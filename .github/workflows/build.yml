@@ -1,0 +1,98 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore:
+      - 'gh-readonly-queue/**'
+    paths-ignore:
+      - '.github/ISSUE_TEMPLATE/*.yml'
+      - '.idea/copyright/*.xml'
+      - '.gitignore'
+      - 'CONTRIBUTING.md'
+      - 'LICENSE'
+      - 'README.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Release Info
+        id: release-info
+        uses: GeyserMC/actions/previous-release@master
+        with:
+          data: ${{ vars.RELEASEACTION_PREVRELEASE }}
+
+      - name: Setup Gradle
+        uses: GeyserMC/actions/setup-gradle-composite@master
+        with:
+          setup-java_java-version: 21
+
+      - name: Build Rainbow
+        run: ./gradlew build
+        env:
+          BUILD_NUMBER: ${{ steps.release-info.outputs.curentRelease }}
+
+      - name: Archive Artifacts
+        uses: GeyserMC/actions/upload-multi-artifact@master
+        if: success()
+        with:
+          artifacts: |
+            build/libs/rainbow-*.jar
+
+      - name: Publish to Maven Repository
+        if: ${{ success() && github.repository == 'GeyserMC/rainbow' && github.ref_name == 'master' }}
+        run: ./gradlew publish
+        env:
+          BUILD_NUMBER: ${{ steps.release-info.outputs.curentRelease }}
+          ORG_GRADLE_PROJECT_geysermcUsername: ${{ vars.DEPLOY_USER }}
+          ORG_GRADLE_PROJECT_geysermcPassword: ${{ secrets.DEPLOY_PASS }}
+
+      - name: Get Version
+        if: ${{ (success() || failure()) && github.repository == 'GeyserMC/rainbow' }}
+        id: get-version
+        run: |
+          version=$(grep -o "mod_version=[0-9\\.]*" gradle.properties | cut -d"=" -f2 | cut -d"-" -f1)
+          echo "VERSION=${version}" >> $GITHUB_OUTPUT
+
+      - name: Get Release Metadata
+        if: ${{ (success() || failure()) && github.repository == 'GeyserMC/rainbow' }}
+        uses: GeyserMC/actions/release@master
+        id: metadata
+        with:
+          appID: ${{ secrets.RELEASE_APP_ID }}
+          appPrivateKey: ${{ secrets.RELEASE_APP_PK }}
+          files: |
+            rainbow:build/libs/rainbow-*.jar
+          releaseEnabled: false
+          saveMetadata: true
+          releaseProject: 'rainbow'
+          releaseVersion: ${{ steps.get-version.outputs.VERSION }}
+
+      - name: Publish to Downloads API
+        if: ${{ success() && github.repository == 'GeyserMC/rainbow' && github.ref_name == 'master' }}
+        uses: GeyserMC/actions/upload-release@master
+        with:
+          username: ${{ vars.DOWNLOADS_USERNAME }}
+          privateKey: ${{ secrets.DOWNLOADS_PRIVATE_KEY }}
+          host: ${{ secrets.DOWNLOADS_SERVER_IP }}
+          files: |
+            build/libs/rainbow-*.jar
+          changelog: ${{ steps.metadata.outputs.body }}
+
+#      - name: Publish to Modrinth
+#        if: ${{ success() && github.repository == 'GeyserMC/rainbow' && github.ref_name == 'master' }}
+#        env:
+#          CHANGELOG: ${{ steps.metadata.outputs.body }}
+#          BUILD_NUMBER: ${{ steps.release-info.outputs.curentRelease }}
+#          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+#        run: ./gradlew modrinth
+
+#      - name: Notify Discord
+#        if: ${{ (success() || failure()) && github.repository == 'GeyserMC/rainbow' }}
+#        uses: GeyserMC/actions/notify-discord@master
+#        with:
+#          discordWebhook: ${{ secrets.DISCORD_WEBHOOK }}
+#          status: ${{ job.status }}
+#          body: ${{ steps.metadata.outputs.body }}
+#          includeDownloads: ${{ github.ref_name == 'master' }}
