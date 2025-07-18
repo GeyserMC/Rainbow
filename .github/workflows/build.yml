@@ -38,10 +38,10 @@ jobs:
         if: success()
         with:
           artifacts: |
-            build/libs/rainbow-*.jar
+            rainbow:build/libs/rainbow-*.jar
 
       - name: Publish to Maven Repository
-        if: ${{ success() && github.repository == 'GeyserMC/rainbow' && github.ref_name == 'master' }}
+        if: ${{ success() && github.repository == 'GeyserMC/Rainbow' && github.ref_name == 'master' }}
         run: ./gradlew publish
         env:
           BUILD_NUMBER: ${{ steps.release-info.outputs.curentRelease }}
@@ -49,14 +49,14 @@ jobs:
           ORG_GRADLE_PROJECT_geysermcPassword: ${{ secrets.DEPLOY_PASS }}
 
       - name: Get Version
-        if: ${{ (success() || failure()) && github.repository == 'GeyserMC/rainbow' }}
+        if: ${{ (success() || failure()) && github.repository == 'GeyserMC/Rainbow' }}
         id: get-version
         run: |
           version=$(grep -o "mod_version=[0-9\\.]*" gradle.properties | cut -d"=" -f2 | cut -d"-" -f1)
           echo "VERSION=${version}" >> $GITHUB_OUTPUT
 
       - name: Get Release Metadata
-        if: ${{ (success() || failure()) && github.repository == 'GeyserMC/rainbow' }}
+        if: ${{ (success() || failure()) && github.repository == 'GeyserMC/Rainbow' }}
         uses: GeyserMC/actions/release@master
         id: metadata
         with:
@@ -70,7 +70,7 @@ jobs:
           releaseVersion: ${{ steps.get-version.outputs.VERSION }}
 
       - name: Publish to Downloads API
-        if: ${{ success() && github.repository == 'GeyserMC/rainbow' && github.ref_name == 'master' }}
+        if: ${{ success() && github.repository == 'GeyserMC/Rainbow' && github.ref_name == 'master' }}
         uses: GeyserMC/actions/upload-release@master
         with:
           username: ${{ vars.DOWNLOADS_USERNAME }}
@@ -88,11 +88,11 @@ jobs:
 #          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
 #        run: ./gradlew modrinth
 
-#      - name: Notify Discord
-#        if: ${{ (success() || failure()) && github.repository == 'GeyserMC/rainbow' }}
-#        uses: GeyserMC/actions/notify-discord@master
-#        with:
-#          discordWebhook: ${{ secrets.DISCORD_WEBHOOK }}
-#          status: ${{ job.status }}
-#          body: ${{ steps.metadata.outputs.body }}
-#          includeDownloads: ${{ github.ref_name == 'master' }}
+      - name: Notify Discord
+        if: ${{ (success() || failure()) && github.repository == 'GeyserMC/Rainbow' }}
+        uses: GeyserMC/actions/notify-discord@master
+        with:
+          discordWebhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: ${{ job.status }}
+          body: ${{ steps.metadata.outputs.body }}
+          includeDownloads: ${{ github.ref_name == 'master' }}
