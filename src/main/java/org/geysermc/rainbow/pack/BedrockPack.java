@@ -22,6 +22,7 @@ import org.geysermc.rainbow.mapping.BedrockItemMapper;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mapping.geyser.GeyserMappings;
 import org.geysermc.rainbow.mixin.SplashRendererAccessor;
+import org.geysermc.rainbow.packconverter.PackConverterContext;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.FileOutputStream;
@@ -71,6 +72,8 @@ public class BedrockPack {
     private final Set<ResourceLocation> texturesToExport = new HashSet<>();
     private final Set<ResourceLocation> modelsMapped = new HashSet<>();
     private final IntSet customModelDataMapped = new IntOpenHashSet();
+
+    private final PackConverterContext packConverterContext = PackConverterContext.create(this);
 
     private final ProblemReporter.Collector reporter;
 
