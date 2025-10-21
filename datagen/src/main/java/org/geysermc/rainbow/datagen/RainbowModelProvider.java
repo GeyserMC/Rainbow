@@ -42,9 +42,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 
 public abstract class RainbowModelProvider extends FabricModelProvider {
@@ -102,7 +105,9 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
                         BedrockPack pack = createBedrockPack(new Serializer(output, registries),
                                 new DatagenResolver(resourceManager, equipmentInfos, itemInfos, models)).build();
 
-                        for (Item item : itemInfos.keySet()) {
+                        Set<Item> sortedItemInfos = new TreeSet<>(Comparator.comparing(item -> item.builtInRegistryHolder().key().location()));
+                        sortedItemInfos.addAll(itemInfos.keySet());
+                        for (Item item : sortedItemInfos) {
                             pack.map(getVanillaItem(item).builtInRegistryHolder(), getVanillaDataComponentPatch(item));
                         }
                         return pack;
