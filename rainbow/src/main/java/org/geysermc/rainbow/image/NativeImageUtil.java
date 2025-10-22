@@ -6,10 +6,7 @@ import org.lwjgl.stb.STBImage;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.Pipe;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
+import java.nio.channels.Channels;
 
 public class NativeImageUtil {
 
@@ -20,24 +17,11 @@ public class NativeImageUtil {
             throw new UnsupportedOperationException("Don't know how to write format " + image.format());
         } else {
             ((NativeImageAccessor) (Object) image).invokeCheckAllocated();
-            Pipe pipe = Pipe.open();
-            try (WritableByteChannel outputChannel = pipe.sink()) {
-                if (!((NativeImageAccessor) (Object) image).invokeWriteToChannel(outputChannel)) {
+            try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+                if (!((NativeImageAccessor) (Object) image).invokeWriteToChannel(Channels.newChannel(output))) {
                     throw new IOException("Could not write image to pipe: " + STBImage.stbi_failure_reason());
                 }
-            }
-
-            try (ReadableByteChannel inputChannel = pipe.source()) {
-                ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-                ByteBuffer buffer = ByteBuffer.allocate(4096);
-                while (inputChannel.read(buffer) != -1) {
-                    buffer.flip();
-                    while (buffer.hasRemaining()) {
-                        bytes.write(buffer.get());
-                    }
-                    buffer.clear();
-                }
-                return bytes.toByteArray();
+                return output.toByteArray();
             }
         }
     }
