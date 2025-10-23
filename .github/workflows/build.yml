@@ -37,6 +37,7 @@ jobs:
         if: ${{ success() && github.repository == 'GeyserMC/Rainbow' && github.ref_name == 'master' }}
         run: ./gradlew publish
         env:
+          BUILD_NUMBER: ${{ steps.release-info.outputs.curentRelease }}
           ORG_GRADLE_PROJECT_geysermcUsername: ${{ vars.DEPLOY_USER }}
           ORG_GRADLE_PROJECT_geysermcPassword: ${{ secrets.DEPLOY_PASS }}
 

@@ -8,6 +8,9 @@ group = properties["maven_group"]!! as String
 val archivesBaseName = properties["archives_base_name"]!! as String
 val targetJavaVersion = 21
 
+val buildNumber = System.getenv()["BUILD_NUMBER"]?: "DEV"
+val fmjVersion = "$version-$buildNumber"
+
 base {
     archivesName = archivesBaseName
 }
@@ -42,7 +45,7 @@ dependencies {
 
 tasks {
     processResources {
-        inputs.property("version", version)
+        inputs.property("version", fmjVersion)
         inputs.property("supported_versions", libs.versions.minecraft.supported.get())
         inputs.property("loader_version", libs.versions.fabric.loader.get())
         filteringCharset = "UTF-8"
@@ -50,7 +53,7 @@ tasks {
         filesMatching("fabric.mod.json") {
             expand(
                 mapOf(
-                    "version" to version,
+                    "version" to fmjVersion,
                     "supported_versions" to libs.versions.minecraft.supported.get(),
                     "loader_version" to libs.versions.fabric.loader.get()
                 )
