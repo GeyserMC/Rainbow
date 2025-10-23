@@ -37,7 +37,11 @@ public record StitchedTextures(Map<String, TextureAtlasSprite> sprites, Supplier
 
         Map<String, TextureAtlasSprite> sprites = new HashMap<>();
         for (Map.Entry<String, Material> material : materials.entrySet()) {
-            sprites.put(material.getKey(), preparations.getSprite(material.getValue().texture()));
+            TextureAtlasSprite sprite = preparations.getSprite(material.getValue().texture());
+            // Sprite could be null when this material wasn't stitched, which happens when the texture simply doesn't exist within the loaded resourcepacks
+            if (sprite != null) {
+                sprites.put(material.getKey(), sprite);
+            }
         }
         return new StitchedTextures(Map.copyOf(sprites), () -> stitchTextureAtlas(preparations), preparations.width(), preparations.height());
     }
