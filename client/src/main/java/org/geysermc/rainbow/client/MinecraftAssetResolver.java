@@ -4,6 +4,8 @@ import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ClientItem;
 import net.minecraft.client.renderer.texture.SpriteContents;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.AtlasManager;
 import net.minecraft.client.resources.model.EquipmentAssetManager;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
@@ -53,8 +55,8 @@ public class MinecraftAssetResolver implements AssetResolver {
     }
 
     @Override
-    public Optional<TextureResource> getTexture(ResourceLocation atlas, ResourceLocation location) {
-        if (atlas == null) {
+    public Optional<TextureResource> getTexture(ResourceLocation atlasId, ResourceLocation location) {
+        if (atlasId == null) {
             // Not in an atlas - so not animated, probably?
             return RainbowIO.safeIO(() -> {
                 try (InputStream textureStream = resourceManager.open(Rainbow.decorateTextureLocation(location))) {
@@ -62,10 +64,15 @@ public class MinecraftAssetResolver implements AssetResolver {
                 }
             });
         }
-        SpriteContents contents = atlasManager.getAtlasOrThrow(atlas).getSprite(location).contents();
-        NativeImage original = ((SpriteContentsAccessor) contents).getOriginalImage();
+        TextureAtlas atlas = atlasManager.getAtlasOrThrow(atlasId);
+        TextureAtlasSprite sprite = atlas.getSprite(location);
+        if (sprite == atlas.missingSprite()) {
+            return Optional.empty();
+        }
+
+        NativeImage original = ((SpriteContentsAccessor) sprite.contents()).getOriginalImage();
         NativeImage textureCopy = new NativeImage(original.getWidth(), original.getHeight(), false);
         textureCopy.copyFrom(original);
-        return Optional.of(new TextureResource(textureCopy, contents.width(), contents.height()));
+        return Optional.of(new TextureResource(textureCopy, sprite.contents().width(), sprite.contents().height()));
     }
 }
