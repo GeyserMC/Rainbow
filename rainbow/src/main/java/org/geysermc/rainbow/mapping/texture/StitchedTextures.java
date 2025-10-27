@@ -23,6 +23,10 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 public record StitchedTextures(Map<String, TextureAtlasSprite> sprites, Supplier<NativeImage> stitched, int width, int height) {
+    // Not sure if 16384 should be the max supported texture size, but it seems to work well enough.
+    // Max supported texture size seems to mostly be a driver thing, to not let the stitched texture get too big for uploading it to the GPU
+    // This is not an issue for us
+    private static final int MAX_TEXTURE_SIZE = 1 << 14;
 
     public Optional<TextureAtlasSprite> getSprite(String key) {
         if (TextureSlotsAccessor.invokeIsTextureReference(key)) {
@@ -48,8 +52,7 @@ public record StitchedTextures(Map<String, TextureAtlasSprite> sprites, Supplier
 
     private static SpriteLoader.Preparations prepareStitching(Stream<ResourceLocation> textures, PackContext context) {
         // Atlas ID doesn't matter much here, but BLOCKS is the most appropriate
-        // Not sure if 1024 should be the max supported texture size, but it seems to work
-        SpriteLoader spriteLoader = new SpriteLoader(AtlasIds.BLOCKS, 1024, 16, 16);
+        SpriteLoader spriteLoader = new SpriteLoader(AtlasIds.BLOCKS, MAX_TEXTURE_SIZE, 16, 16);
         List<SpriteContents> sprites = textures.distinct()
                 .map(texture -> readSpriteContents(texture, context))
                 .<SpriteContents>mapMulti(Optional::ifPresent)
