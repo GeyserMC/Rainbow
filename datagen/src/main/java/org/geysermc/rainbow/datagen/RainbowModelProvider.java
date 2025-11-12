@@ -223,7 +223,7 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
         @Override
         public Optional<TextureResource> getTexture(ResourceLocation atlas, ResourceLocation location) {
             // We don't care about atlas since there are none loaded at datagen
-            return resourceManager.getResource(Rainbow.decorateTextureLocation(location))
+            return resourceManager.getResource(Rainbow.decorateTextureIdentifier(location))
                     .flatMap(resource -> RainbowIO.safeIO(() -> {
                         Optional<AnimationMetadataSection> animationMetadata = resource.metadata().getSection(AnimationMetadataSection.TYPE);
                         try (InputStream textureStream = resource.open()) {

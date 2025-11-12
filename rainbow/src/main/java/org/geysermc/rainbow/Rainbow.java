@@ -18,11 +18,11 @@ public class Rainbow {
         return identifier.toString().replace(':', '.').replace('/', '_');
     }
 
-    public static Identifier decorateResourceLocation(Identifier identifier, String type, String extension) {
+    public static Identifier decorateIdentifier(Identifier identifier, String type, String extension) {
         return identifier.withPath(path -> type + "/" + path + "." + extension);
     }
 
-    public static Identifier decorateTextureLocation(Identifier identifier) {
-        return decorateResourceLocation(identifier, "textures", "png");
+    public static Identifier decorateTextureIdentifier(Identifier identifier) {
+        return decorateIdentifier(identifier, "textures", "png");
     }
 }

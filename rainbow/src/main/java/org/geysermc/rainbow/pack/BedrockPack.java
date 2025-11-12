@@ -125,7 +125,7 @@ public class BedrockPack {
         futures.add(serializer.saveJson(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), paths.itemAtlas()));
 
         Function<TextureHolder, CompletableFuture<?>> textureSaver = texture -> {
-            Identifier textureIdentifier = Rainbow.decorateTextureLocation(texture.location());
+            Identifier textureIdentifier = Rainbow.decorateTextureIdentifier(texture.location());
             return texture.save(context.assetResolver(), serializer, paths.packRoot().resolve(textureIdentifier.getPath()), reporter);
         };
 

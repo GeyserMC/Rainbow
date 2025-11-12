@@ -3,7 +3,6 @@ package org.geysermc.rainbow.client;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ClientItem;
-import net.minecraft.client.renderer.texture.SpriteContents;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.AtlasManager;
@@ -11,8 +10,8 @@ import net.minecraft.client.resources.model.EquipmentAssetManager;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.client.resources.model.ModelManager;
 import net.minecraft.client.resources.model.ResolvedModel;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.item.equipment.EquipmentAsset;
 import org.geysermc.rainbow.Rainbow;
@@ -40,13 +39,13 @@ public class MinecraftAssetResolver implements AssetResolver {
     }
 
     @Override
-    public Optional<ResolvedModel> getResolvedModel(ResourceLocation location) {
-        return ((ResolvedModelAccessor) modelManager).rainbow$getResolvedModel(location);
+    public Optional<ResolvedModel> getResolvedModel(Identifier identifier) {
+        return ((ResolvedModelAccessor) modelManager).rainbow$getResolvedModel(identifier);
     }
 
     @Override
-    public Optional<ClientItem> getClientItem(ResourceLocation location) {
-        return ((ResolvedModelAccessor) modelManager).rainbow$getClientItem(location);
+    public Optional<ClientItem> getClientItem(Identifier identifier) {
+        return ((ResolvedModelAccessor) modelManager).rainbow$getClientItem(identifier);
     }
 
     @Override
@@ -55,17 +54,17 @@ public class MinecraftAssetResolver implements AssetResolver {
     }
 
     @Override
-    public Optional<TextureResource> getTexture(ResourceLocation atlasId, ResourceLocation location) {
+    public Optional<TextureResource> getTexture(Identifier atlasId, Identifier identifier) {
         if (atlasId == null) {
             // Not in an atlas - so not animated, probably?
             return RainbowIO.safeIO(() -> {
-                try (InputStream textureStream = resourceManager.open(Rainbow.decorateTextureLocation(location))) {
+                try (InputStream textureStream = resourceManager.open(Rainbow.decorateTextureIdentifier(identifier))) {
                     return new TextureResource(NativeImage.read(textureStream));
                 }
             });
         }
         TextureAtlas atlas = atlasManager.getAtlasOrThrow(atlasId);
-        TextureAtlasSprite sprite = atlas.getSprite(location);
+        TextureAtlasSprite sprite = atlas.getSprite(identifier);
         if (sprite == atlas.missingSprite()) {
             return Optional.empty();
         }
