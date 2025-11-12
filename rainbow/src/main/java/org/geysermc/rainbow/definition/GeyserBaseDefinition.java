@@ -6,7 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.definition.predicate.GeyserPredicate;
 
@@ -14,8 +14,8 @@ import java.util.List;
 import java.util.Optional;
 
 // TODO other keys, etc.
-// TODO display name can be a component
-public record GeyserBaseDefinition(ResourceLocation bedrockIdentifier, Optional<String> displayName,
+// TODO display name can be a literal text component
+public record GeyserBaseDefinition(Identifier bedrockIdentifier, Optional<String> displayName,
                                    List<GeyserPredicate> predicates, BedrockOptions bedrockOptions, DataComponentPatch components) {
     private static final List<DataComponentType<?>> SUPPORTED_COMPONENTS = List.of(DataComponents.CONSUMABLE, DataComponents.EQUIPPABLE, DataComponents.FOOD,
             DataComponents.MAX_DAMAGE, DataComponents.MAX_STACK_SIZE, DataComponents.USE_COOLDOWN, DataComponents.ENCHANTABLE, DataComponents.ENCHANTMENT_GLINT_OVERRIDE);
@@ -38,7 +38,7 @@ public record GeyserBaseDefinition(ResourceLocation bedrockIdentifier, Optional<
 
     public static final MapCodec<GeyserBaseDefinition> MAP_CODEC = RecordCodecBuilder.mapCodec(instance ->
             instance.group(
-                    ResourceLocation.CODEC.fieldOf("bedrock_identifier").forGetter(GeyserBaseDefinition::bedrockIdentifier),
+                    Identifier.CODEC.fieldOf("bedrock_identifier").forGetter(GeyserBaseDefinition::bedrockIdentifier),
                     Codec.STRING.optionalFieldOf("display_name").forGetter(GeyserBaseDefinition::displayName),
                     GeyserPredicate.LIST_CODEC.optionalFieldOf("predicate", List.of()).forGetter(GeyserBaseDefinition::predicates),
                     BedrockOptions.CODEC.optionalFieldOf("bedrock_options", BedrockOptions.DEFAULT).forGetter(GeyserBaseDefinition::bedrockOptions),
@@ -61,17 +61,17 @@ public record GeyserBaseDefinition(ResourceLocation bedrockIdentifier, Optional<
     }
 
     public String textureName() {
-        return bedrockOptions.icon.orElse(Rainbow.safeResourceLocation(bedrockIdentifier));
+        return bedrockOptions.icon.orElse(Rainbow.bedrockSafeIdentifier(bedrockIdentifier));
     }
 
-    public record BedrockOptions(Optional<String> icon, boolean allowOffhand, boolean displayHandheld, int protectionValue, List<ResourceLocation> tags) {
+    public record BedrockOptions(Optional<String> icon, boolean allowOffhand, boolean displayHandheld, int protectionValue, List<Identifier> tags) {
         public static final Codec<BedrockOptions> CODEC = RecordCodecBuilder.create(instance ->
                 instance.group(
                         Codec.STRING.optionalFieldOf("icon").forGetter(BedrockOptions::icon),
                         Codec.BOOL.optionalFieldOf("allow_offhand", true).forGetter(BedrockOptions::allowOffhand),
                         Codec.BOOL.optionalFieldOf("display_handheld", false).forGetter(BedrockOptions::displayHandheld),
                         Codec.INT.optionalFieldOf("protection_value", 0).forGetter(BedrockOptions::protectionValue),
-                        ResourceLocation.CODEC.listOf().optionalFieldOf("tags", List.of()).forGetter(BedrockOptions::tags)
+                        Identifier.CODEC.listOf().optionalFieldOf("tags", List.of()).forGetter(BedrockOptions::tags)
                 ).apply(instance, BedrockOptions::new)
         );
         public static final BedrockOptions DEFAULT = new BedrockOptions(Optional.empty(), true, false, 0, List.of());

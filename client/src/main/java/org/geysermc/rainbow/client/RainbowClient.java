@@ -22,7 +22,7 @@ public class RainbowClient implements ClientModInitializer {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, buildContext) -> PackGeneratorCommand.register(dispatcher, packManager, packMapper));
         ClientTickEvents.START_CLIENT_TICK.register(packMapper::tick);
 
-        ArgumentTypeRegistry.registerArgumentType(Rainbow.getModdedLocation("command_suggestions"),
+        ArgumentTypeRegistry.registerArgumentType(Rainbow.getModdedIdentifier("command_suggestions"),
                 CommandSuggestionsArgumentType.class, SingletonArgumentInfo.contextFree(CommandSuggestionsArgumentType::new));
 
         RainbowIO.registerExceptionListener(new RainbowClientIOHandler());

@@ -1,7 +1,7 @@
 package org.geysermc.rainbow.mapping.texture;
 
 import com.mojang.blaze3d.platform.NativeImage;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.PackSerializer;
@@ -12,10 +12,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 public abstract class TextureHolder {
-    protected final ResourceLocation location;
+    protected final Identifier identifier;
 
-    public TextureHolder(ResourceLocation location) {
-        this.location = location;
+    public TextureHolder(Identifier identifier) {
+        this.identifier = identifier;
     }
 
     public abstract Optional<byte[]> load(AssetResolver assetResolver, ProblemReporter reporter);
@@ -26,31 +26,31 @@ public abstract class TextureHolder {
                 .orElse(CompletableFuture.completedFuture(null));
     }
 
-    public static TextureHolder createCustom(ResourceLocation location, Supplier<NativeImage> supplier) {
-        return new CustomTextureHolder(location, supplier);
+    public static TextureHolder createCustom(Identifier identifier, Supplier<NativeImage> supplier) {
+        return new CustomTextureHolder(identifier, supplier);
     }
 
-    public static TextureHolder createBuiltIn(ResourceLocation location, ResourceLocation atlas, ResourceLocation source) {
-        return new BuiltInTextureHolder(location, atlas, source);
+    public static TextureHolder createBuiltIn(Identifier identifier, Identifier atlas, Identifier source) {
+        return new BuiltInTextureHolder(identifier, atlas, source);
     }
 
-    public static TextureHolder createBuiltIn(ResourceLocation atlas, ResourceLocation location) {
-        return createBuiltIn(location, atlas, location);
+    public static TextureHolder createBuiltIn(Identifier atlas, Identifier identifier) {
+        return createBuiltIn(identifier, atlas, identifier);
     }
 
-    public static TextureHolder createNonExistent(ResourceLocation location) {
-        return new MissingTextureHolder(location);
+    public static TextureHolder createNonExistent(Identifier identifier) {
+        return new MissingTextureHolder(identifier);
     }
 
     public static TextureHolder createCopy(TextureHolder original) {
-        return new CopyTextureHolder(original.location);
+        return new CopyTextureHolder(original.identifier);
     }
 
-    public ResourceLocation location() {
-        return location;
+    public Identifier location() {
+        return identifier;
     }
 
     protected void reportMissing(ProblemReporter reporter) {
-        reporter.report(() -> "missing texture for " + location + "; please provide it manually");
+        reporter.report(() -> "missing texture for " + identifier + "; please provide it manually");
     }
 }

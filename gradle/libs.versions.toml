@@ -1,11 +1,11 @@
 [versions]
-minecraft = "1.21.10"
-minecraft-supported = ">=1.21.9 <=1.21.10"
+minecraft = "25w46a"
+minecraft-supported = "*" # TODO
 parchment = "2025.10.12"
 
-fabric-loom = "1.11-SNAPSHOT"
+fabric-loom = "1.13-SNAPSHOT"
 fabric-loader = "0.17.3"
-fabric-api = "0.135.0+1.21.10"
+fabric-api = "0.138.4+1.21.11"
 
 creative = "817fa982c4"
 packconverter = "3.4.1-20251013.173215-13"
@@ -23,4 +23,3 @@ creative-serializer-minecraft = {group = "com.github.GeyserMC.unnamed-creative",
 packconverter = {group = "org.geysermc.pack", name = "converter", version.ref = "packconverter"}
 
 [plugins]
-fabric-loom = {id = "fabric-loom", version.ref = "fabric-loom"}

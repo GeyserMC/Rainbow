@@ -2,7 +2,7 @@ package org.geysermc.rainbow.definition;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Comparator;
@@ -11,11 +11,11 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-public record GeyserGroupDefinition(Optional<ResourceLocation> model, List<GeyserMapping> definitions) implements GeyserMapping {
+public record GeyserGroupDefinition(Optional<Identifier> model, List<GeyserMapping> definitions) implements GeyserMapping {
 
     public static final MapCodec<GeyserGroupDefinition> CODEC = RecordCodecBuilder.mapCodec(instance ->
             instance.group(
-                    ResourceLocation.CODEC.optionalFieldOf("model").forGetter(GeyserGroupDefinition::model),
+                    Identifier.CODEC.optionalFieldOf("model").forGetter(GeyserGroupDefinition::model),
                     GeyserMapping.CODEC.listOf().fieldOf("definitions").forGetter(GeyserGroupDefinition::definitions)
             ).apply(instance, GeyserGroupDefinition::new)
     );
@@ -26,12 +26,12 @@ public record GeyserGroupDefinition(Optional<ResourceLocation> model, List<Geyse
                 .toList());
     }
 
-    public boolean isFor(Optional<ResourceLocation> model) {
+    public boolean isFor(Optional<Identifier> model) {
         return this.model.isPresent() && model.isPresent() && this.model.get().equals(model.get());
     }
 
-    public boolean conflictsWith(Optional<ResourceLocation> parentModel, GeyserItemDefinition other) {
-        Optional<ResourceLocation> thisModel = model.or(() -> parentModel);
+    public boolean conflictsWith(Optional<Identifier> parentModel, GeyserItemDefinition other) {
+        Optional<Identifier> thisModel = model.or(() -> parentModel);
         for (GeyserMapping definition : definitions) {
             if (definition instanceof GeyserGroupDefinition group && group.conflictsWith(thisModel, other)) {
                 return true;
@@ -61,7 +61,7 @@ public record GeyserGroupDefinition(Optional<ResourceLocation> model, List<Geyse
 
     @Override
     public int compareTo(@NotNull GeyserMapping other) {
-        if (other instanceof GeyserGroupDefinition(Optional<ResourceLocation> otherModel, List<GeyserMapping> otherDefinitions)) {
+        if (other instanceof GeyserGroupDefinition(Optional<Identifier> otherModel, List<GeyserMapping> otherDefinitions)) {
             if (model.isPresent() && otherModel.isPresent()) {
                 return model.get().compareTo(otherModel.get());
             } else if (model.isPresent()) {
