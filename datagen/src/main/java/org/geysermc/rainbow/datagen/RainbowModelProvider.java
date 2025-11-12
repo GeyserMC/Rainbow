@@ -5,7 +5,6 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.serialization.Codec;
 import net.fabricmc.fabric.api.client.datagen.v1.provider.FabricModelProvider;
 import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
-import net.minecraft.Util;
 import net.minecraft.client.data.models.model.ModelInstance;
 import net.minecraft.client.renderer.block.model.BlockModel;
 import net.minecraft.client.renderer.block.model.ItemModelGenerator;
@@ -19,10 +18,11 @@ import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.ProblemReporter;
+import net.minecraft.util.Util;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.equipment.EquipmentAsset;
 import org.geysermc.rainbow.Rainbow;
@@ -60,11 +60,11 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
     private final Path packPath;
 
     private Map<Item, ClientItem> itemInfos;
-    private Map<ResourceLocation, ModelInstance> models;
+    private Map<Identifier, ModelInstance> models;
 
     protected RainbowModelProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries,
                                    Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos, String packName,
-                                   ResourceLocation outputRoot, Path geyserMappingsPath, Path packPath) {
+                                   Identifier outputRoot, Path geyserMappingsPath, Path packPath) {
         super(output);
         this.registries = registries;
         this.equipmentInfos = equipmentInfos;
@@ -78,13 +78,13 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
 
     protected RainbowModelProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries,
                                    Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos, String packName,
-                                   ResourceLocation outputRoot) {
+                                   Identifier outputRoot) {
         this(output, registries, equipmentInfos, packName, outputRoot, Path.of("geyser_mappings.json"), Path.of("pack"));
     }
 
     protected RainbowModelProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries,
                                 Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos, String packName) {
-        this(output, registries, equipmentInfos, packName, ResourceLocation.withDefaultNamespace("bedrock"));
+        this(output, registries, equipmentInfos, packName, Identifier.withDefaultNamespace("bedrock"));
     }
 
     protected RainbowModelProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries, String packName) {
@@ -105,7 +105,7 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
                         BedrockPack pack = createBedrockPack(new Serializer(output, registries),
                                 new DatagenResolver(resourceManager, equipmentInfos, itemInfos, models)).build();
 
-                        Set<Item> sortedItemInfos = new TreeSet<>(Comparator.comparing(item -> item.builtInRegistryHolder().key().location()));
+                        Set<Item> sortedItemInfos = new TreeSet<>(Comparator.comparing(item -> item.builtInRegistryHolder().key().identifier()));
                         sortedItemInfos.addAll(itemInfos.keySet());
                         for (Item item : sortedItemInfos) {
                             pack.map(getVanillaItem(item).builtInRegistryHolder(), getVanillaDataComponentPatch(item));
@@ -136,7 +136,7 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
     }
 
     @ApiStatus.Internal
-    public void setModels(Map<ResourceLocation, ModelInstance> models) {
+    public void setModels(Map<Identifier, ModelInstance> models) {
         this.models = models;
     }
 
@@ -162,33 +162,33 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
     private static class DatagenResolver implements AssetResolver {
         private final ResourceManager resourceManager;
         private final Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos;
-        private final Map<ResourceLocation, ClientItem> itemInfos;
-        private final Map<ResourceLocation, ModelInstance> models;
-        private final Map<ResourceLocation, Optional<ResolvedModel>> resolvedModelCache = new HashMap<>();
+        private final Map<Identifier, ClientItem> itemInfos;
+        private final Map<Identifier, ModelInstance> models;
+        private final Map<Identifier, Optional<ResolvedModel>> resolvedModelCache = new HashMap<>();
 
         private DatagenResolver(ResourceManager resourceManager, Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos,
-                                Map<Item, ClientItem> itemInfos, Map<ResourceLocation, ModelInstance> models) {
+                                Map<Item, ClientItem> itemInfos, Map<Identifier, ModelInstance> models) {
             this.resourceManager = resourceManager;
             this.equipmentInfos = equipmentInfos;
             this.itemInfos = new HashMap<>();
             for (Map.Entry<Item, ClientItem> entry : itemInfos.entrySet()) {
-                this.itemInfos.put(entry.getKey().builtInRegistryHolder().key().location(), entry.getValue());
+                this.itemInfos.put(entry.getKey().builtInRegistryHolder().key().identifier(), entry.getValue());
             }
             this.models = models;
         }
 
         @Override
-        public Optional<ResolvedModel> getResolvedModel(ResourceLocation location) {
-            return resolvedModelCache.computeIfAbsent(location, key -> Optional.ofNullable(models.get(location))
+        public Optional<ResolvedModel> getResolvedModel(Identifier identifier) {
+            return resolvedModelCache.computeIfAbsent(identifier, key -> Optional.ofNullable(models.get(identifier))
                     .<UnbakedModel>map(instance -> BlockModel.fromStream(new StringReader(instance.get().toString())))
                     .or(() -> {
-                        if (location.equals(ItemModelGenerator.GENERATED_ITEM_MODEL_ID)) {
+                        if (identifier.equals(ItemModelGenerator.GENERATED_ITEM_MODEL_ID)) {
                             return Optional.of(new ItemModelGenerator());
                         }
                         return Optional.empty();
                     })
                     .or(() -> RainbowIO.safeIO(() -> {
-                        try (BufferedReader reader = resourceManager.openAsReader(location.withPrefix("models/").withSuffix(".json"))) {
+                        try (BufferedReader reader = resourceManager.openAsReader(identifier.withPrefix("models/").withSuffix(".json"))) {
                             return BlockModel.fromStream(reader);
                         }
                     }))
@@ -205,14 +205,14 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
 
                         @Override
                         public @NotNull String debugName() {
-                            return location.toString();
+                            return identifier.toString();
                         }
                     }));
         }
 
         @Override
-        public Optional<ClientItem> getClientItem(ResourceLocation location) {
-            return Optional.ofNullable(itemInfos.get(location));
+        public Optional<ClientItem> getClientItem(Identifier identifier) {
+            return Optional.ofNullable(itemInfos.get(identifier));
         }
 
         @Override
@@ -221,9 +221,9 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
         }
 
         @Override
-        public Optional<TextureResource> getTexture(ResourceLocation atlas, ResourceLocation location) {
+        public Optional<TextureResource> getTexture(Identifier atlas, Identifier identifier) {
             // We don't care about atlas since there are none loaded at datagen
-            return resourceManager.getResource(Rainbow.decorateTextureIdentifier(location))
+            return resourceManager.getResource(Rainbow.decorateTextureIdentifier(identifier))
                     .flatMap(resource -> RainbowIO.safeIO(() -> {
                         Optional<AnimationMetadataSection> animationMetadata = resource.metadata().getSection(AnimationMetadataSection.TYPE);
                         try (InputStream textureStream = resource.open()) {
