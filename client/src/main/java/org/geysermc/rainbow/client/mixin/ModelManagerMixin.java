@@ -26,7 +26,7 @@ public abstract class ModelManagerMixin implements PreparableReloadListener, Aut
     @Unique
     private Map<Identifier, ClientItem> clientItems;
 
-    @WrapOperation(method = "method_65753", at = @At(value = "INVOKE", target = "Ljava/util/concurrent/CompletableFuture;join()Ljava/lang/Object;", ordinal = 1))
+    @WrapOperation(method = "method_65753", at = @At(value = "INVOKE", target = "Ljava/util/concurrent/CompletableFuture;join()Ljava/lang/Object;", ordinal = 2))
     private static Object setResolvedModels(CompletableFuture<?> instance, Operation<Object> original) {
         Object resolved = original.call(instance);
         try {

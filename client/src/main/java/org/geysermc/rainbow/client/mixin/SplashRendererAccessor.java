@@ -1,6 +1,7 @@
 package org.geysermc.rainbow.client.mixin;
 
 import net.minecraft.client.gui.components.SplashRenderer;
+import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
@@ -8,5 +9,5 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface SplashRendererAccessor {
 
     @Accessor
-    String getSplash();
+    Component getSplash();
 }
