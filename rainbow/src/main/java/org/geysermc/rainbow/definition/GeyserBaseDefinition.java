@@ -18,7 +18,8 @@ import java.util.Optional;
 public record GeyserBaseDefinition(Identifier bedrockIdentifier, Optional<String> displayName,
                                    List<GeyserPredicate> predicates, BedrockOptions bedrockOptions, DataComponentPatch components) {
     private static final List<DataComponentType<?>> SUPPORTED_COMPONENTS = List.of(DataComponents.CONSUMABLE, DataComponents.EQUIPPABLE, DataComponents.FOOD,
-            DataComponents.MAX_DAMAGE, DataComponents.MAX_STACK_SIZE, DataComponents.USE_COOLDOWN, DataComponents.ENCHANTABLE, DataComponents.ENCHANTMENT_GLINT_OVERRIDE);
+            DataComponents.MAX_DAMAGE, DataComponents.MAX_STACK_SIZE, DataComponents.USE_COOLDOWN, DataComponents.ENCHANTABLE, DataComponents.ENCHANTMENT_GLINT_OVERRIDE,
+            DataComponents.ATTACK_RANGE, DataComponents.KINETIC_WEAPON, DataComponents.PIERCING_WEAPON, DataComponents.SWING_ANIMATION, DataComponents.USE_EFFECTS);
 
     private static final MapCodec<DataComponentPatch> FILTERED_COMPONENT_MAP_CODEC = DataComponentPatch.CODEC.optionalFieldOf("components")
             .xmap(optional -> optional.orElse(DataComponentPatch.EMPTY), patch -> {
