@@ -52,7 +52,7 @@ public record StitchedTextures(Map<String, TextureAtlasSprite> sprites, Supplier
 
     private static SpriteLoader.Preparations prepareStitching(Stream<Identifier> textures, PackContext context) {
         // Atlas ID doesn't matter much here, but BLOCKS is the most appropriate
-        SpriteLoader spriteLoader = new SpriteLoader(AtlasIds.BLOCKS, MAX_TEXTURE_SIZE, 16, 16);
+        SpriteLoader spriteLoader = new SpriteLoader(AtlasIds.BLOCKS, MAX_TEXTURE_SIZE);
         List<SpriteContents> sprites = textures.distinct()
                 .map(texture -> readSpriteContents(texture, context))
                 .<SpriteContents>mapMulti(Optional::ifPresent)
