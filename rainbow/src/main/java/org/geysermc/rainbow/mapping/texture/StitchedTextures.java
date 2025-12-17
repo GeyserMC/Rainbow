@@ -1,14 +1,14 @@
 package org.geysermc.rainbow.mapping.texture;
 
 import com.mojang.blaze3d.platform.NativeImage;
-import net.minecraft.Util;
 import net.minecraft.client.renderer.block.model.TextureSlots;
 import net.minecraft.client.renderer.texture.SpriteContents;
 import net.minecraft.client.renderer.texture.SpriteLoader;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.Material;
 import net.minecraft.data.AtlasIds;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Util;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mixin.SpriteContentsAccessor;
@@ -50,9 +50,9 @@ public record StitchedTextures(Map<String, TextureAtlasSprite> sprites, Supplier
         return new StitchedTextures(Map.copyOf(sprites), () -> stitchTextureAtlas(preparations), preparations.width(), preparations.height());
     }
 
-    private static SpriteLoader.Preparations prepareStitching(Stream<ResourceLocation> textures, PackContext context) {
+    private static SpriteLoader.Preparations prepareStitching(Stream<Identifier> textures, PackContext context) {
         // Atlas ID doesn't matter much here, but BLOCKS is the most appropriate
-        SpriteLoader spriteLoader = new SpriteLoader(AtlasIds.BLOCKS, MAX_TEXTURE_SIZE, 16, 16);
+        SpriteLoader spriteLoader = new SpriteLoader(AtlasIds.BLOCKS, MAX_TEXTURE_SIZE);
         List<SpriteContents> sprites = textures.distinct()
                 .map(texture -> readSpriteContents(texture, context))
                 .<SpriteContents>mapMulti(Optional::ifPresent)
@@ -60,11 +60,11 @@ public record StitchedTextures(Map<String, TextureAtlasSprite> sprites, Supplier
         return  ((SpriteLoaderAccessor) spriteLoader).invokeStitch(sprites, 0, Util.backgroundExecutor());
     }
 
-    private static Optional<SpriteContents> readSpriteContents(ResourceLocation location, PackContext context) {
+    private static Optional<SpriteContents> readSpriteContents(Identifier identifier, PackContext context) {
         return RainbowIO.safeIO(() -> {
-            try (TextureResource texture = context.assetResolver().getTexture(AtlasIds.BLOCKS, location).orElse(null)) {
+            try (TextureResource texture = context.assetResolver().getTexture(AtlasIds.BLOCKS, identifier).orElse(null)) {
                 if (texture != null) {
-                    return new SpriteContents(location, texture.sizeOfFrame(), texture.getFirstFrame(true));
+                    return new SpriteContents(identifier, texture.sizeOfFrame(), texture.getFirstFrame(true));
                 }
             }
             return null;

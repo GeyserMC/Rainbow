@@ -115,16 +115,23 @@ public class GeometryMapper {
 
             // Same as above for inverting the X axis (thanks again Blockbench!!)
             builder.withPivot(rotation.origin().div(0.0625F, new Vector3f()).sub(CENTRE_OFFSET).mul(-1.0F, 1.0F, 1.0F));
-
-            // Same as above but for some reason the Z axis too (thanks again, so much, Blockbench!!!)
-            Vector3f bedrockRotation = switch (rotation.axis()) {
-                case X -> new Vector3f(-rotation.angle(), 0.0F, 0.0F);
-                case Y -> new Vector3f(0.0F, rotation.angle(), 0.0F);
-                case Z -> new Vector3f(0.0F, 0.0F, -rotation.angle());
-            };
-            builder.withRotation(bedrockRotation);
+            builder.withRotation(getBedrockRotation(rotation.value()));
+            // TODO translate rescale property?
         }
 
         return builder;
+    }
+
+    private static Vector3fc getBedrockRotation(BlockElementRotation.RotationValue rotation) {
+        // Same as in the method above, but for some reason the Z axis too: X and Z axes have to be inverted (thanks again, so much, Blockbench!!!)
+        return switch (rotation) {
+            case BlockElementRotation.EulerXYZRotation(float x, float y, float z) -> new Vector3f(-x, y, -z); // TODO check if these angle transformations are right, they should be
+            case BlockElementRotation.SingleAxisRotation(Direction.Axis axis, float angle) -> switch (axis) {
+                case X -> new Vector3f(-angle, 0.0F, 0.0F);
+                case Y -> new Vector3f(0.0F, angle, 0.0F);
+                case Z -> new Vector3f(0.0F, 0.0F, -angle);
+            };
+            default -> throw new IllegalArgumentException("Don't know how to transform rotation of type " + rotation.getClass() + " to bedrock rotation");
+        };
     }
 }

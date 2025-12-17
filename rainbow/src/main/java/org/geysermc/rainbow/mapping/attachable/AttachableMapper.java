@@ -5,7 +5,7 @@ import net.minecraft.client.resources.model.EquipmentAssetManager;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.equipment.Equippable;
 import org.geysermc.rainbow.mapping.AssetResolver;
@@ -32,7 +32,7 @@ public class AttachableMapper {
                                 .mapSecond(info -> info.getLayers(getLayer(assetInfo.getFirst()))))
                         .filter(assetInfo -> !assetInfo.getSecond().isEmpty())
                         .map(assetInfo -> {
-                            ResourceLocation equipmentTexture = getTexture(assetInfo.getSecond(), getLayer(assetInfo.getFirst()));
+                            Identifier equipmentTexture = getTexture(assetInfo.getSecond(), getLayer(assetInfo.getFirst()));
                             textureConsumer.accept(TextureHolder.createBuiltIn(null, equipmentTexture));
                             return BedrockAttachable.equipment(bedrockIdentifier, assetInfo.getFirst(), equipmentTexture.getPath());
                         }))
@@ -53,13 +53,13 @@ public class AttachableMapper {
         return slot == EquipmentSlot.LEGS ? EquipmentClientInfo.LayerType.HUMANOID_LEGGINGS : EquipmentClientInfo.LayerType.HUMANOID;
     }
 
-    private static ResourceLocation getTexture(List<EquipmentClientInfo.Layer> info, EquipmentClientInfo.LayerType layer) {
+    private static Identifier getTexture(List<EquipmentClientInfo.Layer> info, EquipmentClientInfo.LayerType layer) {
         return info.getFirst().textureId().withPath(path -> "entity/equipment/" + layer.getSerializedName() + "/" + path);
     }
 
     @FunctionalInterface
     public interface AttachableCreator {
 
-        Optional<BedrockAttachable> create(ResourceLocation bedrockIdentifier, Consumer<TextureHolder> textureConsumer);
+        Optional<BedrockAttachable> create(Identifier bedrockIdentifier, Consumer<TextureHolder> textureConsumer);
     }
 }

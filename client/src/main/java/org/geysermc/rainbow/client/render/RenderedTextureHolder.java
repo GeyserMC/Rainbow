@@ -12,7 +12,7 @@ import net.minecraft.client.gui.render.state.GuiItemRenderState;
 import net.minecraft.client.gui.render.state.GuiRenderState;
 import net.minecraft.client.gui.render.state.pip.OversizedItemRenderState;
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -35,8 +35,8 @@ import java.util.concurrent.locks.ReentrantLock;
 public class RenderedTextureHolder extends TextureHolder {
     private final ItemStack stackToRender;
 
-    public RenderedTextureHolder(ResourceLocation location, ItemStack stackToRender) {
-        super(location);
+    public RenderedTextureHolder(Identifier identifier, ItemStack stackToRender) {
+        super(identifier);
         this.stackToRender = stackToRender;
     }
 

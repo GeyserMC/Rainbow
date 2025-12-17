@@ -1,7 +1,7 @@
 package org.geysermc.rainbow.mapping.texture;
 
 import com.mojang.blaze3d.platform.NativeImage;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.image.NativeImageUtil;
@@ -11,11 +11,11 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class BuiltInTextureHolder extends TextureHolder {
-    private final ResourceLocation atlas;
-    private final ResourceLocation source;
+    private final Identifier atlas;
+    private final Identifier source;
 
-    public BuiltInTextureHolder(ResourceLocation location, ResourceLocation atlas, ResourceLocation source) {
-        super(location);
+    public BuiltInTextureHolder(Identifier identifier, Identifier atlas, Identifier source) {
+        super(identifier);
         this.atlas = atlas;
         this.source = source;
     }

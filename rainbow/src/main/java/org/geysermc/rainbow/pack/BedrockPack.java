@@ -4,7 +4,7 @@ import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -42,7 +42,7 @@ public class BedrockPack {
 
     private final BedrockTextures.Builder itemTextures = BedrockTextures.builder();
     private final Set<BedrockItem> bedrockItems = new HashSet<>();
-    private final Set<ResourceLocation> modelsMapped = new HashSet<>();
+    private final Set<Identifier> modelsMapped = new HashSet<>();
     private final Set<Pair<Item, Integer>> customModelDataMapped = new HashSet<>();
 
     private final PackContext context;
@@ -88,7 +88,7 @@ public class BedrockPack {
             }
         };
 
-        Optional<? extends ResourceLocation> patchedModel = stack.getComponentsPatch().get(DataComponents.ITEM_MODEL);
+        Optional<? extends Identifier> patchedModel = stack.getComponentsPatch().get(DataComponents.ITEM_MODEL);
         //noinspection OptionalAssignedToNull - annoying Mojang
         if (patchedModel == null || patchedModel.isEmpty()) {
             CustomModelData customModelData = stack.get(DataComponents.CUSTOM_MODEL_DATA);
@@ -100,7 +100,7 @@ public class BedrockPack {
 
             BedrockItemMapper.tryMapStack(stack, firstNumber.intValue(), mapReporter, context);
         } else {
-            ResourceLocation model = patchedModel.get();
+            Identifier model = patchedModel.get();
             if (!modelsMapped.add(model)) {
                 return MappingResult.NONE_MAPPED;
             }
@@ -125,8 +125,8 @@ public class BedrockPack {
         futures.add(serializer.saveJson(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), paths.itemAtlas()));
 
         Function<TextureHolder, CompletableFuture<?>> textureSaver = texture -> {
-            ResourceLocation textureLocation = Rainbow.decorateTextureLocation(texture.location());
-            return texture.save(context.assetResolver(), serializer, paths.packRoot().resolve(textureLocation.getPath()), reporter);
+            Identifier textureIdentifier = Rainbow.decorateTextureIdentifier(texture.location());
+            return texture.save(context.assetResolver(), serializer, paths.packRoot().resolve(textureIdentifier.getPath()), reporter);
         };
 
         for (BedrockItem item : bedrockItems) {

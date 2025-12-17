@@ -1,6 +1,6 @@
 package org.geysermc.rainbow.pack;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.attachable.AttachableMapper;
@@ -15,7 +15,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-public record BedrockItem(ResourceLocation identifier, String textureName, BedrockGeometryContext geometryContext, AttachableMapper.AttachableCreator attachableCreator) {
+public record BedrockItem(Identifier identifier, String textureName, BedrockGeometryContext geometryContext, AttachableMapper.AttachableCreator attachableCreator) {
 
     public CompletableFuture<?> save(PackSerializer serializer, Path attachableDirectory, Path geometryDirectory, Path animationDirectory,
                                      Function<TextureHolder, CompletableFuture<?>> textureSaver) {
@@ -26,7 +26,7 @@ public record BedrockItem(ResourceLocation identifier, String textureName, Bedro
                 createdAttachable.map(attachable -> attachable.save(serializer, attachableDirectory)).orElse(noop()),
                 CompletableFuture.allOf(attachableTextures.stream().map(textureSaver).toArray(CompletableFuture[]::new)),
                 geometryContext.geometry().map(geometry -> geometry.save(serializer, geometryDirectory, textureSaver)).orElse(noop()),
-                geometryContext.animation().map(context -> context.animation().save(serializer, animationDirectory, Rainbow.safeResourceLocation(identifier))).orElse(noop())
+                geometryContext.animation().map(context -> context.animation().save(serializer, animationDirectory, Rainbow.bedrockSafeIdentifier(identifier))).orElse(noop())
         );
     }
 

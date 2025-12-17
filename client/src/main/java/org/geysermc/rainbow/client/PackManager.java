@@ -113,7 +113,7 @@ Textures tried to export: FIXME
             if (splash == null) {
                 return "Undefined Undefined :(";
             }
-            return ((SplashRendererAccessor) splash).getSplash();
+            return ((SplashRendererAccessor) splash).getSplash().getString();
         }
         return randomBuiltinSummaryComment();
     }

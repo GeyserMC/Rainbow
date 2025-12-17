@@ -5,7 +5,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -37,14 +37,14 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
 
     public CompletableFuture<?> save(PackSerializer serializer, Path attachablesDirectory) {
         // Get a safe attachable path by using Geyser's way of getting icons
-        return serializer.saveJson(CODEC, this, attachablesDirectory.resolve(Rainbow.safeResourceLocation(info.identifier) + ".json"));
+        return serializer.saveJson(CODEC, this, attachablesDirectory.resolve(Rainbow.bedrockSafeIdentifier(info.identifier) + ".json"));
     }
 
-    public static Builder builder(ResourceLocation identifier) {
+    public static Builder builder(Identifier identifier) {
         return new Builder(identifier);
     }
 
-    public static BedrockAttachable.Builder equipment(ResourceLocation identifier, EquipmentSlot slot, String texture) {
+    public static BedrockAttachable.Builder equipment(Identifier identifier, EquipmentSlot slot, String texture) {
         String script = switch (slot) {
             case HEAD -> "v.helmet_layer_visible = 0.0;";
             case CHEST -> "v.chest_layer_visible = 0.0;";
@@ -62,7 +62,7 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
                 .withRenderController(VanillaRenderControllers.ARMOR);
     }
 
-    public static BedrockAttachable.Builder geometry(ResourceLocation identifier, MappedGeometry geometry) {
+    public static BedrockAttachable.Builder geometry(Identifier identifier, MappedGeometry geometry) {
         return builder(identifier)
                 .withMaterial(DisplaySlot.DEFAULT, VanillaMaterials.ENTITY)
                 .withMaterial(DisplaySlot.ENCHANTED, VanillaMaterials.ENTITY_ALPHATEST_GLINT)
@@ -73,7 +73,7 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
     }
 
     public static class Builder {
-        private final ResourceLocation identifier;
+        private final Identifier identifier;
         private final EnumMap<DisplaySlot, String> materials = new EnumMap<>(DisplaySlot.class);
         private final EnumMap<DisplaySlot, String> textures = new EnumMap<>(DisplaySlot.class);
         private final EnumMap<DisplaySlot, String> geometries = new EnumMap<>(DisplaySlot.class);
@@ -81,7 +81,7 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
         private final Map<String, List<Script>> scripts = new HashMap<>();
         private final List<String> renderControllers = new ArrayList<>();
 
-        public Builder(ResourceLocation identifier) {
+        public Builder(Identifier identifier) {
             this.identifier = identifier;
         }
 
@@ -137,13 +137,13 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
         }
     }
 
-    public record AttachableInfo(ResourceLocation identifier, DisplayMap materials, DisplayMap textures,
+    public record AttachableInfo(Identifier identifier, DisplayMap materials, DisplayMap textures,
                                  DisplayMap geometry, Map<String, String> animations, Scripts scripts,
                                  List<String> renderControllers) {
         private static final Codec<Map<String, String>> STRING_MAP_CODEC = Codec.unboundedMap(Codec.STRING, Codec.STRING);
         public static final Codec<AttachableInfo> CODEC = RecordCodecBuilder.create(instance ->
                 instance.group(
-                        ResourceLocation.CODEC.fieldOf("identifier").forGetter(AttachableInfo::identifier),
+                        Identifier.CODEC.fieldOf("identifier").forGetter(AttachableInfo::identifier),
                         DisplayMap.CODEC.fieldOf("materials").forGetter(AttachableInfo::materials),
                         DisplayMap.CODEC.fieldOf("textures").forGetter(AttachableInfo::textures),
                         DisplayMap.CODEC.fieldOf("geometry").forGetter(AttachableInfo::geometry),
