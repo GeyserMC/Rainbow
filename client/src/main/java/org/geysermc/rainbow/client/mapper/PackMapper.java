@@ -5,6 +5,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import org.geysermc.rainbow.client.PackManager;
+import org.geysermc.rainbow.client.screen.ManagePackScreen;
 import org.geysermc.rainbow.pack.BedrockPack;
 
 import java.util.Objects;
@@ -17,11 +18,20 @@ public class PackMapper {
         this.packManager = packManager;
     }
 
+    public CustomItemProvider getItemProvider() {
+        if (this.itemProvider == null) return NoItemProvider.INSTANCE;
+        return this.itemProvider;
+    }
+
     public void setItemProvider(CustomItemProvider itemProvider) {
-        this.itemProvider = itemProvider;
+        if (itemProvider == NoItemProvider.INSTANCE) this.itemProvider = null;
+        else this.itemProvider = itemProvider;
     }
 
     public void tick(Minecraft minecraft) {
+        // Don't tick when this screen is open, the user might be toggling settings
+        if (minecraft.screen instanceof ManagePackScreen) return;
+
         if (itemProvider != null) {
             LocalPlayer player = Objects.requireNonNull(minecraft.player);
             ClientPacketListener connection = Objects.requireNonNull(minecraft.getConnection());
@@ -33,10 +43,10 @@ public class PackMapper {
                         .filter(result -> result != BedrockPack.MappingResult.NONE_MAPPED)
                         .count();
                 if (mapped != 0) {
-                    player.displayClientMessage(Component.translatable("chat.rainbow.mapped_items", mapped), false);
+                    player.displayClientMessage(Component.translatable("feedback.rainbow.mapped_items", mapped), false);
                 }
                 if (itemProvider.isDone()) {
-                    player.displayClientMessage(Component.translatable("chat.rainbow.automatic_mapping_finished"), false);
+                    player.displayClientMessage(Component.translatable("feedback.rainbow.automatic_mapping_finished"), false);
                     itemProvider = null;
                 }
             }, () -> itemProvider = null);

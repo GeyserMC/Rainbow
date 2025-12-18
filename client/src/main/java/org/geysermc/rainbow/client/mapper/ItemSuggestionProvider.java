@@ -2,6 +2,7 @@ package org.geysermc.rainbow.client.mapper;
 
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundChatCommandPacket;
 import net.minecraft.world.item.ItemStack;
 
@@ -49,5 +50,10 @@ public class ItemSuggestionProvider implements CustomItemProvider {
     @Override
     public boolean isDone() {
         return remainingCommands.isEmpty() && !waitingOnItem && !waitingOnClear;
+    }
+
+    @Override
+    public Component name() {
+        return Component.translatable("menu.rainbow.manage_pack.auto_mapping.commands");
     }
 }

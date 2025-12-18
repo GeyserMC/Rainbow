@@ -7,23 +7,23 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.stream.Stream;
 
-public class InventoryMapper implements CustomItemProvider {
-    public static final InventoryMapper INSTANCE = new InventoryMapper();
+public class NoItemProvider implements CustomItemProvider {
+    public static final NoItemProvider INSTANCE = new NoItemProvider();
 
-    private InventoryMapper() {}
+    private NoItemProvider() {}
 
     @Override
     public Stream<ItemStack> nextItems(LocalPlayer player, ClientPacketListener connection) {
-        return player.containerMenu.getItems().stream();
+        return Stream.empty();
     }
 
     @Override
     public boolean isDone() {
-        return false;
+        return true;
     }
 
     @Override
     public Component name() {
-        return Component.translatable("menu.rainbow.manage_pack.auto_mapping.inventory");
+        return Component.translatable("menu.rainbow.manage_pack.auto_mapping.none");
     }
 }

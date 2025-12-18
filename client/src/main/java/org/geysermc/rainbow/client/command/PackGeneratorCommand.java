@@ -8,22 +8,19 @@ import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.item.ItemStack;
 import org.geysermc.rainbow.client.PackManager;
+import org.geysermc.rainbow.client.PackManagerUtils;
 import org.geysermc.rainbow.client.mapper.InventoryMapper;
 import org.geysermc.rainbow.client.mapper.PackMapper;
 import org.geysermc.rainbow.pack.BedrockPack;
 
-import java.nio.file.Path;
-import java.util.Optional;
 import java.util.function.BiConsumer;
 
 public class PackGeneratorCommand {
 
-    private static final Component NO_PACK_CREATED = Component.translatable("commands.rainbow.no_pack", Component.literal("/rainbow create <name>")
+    private static final Component NO_PACK_CREATED = Component.translatable("feedback.rainbow.no_pack", Component.literal("/rainbow create <name>")
             .withStyle(style -> style.withColor(ChatFormatting.BLUE).withUnderlined(true)
-                    .withClickEvent(new ClickEvent.SuggestCommand("/rainbow create "))));
+                    .withClickEvent(new ClickEvent.SuggestCommand("/rainbow create ")))).withStyle(ChatFormatting.RED);
 
     public static void register(CommandDispatcher<FabricClientCommandSource> dispatcher, PackManager packManager, PackMapper packMapper) {
         dispatcher.register(ClientCommandManager.literal("rainbow")
@@ -31,51 +28,21 @@ public class PackGeneratorCommand {
                         .then(ClientCommandManager.argument("name", StringArgumentType.word())
                                 .executes(context -> {
                                     String name = StringArgumentType.getString(context, "name");
-                                    try {
-                                        packManager.startPack(name);
-                                    } catch (Exception exception) {
-                                        context.getSource().sendError(Component.translatable("commands.rainbow.create_pack_failed"));
-                                        throw new RuntimeException(exception);
-                                    }
-                                    context.getSource().sendFeedback(Component.translatable("commands.rainbow.pack_created", name));
+
+                                    PackManagerUtils.startPack(name, packManager, context.getSource().getClient());
+
                                     return 0;
                                 })
                         )
                 )
                 .then(ClientCommandManager.literal("map")
                         .executes(runWithPack(packManager, (source, pack) -> {
-                            ItemStack heldItem = source.getPlayer().getMainHandItem();
-                            switch (pack.map(heldItem)) {
-                                case NONE_MAPPED -> source.sendError(Component.translatable("commands.rainbow.no_item_mapped"));
-                                case PROBLEMS_OCCURRED -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item_problems"));
-                                case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item"));
-                            }
+                            PackManagerUtils.mapItemInHand(packManager, source.getClient());
                         }))
                 )
                 .then(ClientCommandManager.literal("mapinventory")
                         .executes(runWithPack(packManager, (source, pack) -> {
-                            int mapped = 0;
-                            boolean errors = false;
-                            Inventory inventory = source.getPlayer().getInventory();
-
-                            for (ItemStack stack : inventory) {
-                                BedrockPack.MappingResult result = pack.map(stack);
-                                if (result != BedrockPack.MappingResult.NONE_MAPPED) {
-                                    mapped++;
-                                    if (result == BedrockPack.MappingResult.PROBLEMS_OCCURRED) {
-                                        errors = true;
-                                    }
-                                }
-                            }
-
-                            if (mapped > 0) {
-                                source.sendFeedback(Component.translatable("commands.rainbow.mapped_items_from_inventory", mapped));
-                                if (errors) {
-                                    source.sendFeedback(Component.translatable("commands.rainbow.mapped_items_problems"));
-                                }
-                            } else {
-                                source.sendError(Component.translatable("commands.rainbow.no_items_mapped"));
-                            }
+                            PackManagerUtils.mapItemsInInventory(packManager, source.getClient());
                         }))
                 )
                 .then(ClientCommandManager.literal("auto")
@@ -100,24 +67,25 @@ public class PackGeneratorCommand {
                         .then(ClientCommandManager.literal("inventory")
                                 .executes(runWithPack(packManager, (source, pack) -> {
                                     packMapper.setItemProvider(InventoryMapper.INSTANCE);
-                                    source.sendFeedback(Component.translatable("commands.rainbow.automatic_inventory_mapping"));
+                                    source.sendFeedback(
+                                            Component.translatable("feedback.rainbow.automatic_mapping_inventory")
+                                                    .withStyle(ChatFormatting.GREEN)
+                                    );
                                 }))
                         )
                         .then(ClientCommandManager.literal("stop")
                                 .executes(runWithPack(packManager, (source, pack) -> {
                                     packMapper.setItemProvider(null);
-                                    source.sendFeedback(Component.translatable("commands.rainbow.stopped_automatic_mapping"));
+                                    source.sendFeedback(
+                                            Component.translatable("feedback.rainbow.automatic_mapping_none")
+                                                    .withStyle(ChatFormatting.GREEN)
+                                    );
                                 }))
                         )
                 )
                 .then(ClientCommandManager.literal("finish")
                         .executes(context -> {
-                            Optional<Path> exportPath = packManager.getExportPath();
-                            Runnable onFinish = () -> context.getSource().sendFeedback(Component.translatable("commands.rainbow.pack_finished_successfully").withStyle(style
-                                    -> style.withUnderlined(true).withClickEvent(new ClickEvent.OpenFile(exportPath.orElseThrow()))));
-                            if (!packManager.finish(onFinish)) {
-                                context.getSource().sendError(NO_PACK_CREATED);
-                            }
+                            PackManagerUtils.finishPack(packManager, context.getSource().getClient());
                             return 0;
                         })
                 )
