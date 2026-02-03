@@ -7,8 +7,8 @@ import net.minecraft.client.renderer.texture.SpriteLoader;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.Material;
 import net.minecraft.data.AtlasIds;
-import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
+import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mixin.SpriteContentsAccessor;
@@ -37,7 +37,7 @@ public record StitchedTextures(Map<String, TextureAtlasSprite> sprites, Supplier
 
     public static StitchedTextures stitchModelTextures(TextureSlots textures, PackContext context) {
         Map<String, Material> materials = ((TextureSlotsAccessor) textures).getResolvedValues();
-        SpriteLoader.Preparations preparations = prepareStitching(materials.values().stream().map(Material::texture), context);
+        SpriteLoader.Preparations preparations = prepareStitching(materials.values().stream(), context);
 
         Map<String, TextureAtlasSprite> sprites = new HashMap<>();
         for (Map.Entry<String, Material> material : materials.entrySet()) {
@@ -50,21 +50,21 @@ public record StitchedTextures(Map<String, TextureAtlasSprite> sprites, Supplier
         return new StitchedTextures(Map.copyOf(sprites), () -> stitchTextureAtlas(preparations), preparations.width(), preparations.height());
     }
 
-    private static SpriteLoader.Preparations prepareStitching(Stream<Identifier> textures, PackContext context) {
-        // Atlas ID doesn't matter much here, but BLOCKS is the most appropriate
-        SpriteLoader spriteLoader = new SpriteLoader(AtlasIds.BLOCKS, MAX_TEXTURE_SIZE);
-        List<SpriteContents> sprites = textures.distinct()
-                .map(texture -> readSpriteContents(texture, context))
+    private static SpriteLoader.Preparations prepareStitching(Stream<Material> materials, PackContext context) {
+        // Atlas ID doesn't matter much here, but ITEMS is the most appropriate (though not always right)
+        SpriteLoader spriteLoader = new SpriteLoader(AtlasIds.ITEMS, MAX_TEXTURE_SIZE);
+        List<SpriteContents> sprites = materials.distinct()
+                .map(material -> readSpriteContents(material, context))
                 .<SpriteContents>mapMulti(Optional::ifPresent)
                 .toList();
         return  ((SpriteLoaderAccessor) spriteLoader).invokeStitch(sprites, 0, Util.backgroundExecutor());
     }
 
-    private static Optional<SpriteContents> readSpriteContents(Identifier identifier, PackContext context) {
+    private static Optional<SpriteContents> readSpriteContents(Material material, PackContext context) {
         return RainbowIO.safeIO(() -> {
-            try (TextureResource texture = context.assetResolver().getTexture(AtlasIds.BLOCKS, identifier).orElse(null)) {
+            try (TextureResource texture = context.assetResolver().getTextureSafely(Rainbow.getAtlasIdFromMaterial(material), material.texture()).orElse(null)) {
                 if (texture != null) {
-                    return new SpriteContents(identifier, texture.sizeOfFrame(), texture.getFirstFrame(true));
+                    return new SpriteContents(material.texture(), texture.sizeOfFrame(), texture.getFirstFrame(true));
                 }
             }
             return null;
