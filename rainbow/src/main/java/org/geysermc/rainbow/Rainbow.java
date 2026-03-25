@@ -2,7 +2,7 @@ package org.geysermc.rainbow;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.renderer.texture.TextureAtlas;
-import net.minecraft.client.resources.model.Material;
+import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.data.AtlasIds;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;

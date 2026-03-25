@@ -1,8 +1,8 @@
 package org.geysermc.rainbow.mapping.geometry;
 
-import net.minecraft.client.resources.model.Material;
 import net.minecraft.client.resources.model.ResolvedModel;
-import net.minecraft.client.resources.model.UnbakedGeometry;
+import net.minecraft.client.resources.model.geometry.UnbakedGeometry;
+import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import org.geysermc.rainbow.Rainbow;

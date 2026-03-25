@@ -1,8 +1,8 @@
 package org.geysermc.rainbow.mapping.geometry;
 
-import net.minecraft.client.renderer.block.model.TextureSlots;
-import net.minecraft.client.resources.model.Material;
 import net.minecraft.client.resources.model.ResolvedModel;
+import net.minecraft.client.resources.model.sprite.Material;
+import net.minecraft.client.resources.model.sprite.TextureSlots;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import org.geysermc.rainbow.Rainbow;
@@ -36,7 +36,7 @@ public record BedrockGeometryContext(Optional<MappedGeometry> geometry,
         if (layer0Texture != null) {
             geometry = Optional.empty();
             animation = Optional.empty();
-            icon = TextureHolder.createBuiltIn(Rainbow.getAtlasIdFromMaterial(layer0Texture), layer0Texture.texture());
+            icon = TextureHolder.createBuiltIn(Rainbow.getAtlasIdFromMaterial(layer0Texture), layer0Texture.sprite());
         } else {
             // Unknown model (doesn't use layer0), so we immediately assume the geometry is custom
             // This check should probably be done differently (actually check if the model is 2D or 3D)

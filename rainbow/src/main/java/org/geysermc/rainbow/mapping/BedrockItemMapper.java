@@ -1,8 +1,9 @@
 package org.geysermc.rainbow.mapping;
 
-import net.minecraft.client.renderer.item.BlockModelWrapper;
+import com.mojang.math.Transformation;
 import net.minecraft.client.renderer.item.ClientItem;
 import net.minecraft.client.renderer.item.ConditionalItemModel;
+import net.minecraft.client.renderer.item.CuboidItemModelWrapper;
 import net.minecraft.client.renderer.item.ItemModel;
 import net.minecraft.client.renderer.item.ItemModels;
 import net.minecraft.client.renderer.item.RangeSelectItemModel;
@@ -80,7 +81,8 @@ public class BedrockItemMapper {
         Identifier itemModel = stack.get(DataComponents.ITEM_MODEL);
         ItemModel.Unbaked vanillaModel = context.assetResolver().getClientItem(itemModel).map(ClientItem::model).orElseThrow();
         ProblemReporter childReporter = reporter.forChild(() -> "item model " + itemModel + " with custom model data " + customModelData + " ");
-        if (vanillaModel instanceof RangeSelectItemModel.Unbaked(RangeSelectItemModelProperty property, float scale, List<RangeSelectItemModel.Entry> entries, Optional<ItemModel.Unbaked> fallback)) {
+        // TODO 26.1 transformation translation
+        if (vanillaModel instanceof RangeSelectItemModel.Unbaked(Optional<Transformation> transformation, RangeSelectItemModelProperty property, float scale, List<RangeSelectItemModel.Entry> entries, Optional<ItemModel.Unbaked> fallback)) {
             // WHY, Mojang?
             if (property instanceof net.minecraft.client.renderer.item.properties.numeric.CustomModelDataProperty(int index)) {
                 if (index == 0) {
@@ -109,7 +111,7 @@ public class BedrockItemMapper {
 
     private static void mapItem(ItemModel.Unbaked model, MappingContext context) {
         switch (model) {
-            case BlockModelWrapper.Unbaked modelWrapper -> mapBlockModelWrapper(modelWrapper, context.child("plain model " + modelWrapper.model()));
+            case CuboidItemModelWrapper.Unbaked modelWrapper -> mapBlockModelWrapper(modelWrapper, context.child("plain model " + modelWrapper.model()));
             case ConditionalItemModel.Unbaked conditional -> mapConditionalModel(conditional, context.child("condition model "));
             case RangeSelectItemModel.Unbaked rangeSelect -> mapRangeSelectModel(rangeSelect, context.child("range select model "));
             case SelectItemModel.Unbaked select -> mapSelectModel(select, context.child("select model "));
@@ -117,7 +119,7 @@ public class BedrockItemMapper {
         }
     }
 
-    private static void mapBlockModelWrapper(BlockModelWrapper.Unbaked model, MappingContext context) {
+    private static void mapBlockModelWrapper(CuboidItemModelWrapper.Unbaked model, MappingContext context) {
         Identifier itemModelIdentifier = model.model();
 
         context.packContext().assetResolver().getResolvedModel(itemModelIdentifier)

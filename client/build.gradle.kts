@@ -1,5 +1,3 @@
-import net.fabricmc.loom.task.RemapJarTask
-
 plugins {
     id("rainbow.base-conventions")
     id("rainbow.publish-conventions")
@@ -14,10 +12,10 @@ tasks {
     val copyJarTask = register<Copy>("copyRainbowClientJar") {
         group = "build"
 
-        val remapJarTask = getByName<RemapJarTask>("remapJar")
-        dependsOn(remapJarTask)
+        val jarTask = getByName<Jar>("jar")
+        dependsOn(jarTask)
 
-        from(remapJarTask.archiveFile)
+        from(jarTask.archiveFile)
         rename {
             "Rainbow.jar"
         }

@@ -1,11 +1,11 @@
 package org.geysermc.rainbow.mapping.geometry;
 
-import net.minecraft.client.renderer.block.model.BlockElement;
-import net.minecraft.client.renderer.block.model.BlockElementFace;
-import net.minecraft.client.renderer.block.model.BlockElementRotation;
-import net.minecraft.client.renderer.block.model.SimpleUnbakedGeometry;
 import net.minecraft.client.resources.model.ResolvedModel;
-import net.minecraft.client.resources.model.UnbakedGeometry;
+import net.minecraft.client.resources.model.cuboid.CuboidFace;
+import net.minecraft.client.resources.model.cuboid.CuboidModelElement;
+import net.minecraft.client.resources.model.cuboid.CuboidRotation;
+import net.minecraft.client.resources.model.cuboid.UnbakedCuboidGeometry;
+import net.minecraft.client.resources.model.geometry.UnbakedGeometry;
 import net.minecraft.core.Direction;
 import org.geysermc.rainbow.mapping.texture.StitchedTextures;
 import org.geysermc.rainbow.mixin.FaceBakeryAccessor;
@@ -39,9 +39,9 @@ public class GeometryMapper {
         Vector3f min = new Vector3f(Float.MAX_VALUE);
         Vector3f max = new Vector3f(Float.MIN_VALUE);
 
-        SimpleUnbakedGeometry geometry = (SimpleUnbakedGeometry) top;
-        for (BlockElement element : geometry.elements()) {
-            BedrockGeometry.Cube cube = mapBlockElement(element, textures).build();
+        UnbakedCuboidGeometry geometry = (UnbakedCuboidGeometry) top;
+        for (CuboidModelElement element : geometry.elements()) {
+            BedrockGeometry.Cube cube = mapCuboidModelElement(element, textures).build();
             bone.withCube(cube);
             min.min(cube.origin());
             max.max(cube.origin().add(cube.size(), new Vector3f()));
@@ -59,7 +59,7 @@ public class GeometryMapper {
     // After hours of painfully suffering and 40 test builds of Rainbow, I finally got the right formula together and somehow made this mess of a code
     // work properly, or at least, I think it is. I physically jumped in the air and cheered as I saw my models convert properly.
     // Now, make sure you are ready to witness my deformed creation
-    private static BedrockGeometry.Cube.Builder mapBlockElement(BlockElement element, StitchedTextures textures) {
+    private static BedrockGeometry.Cube.Builder mapCuboidModelElement(CuboidModelElement element, StitchedTextures textures) {
         // For some reason the X axis is inverted on bedrock (thanks Blockbench!!)
 
         // The centre of the model is back by 8 in the X and Z direction on bedrock, so start by move the from and to points of the cube, and later the pivot, like that
@@ -76,13 +76,13 @@ public class GeometryMapper {
 
         BedrockGeometry.Cube.Builder builder = BedrockGeometry.cube(origin, size);
 
-        for (Map.Entry<Direction, BlockElementFace> faceEntry : element.faces().entrySet()) {
+        for (Map.Entry<Direction, CuboidFace> faceEntry : element.faces().entrySet()) {
             Direction direction = faceEntry.getKey();
-            BlockElementFace face = faceEntry.getValue();
+            CuboidFace face = faceEntry.getValue();
 
             Vector2f uvOrigin;
             Vector2f uvSize;
-            BlockElementFace.UVs uvs = face.uvs();
+            CuboidFace.UVs uvs = face.uvs();
             if (uvs == null) {
                 // Java defaults to a set of UV values determined by the position of the face if no UV values were specified
                 uvs = FaceBakeryAccessor.invokeDefaultFaceUV(element.from(), element.to(), direction);
@@ -109,7 +109,7 @@ public class GeometryMapper {
             builder.withFace(direction, uvOrigin, uvSize, face.rotation());
         }
 
-        BlockElementRotation rotation = element.rotation();
+        CuboidRotation rotation = element.rotation();
         if (rotation != null) {
             // MC multiplies model origin by 0.0625 when loading rotation origin
 
@@ -122,11 +122,11 @@ public class GeometryMapper {
         return builder;
     }
 
-    private static Vector3fc getBedrockRotation(BlockElementRotation.RotationValue rotation) {
+    private static Vector3fc getBedrockRotation(CuboidRotation.RotationValue rotation) {
         // Same as in the method above, but for some reason the Z axis too: X and Z axes have to be inverted (thanks again, so much, Blockbench!!!)
         return switch (rotation) {
-            case BlockElementRotation.EulerXYZRotation(float x, float y, float z) -> new Vector3f(-x, y, -z); // TODO check if these angle transformations are right, they should be
-            case BlockElementRotation.SingleAxisRotation(Direction.Axis axis, float angle) -> switch (axis) {
+            case CuboidRotation.EulerXYZRotation(float x, float y, float z) -> new Vector3f(-x, y, -z); // TODO check if these angle transformations are right, they should be
+            case CuboidRotation.SingleAxisRotation(Direction.Axis axis, float angle) -> switch (axis) {
                 case X -> new Vector3f(-angle, 0.0F, 0.0F);
                 case Y -> new Vector3f(0.0F, angle, 0.0F);
                 case Z -> new Vector3f(0.0F, 0.0F, -angle);
