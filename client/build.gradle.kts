@@ -6,8 +6,7 @@ plugins {
 }
 
 dependencies {
-    // Implement namedElements so IDEs can use it correctly, but include the remapped build
-    implementation(project(path = ":rainbow", configuration = "namedElements"))
+    implementation(project(":rainbow"))
     include(project(":rainbow"))
 }
 

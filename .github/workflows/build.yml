@@ -26,7 +26,7 @@ jobs:
       - name: Setup Gradle
         uses: GeyserMC/actions/setup-gradle-composite@master
         with:
-          setup-java_java-version: 21
+          setup-java_java-version: 25
 
       - name: Build Rainbow
         run: ./gradlew build

@@ -4,7 +4,7 @@ plugins {
 }
 
 dependencies {
-    implementation(project(path = ":rainbow", configuration = "namedElements"))
+    implementation(project(":rainbow"))
 }
 
 loom {

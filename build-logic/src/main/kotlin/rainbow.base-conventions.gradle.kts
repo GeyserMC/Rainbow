@@ -1,12 +1,12 @@
 plugins {
-    id("fabric-loom")
+    id("net.fabricmc.fabric-loom")
 }
 
 version = properties["mod_version"]!! as String
 group = properties["maven_group"]!! as String
 
 val archivesBaseName = properties["archives_base_name"]!! as String
-val targetJavaVersion = 21
+val targetJavaVersion = 25
 
 val buildNumber = System.getenv()["BUILD_NUMBER"]?: "DEV"
 val fmjVersion = "$version-$buildNumber"
@@ -16,11 +16,6 @@ base {
 }
 
 repositories {
-    maven {
-        name = "ParchmentMC"
-        url = uri("https://maven.parchmentmc.org")
-    }
-
     maven {
         name = "Jitpack"
         url = uri("https://jitpack.io")
@@ -34,13 +29,9 @@ repositories {
 
 dependencies {
     minecraft(libs.minecraft)
-    mappings(loom.layered {
-        officialMojangMappings()
-        parchment(libs.parchment)
-    })
 
-    modImplementation(libs.fabric.loader)
-    modImplementation(libs.fabric.api)
+    implementation(libs.fabric.loader)
+    implementation(libs.fabric.api)
 }
 
 tasks {
