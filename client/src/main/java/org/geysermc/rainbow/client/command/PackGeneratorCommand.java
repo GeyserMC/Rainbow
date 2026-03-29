@@ -3,7 +3,7 @@ package org.geysermc.rainbow.client.command;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
@@ -26,9 +26,9 @@ public class PackGeneratorCommand {
                     .withClickEvent(new ClickEvent.SuggestCommand("/rainbow create "))));
 
     public static void register(CommandDispatcher<FabricClientCommandSource> dispatcher, PackManager packManager, PackMapper packMapper) {
-        dispatcher.register(ClientCommandManager.literal("rainbow")
-                .then(ClientCommandManager.literal("create")
-                        .then(ClientCommandManager.argument("name", StringArgumentType.word())
+        dispatcher.register(ClientCommands.literal("rainbow")
+                .then(ClientCommands.literal("create")
+                        .then(ClientCommands.argument("name", StringArgumentType.word())
                                 .executes(context -> {
                                     String name = StringArgumentType.getString(context, "name");
                                     try {
@@ -42,7 +42,7 @@ public class PackGeneratorCommand {
                                 })
                         )
                 )
-                .then(ClientCommandManager.literal("map")
+                .then(ClientCommands.literal("map")
                         .executes(runWithPack(packManager, (source, pack) -> {
                             ItemStack heldItem = source.getPlayer().getMainHandItem();
                             switch (pack.map(heldItem)) {
@@ -52,7 +52,7 @@ public class PackGeneratorCommand {
                             }
                         }))
                 )
-                .then(ClientCommandManager.literal("mapinventory")
+                .then(ClientCommands.literal("mapinventory")
                         .executes(runWithPack(packManager, (source, pack) -> {
                             int mapped = 0;
                             boolean errors = false;
@@ -78,7 +78,7 @@ public class PackGeneratorCommand {
                             }
                         }))
                 )
-                .then(ClientCommandManager.literal("auto")
+                .then(ClientCommands.literal("auto")
                         /* This is disabled for now.
                         .then(ClientCommandManager.literal("command")
                                 .then(ClientCommandManager.argument("suggestions", CommandSuggestionsArgumentType.TYPE)
@@ -97,20 +97,20 @@ public class PackGeneratorCommand {
                                 )
                         )
                          */
-                        .then(ClientCommandManager.literal("inventory")
+                        .then(ClientCommands.literal("inventory")
                                 .executes(runWithPack(packManager, (source, pack) -> {
                                     packMapper.setItemProvider(InventoryMapper.INSTANCE);
                                     source.sendFeedback(Component.translatable("commands.rainbow.automatic_inventory_mapping"));
                                 }))
                         )
-                        .then(ClientCommandManager.literal("stop")
+                        .then(ClientCommands.literal("stop")
                                 .executes(runWithPack(packManager, (source, pack) -> {
                                     packMapper.setItemProvider(null);
                                     source.sendFeedback(Component.translatable("commands.rainbow.stopped_automatic_mapping"));
                                 }))
                         )
                 )
-                .then(ClientCommandManager.literal("finish")
+                .then(ClientCommands.literal("finish")
                         .executes(context -> {
                             Optional<Path> exportPath = packManager.getExportPath();
                             Runnable onFinish = () -> context.getSource().sendFeedback(Component.translatable("commands.rainbow.pack_finished_successfully").withStyle(style

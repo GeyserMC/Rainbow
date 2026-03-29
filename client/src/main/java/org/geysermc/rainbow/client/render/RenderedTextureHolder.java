@@ -8,10 +8,10 @@ import com.mojang.blaze3d.textures.GpuTexture;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.pip.OversizedItemRenderer;
-import net.minecraft.client.gui.render.state.GuiItemRenderState;
-import net.minecraft.client.gui.render.state.GuiRenderState;
-import net.minecraft.client.gui.render.state.pip.OversizedItemRenderState;
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
+import net.minecraft.client.renderer.state.gui.GuiItemRenderState;
+import net.minecraft.client.renderer.state.gui.GuiRenderState;
+import net.minecraft.client.renderer.state.gui.pip.OversizedItemRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -22,7 +22,7 @@ import org.geysermc.rainbow.image.NativeImageUtil;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.texture.TextureHolder;
-import org.joml.Matrix3x2fStack;
+import org.joml.Matrix3x2f;
 
 import java.nio.file.Path;
 import java.util.Objects;
@@ -51,7 +51,7 @@ public class RenderedTextureHolder extends TextureHolder {
         Minecraft.getInstance().getItemModelResolver().updateForTopItem(itemRenderState, stackToRender, ItemDisplayContext.GUI, null, null, 0);
         itemRenderState.setOversizedInGui(true);
 
-        GuiItemRenderState guiItemRenderState = new GuiItemRenderState("geometry_render", new Matrix3x2fStack(16), itemRenderState, 0, 0, null);
+        GuiItemRenderState guiItemRenderState = new GuiItemRenderState(new Matrix3x2f(), itemRenderState, 0, 0, null);
         ScreenRectangle sizeBounds = guiItemRenderState.oversizedItemBounds();
         Objects.requireNonNull(sizeBounds);
         OversizedItemRenderState oversizedRenderState = new OversizedItemRenderState(guiItemRenderState, sizeBounds.left(), sizeBounds.top(), sizeBounds.right() + 4, sizeBounds.bottom() + 4);
