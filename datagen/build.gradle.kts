@@ -9,4 +9,5 @@ dependencies {
 
 loom {
     accessWidenerPath = file("src/main/resources/rainbow-datagen.accesswidener")
+    runs.clear()
 }
