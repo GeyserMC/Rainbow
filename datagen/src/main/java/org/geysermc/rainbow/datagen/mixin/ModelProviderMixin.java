@@ -17,7 +17,8 @@ public abstract class ModelProviderMixin implements DataProvider {
 
     @Inject(method = "run", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/data/models/BlockModelGenerators;run()V"))
     public void setItemInfosInRainbowModelProvider(CachedOutput output, CallbackInfoReturnable<CompletableFuture<?>> callbackInfoReturnable,
-                                                   @Local ModelProvider.ItemInfoCollector itemInfoCollector, @Local ModelProvider.SimpleModelCollector simpleModelCollector) {
+                                                   @Local(name = "itemModels") ModelProvider.ItemInfoCollector itemInfoCollector,
+                                                   @Local(name = "simpleModels") ModelProvider.SimpleModelCollector simpleModelCollector) {
         if ((Object) this instanceof RainbowModelProvider rainbowModelProvider) {
             rainbowModelProvider.setItemInfos(((ItemInfoCollectorAccessor) itemInfoCollector).getItemInfos());
             rainbowModelProvider.setModels(((SimpleModelCollectorAccessor) simpleModelCollector).getModels());

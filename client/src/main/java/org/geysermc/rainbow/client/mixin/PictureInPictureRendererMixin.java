@@ -1,5 +1,6 @@
 package org.geysermc.rainbow.client.mixin;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.blaze3d.textures.GpuTexture;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
 import org.geysermc.rainbow.client.render.PictureInPictureCopyRenderer;
@@ -7,8 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
-import org.spongepowered.asm.mixin.injection.Constant;
-import org.spongepowered.asm.mixin.injection.ModifyConstant;
+import org.spongepowered.asm.mixin.injection.At;
 
 @Mixin(PictureInPictureRenderer.class)
 public abstract class PictureInPictureRendererMixin implements AutoCloseable, PictureInPictureCopyRenderer {
@@ -27,7 +27,7 @@ public abstract class PictureInPictureRendererMixin implements AutoCloseable, Pi
         allowTextureCopy = true;
     }
 
-    @ModifyConstant(method = "prepareTexturesAndProjection", constant = @Constant(intValue = 13))
+    @ModifyExpressionValue(method = "prepareTexturesAndProjection", at = @At(value = "CONSTANT", args = "intValue=13"))
     public int allowUsageCopySrc(int usage) {
         return allowTextureCopy ? usage | GpuTexture.USAGE_COPY_SRC : usage;
     }
