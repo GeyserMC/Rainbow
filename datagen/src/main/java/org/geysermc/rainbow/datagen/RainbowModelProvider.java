@@ -32,8 +32,7 @@ import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.texture.TextureResource;
 import org.geysermc.rainbow.pack.BedrockPack;
 import org.jetbrains.annotations.ApiStatus;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +44,7 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -59,8 +59,8 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
     private final Path geyserMappingsPath;
     private final Path packPath;
 
-    private Map<Item, ClientItem> itemInfos;
-    private Map<Identifier, ModelInstance> models;
+    private @Nullable Map<Item, ClientItem> itemInfos;
+    private @Nullable Map<Identifier, ModelInstance> models;
 
     protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries,
                                    Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos, String packName,
@@ -96,14 +96,15 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
     }
 
     @Override
-    public @NotNull CompletableFuture<?> run(CachedOutput output) {
+    public CompletableFuture<?> run(CachedOutput output) {
         CompletableFuture<?> vanillaModels = super.run(output);
 
         CompletableFuture<BedrockPack> bedrockPack = ClientPackLoader.openClientResources()
                 .thenCompose(resourceManager -> registries.thenApply(registries -> {
                     try (resourceManager) {
                         BedrockPack pack = createBedrockPack(new Serializer(output, registries),
-                                new DatagenResolver(resourceManager, equipmentInfos, itemInfos, models)).build();
+                                new DatagenResolver(resourceManager, equipmentInfos,
+                                        Objects.requireNonNull(itemInfos), Objects.requireNonNull(models))).build();
 
                         Set<Item> sortedItemInfos = new TreeSet<>(Comparator.comparing(item -> item.builtInRegistryHolder().key().identifier()));
                         sortedItemInfos.addAll(itemInfos.keySet());
@@ -194,7 +195,7 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
                     }))
                     .map(model -> new ResolvedModel() {
                         @Override
-                        public @NotNull UnbakedModel wrapped() {
+                        public UnbakedModel wrapped() {
                             return model;
                         }
 
@@ -204,7 +205,7 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
                         }
 
                         @Override
-                        public @NotNull String debugName() {
+                        public String debugName() {
                             return identifier.toString();
                         }
                     }));
@@ -221,7 +222,7 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
         }
 
         @Override
-        public Optional<TextureResource> getTexture(Identifier atlas, Identifier identifier) {
+        public Optional<TextureResource> getTexture(@Nullable Identifier atlas, Identifier identifier) {
             // We don't care about atlas since there are none loaded at datagen
             return resourceManager.getResource(Rainbow.decorateTextureIdentifier(identifier))
                     .flatMap(resource -> RainbowIO.safeIO(() -> {

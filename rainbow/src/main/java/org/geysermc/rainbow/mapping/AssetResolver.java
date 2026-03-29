@@ -8,6 +8,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.equipment.EquipmentAsset;
 import org.geysermc.rainbow.mapping.texture.TextureResource;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
 
@@ -19,7 +20,7 @@ public interface AssetResolver {
 
     Optional<EquipmentClientInfo> getEquipmentInfo(ResourceKey<EquipmentAsset> key);
 
-    Optional<TextureResource> getTexture(Identifier atlas, Identifier identifier);
+    Optional<TextureResource> getTexture(@Nullable Identifier atlas, Identifier identifier);
 
     default Optional<TextureResource> getBlockOrItemTextureSafely(Identifier identifier) {
         // Vanilla behaviour: when baking a Material, check item atlas first, then block atlas

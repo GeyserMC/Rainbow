@@ -10,6 +10,7 @@ import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import org.geysermc.rainbow.client.accessor.ResolvedModelAccessor;
+import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -23,9 +24,9 @@ import java.util.Optional;
 @Mixin(ModelManager.class)
 public abstract class ModelManagerMixin implements PreparableReloadListener, AutoCloseable, ResolvedModelAccessor {
     @Unique
-    private Map<Identifier, ResolvedModel> unbakedResolvedModels;
+    private @Nullable Map<Identifier, ResolvedModel> unbakedResolvedModels;
     @Unique
-    private Map<Identifier, ClientItem> clientItems;
+    private @Nullable Map<Identifier, ClientItem> clientItems;
 
     @Inject(method = "discoverModelDependencies", at = @At("TAIL"))
     private static void setResolvedAndItemFields(Map<Identifier, UnbakedModel> allModels, BlockStateModelLoader.LoadedModels blockStateModels, ClientItemInfoLoader.LoadedClientInfos itemInfos,

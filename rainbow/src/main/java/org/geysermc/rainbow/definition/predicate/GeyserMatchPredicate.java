@@ -10,7 +10,6 @@ import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.equipment.trim.TrimMaterial;
 import net.minecraft.world.level.Level;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Function;
 
@@ -50,7 +49,7 @@ public record GeyserMatchPredicate(MatchPredicateData data) implements GeyserPre
             }
 
             @Override
-            public @NotNull String getSerializedName() {
+            public String getSerializedName() {
                 return name;
             }
         }

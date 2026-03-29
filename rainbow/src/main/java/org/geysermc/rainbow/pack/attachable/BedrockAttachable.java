@@ -15,7 +15,6 @@ import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.geometry.MappedGeometry;
 import org.geysermc.rainbow.pack.BedrockTextures;
 import org.geysermc.rainbow.pack.BedrockVersion;
-import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -23,6 +22,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
@@ -57,7 +57,7 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
                 .withMaterial(DisplaySlot.ENCHANTED, VanillaMaterials.ARMOR_ENCHANTED)
                 .withTexture(DisplaySlot.DEFAULT, texture)
                 .withTexture(DisplaySlot.ENCHANTED, VanillaTextures.ENCHANTED_ACTOR_GLINT)
-                .withGeometry(DisplaySlot.DEFAULT, VanillaGeometries.fromEquipmentSlot(slot))
+                .withGeometry(DisplaySlot.DEFAULT, Objects.requireNonNull(VanillaGeometries.fromEquipmentSlot(slot)))
                 .withScript("parent_setup", script)
                 .withRenderController(VanillaRenderControllers.ARMOR);
     }
@@ -172,7 +172,7 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
         }
 
         @Override
-        public @NotNull String getSerializedName() {
+        public String getSerializedName() {
             return name;
         }
     }
@@ -194,7 +194,7 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
                 script -> script.condition.map(condition -> DataResult.success(Map.of(script.script, condition)))
                         .orElse(DataResult.error(() -> "Script must have a condition"))
         );
-        public static final Codec<Script> CODEC = SCRIPT_WITH_CONDITION_CODEC.mapResult(new Codec.ResultFunction<Script>() {
+        public static final Codec<Script> CODEC = SCRIPT_WITH_CONDITION_CODEC.mapResult(new Codec.ResultFunction<>() {
             @Override
             public <T> DataResult<Pair<Script, T>> apply(DynamicOps<T> ops, T input, DataResult<Pair<Script, T>> decoded) {
                 if (decoded.isError()) {

@@ -53,7 +53,6 @@ import org.geysermc.rainbow.definition.predicate.GeyserRangeDispatchPredicate;
 import org.geysermc.rainbow.mixin.LateBoundIdMapperAccessor;
 import org.geysermc.rainbow.mixin.RangeSelectItemModelAccessor;
 import org.geysermc.rainbow.pack.BedrockItem;
-import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 import java.util.Optional;
@@ -65,7 +64,7 @@ public class BedrockItemMapper {
             .map(Identifier::withDefaultNamespace)
             .toList();
 
-    private static <T> Identifier getId(ExtraCodecs.LateBoundIdMapper<@NonNull Identifier, @NonNull T> mapper,
+    private static <T> Identifier getId(ExtraCodecs.LateBoundIdMapper<Identifier, T> mapper,
                                         T type) {
         //noinspection unchecked
         return ((LateBoundIdMapperAccessor<Identifier, ?>) mapper).getIdToValue().inverse().get(type);
@@ -79,6 +78,7 @@ public class BedrockItemMapper {
 
     public static void tryMapStack(ItemStack stack, int customModelData, ProblemReporter reporter, PackContext context) {
         Identifier itemModel = stack.get(DataComponents.ITEM_MODEL);
+        assert itemModel != null;
         ItemModel.Unbaked vanillaModel = context.assetResolver().getClientItem(itemModel).map(ClientItem::model).orElseThrow();
         ProblemReporter childReporter = reporter.forChild(() -> "item model " + itemModel + " with custom model data " + customModelData + " ");
         // TODO 26.1 transformation translation

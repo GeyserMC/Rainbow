@@ -1,6 +1,7 @@
 package org.geysermc.rainbow;
 
 import com.mojang.logging.LogUtils;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -42,7 +43,7 @@ public final class RainbowIO {
     @FunctionalInterface
     public interface IOSupplier<T> {
 
-        T get() throws IOException;
+        @Nullable T get() throws IOException;
     }
 
     @FunctionalInterface

@@ -6,18 +6,19 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import org.geysermc.rainbow.client.PackManager;
 import org.geysermc.rainbow.pack.BedrockPack;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 
 public class PackMapper {
     private final PackManager packManager;
-    private CustomItemProvider itemProvider;
+    private @Nullable CustomItemProvider itemProvider;
 
     public PackMapper(PackManager packManager) {
         this.packManager = packManager;
     }
 
-    public void setItemProvider(CustomItemProvider itemProvider) {
+    public void setItemProvider(@Nullable CustomItemProvider itemProvider) {
         this.itemProvider = itemProvider;
     }
 

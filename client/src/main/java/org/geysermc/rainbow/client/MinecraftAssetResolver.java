@@ -21,6 +21,7 @@ import org.geysermc.rainbow.client.mixin.EntityRenderDispatcherAccessor;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.texture.TextureResource;
 import org.geysermc.rainbow.mixin.SpriteContentsAccessor;
+import org.jspecify.annotations.Nullable;
 
 import java.io.InputStream;
 import java.util.Optional;
@@ -54,7 +55,7 @@ public class MinecraftAssetResolver implements AssetResolver {
     }
 
     @Override
-    public Optional<TextureResource> getTexture(Identifier atlasId, Identifier identifier) {
+    public Optional<TextureResource> getTexture(@Nullable Identifier atlasId, Identifier identifier) {
         if (atlasId == null) {
             // Not in an atlas - so not animated, probably?
             return RainbowIO.safeIO(() -> {
