@@ -240,14 +240,14 @@ public class BedrockItemMapper {
                     new GeyserBaseDefinition.BedrockOptions(Optional.empty(), true, geometry.handheld(), calculateProtectionValue(stack), tags),
                     stack.getComponentsPatch());
             try {
-                packContext.mappings().map(stack.getItemHolder(), definitionCreator.apply(base));
+                packContext.mappings().map(stack.getItem().builtInRegistryHolder(), definitionCreator.apply(base));
             } catch (Exception exception) {
                 reporter.forChild(() -> "mapping with bedrock identifier " + bedrockIdentifier + " ").report(() -> "failed to pass mapping: " + exception.getMessage());
                 return;
             }
 
             packContext.itemConsumer().accept(new BedrockItem(bedrockIdentifier, base.textureName(), geometry,
-                    AttachableMapper.mapItem(packContext.assetResolver(), geometry, stack.getComponentsPatch())));
+                    AttachableMapper.mapItem(packContext.assetResolver(), geometry, stack.getComponents())));
         }
 
         public void report(String problem) {

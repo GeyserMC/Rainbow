@@ -3,6 +3,7 @@ package org.geysermc.rainbow.mapping.attachable;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.client.resources.model.EquipmentAssetManager;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
@@ -19,13 +20,12 @@ import java.util.function.Consumer;
 
 public class AttachableMapper {
 
-    public static AttachableCreator mapItem(AssetResolver assetResolver, BedrockGeometryContext geometryContext, DataComponentPatch components) {
+    public static AttachableCreator mapItem(AssetResolver assetResolver, BedrockGeometryContext geometryContext, DataComponentMap components) {
         // Crazy optional statement
         // Unfortunately we can't have both equippables and custom models, so we prefer the latter :(
         return (bedrockIdentifier, textureConsumer) -> geometryContext.geometry()
                 .map(geometry -> BedrockAttachable.geometry(bedrockIdentifier, geometry))
                 .or(() -> Optional.ofNullable(components.get(DataComponents.EQUIPPABLE))
-                        .flatMap(optional -> (Optional<Equippable>) optional)
                         .flatMap(equippable -> equippable.assetId().flatMap(assetResolver::getEquipmentInfo).map(info -> Pair.of(equippable.slot(), info)))
                         .filter(assetInfo -> assetInfo.getSecond() != EquipmentAssetManager.MISSING)
                         .map(assetInfo -> assetInfo

@@ -88,9 +88,7 @@ public class BedrockPack {
             }
         };
 
-        Optional<? extends Identifier> patchedModel = stack.getComponentsPatch().get(DataComponents.ITEM_MODEL);
-        //noinspection OptionalAssignedToNull - annoying Mojang
-        if (patchedModel == null || patchedModel.isEmpty()) {
+        if (!stack.hasNonDefault(DataComponents.ITEM_MODEL)) {
             CustomModelData customModelData = stack.get(DataComponents.CUSTOM_MODEL_DATA);
             Float firstNumber;
             if (customModelData == null || (firstNumber = customModelData.getFloat(0)) == null
@@ -100,7 +98,7 @@ public class BedrockPack {
 
             BedrockItemMapper.tryMapStack(stack, firstNumber.intValue(), mapReporter, context);
         } else {
-            Identifier model = patchedModel.get();
+            Identifier model = stack.get(DataComponents.ITEM_MODEL);
             if (!modelsMapped.add(model)) {
                 return MappingResult.NONE_MAPPED;
             }
