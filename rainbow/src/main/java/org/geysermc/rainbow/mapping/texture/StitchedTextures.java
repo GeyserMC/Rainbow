@@ -8,7 +8,6 @@ import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.client.resources.model.sprite.TextureSlots;
 import net.minecraft.data.AtlasIds;
 import net.minecraft.util.Util;
-import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mixin.SpriteContentsAccessor;
@@ -62,7 +61,7 @@ public record StitchedTextures(Map<String, TextureAtlasSprite> sprites, Supplier
 
     private static Optional<SpriteContents> readSpriteContents(Material material, PackContext context) {
         return RainbowIO.safeIO(() -> {
-            try (TextureResource texture = context.assetResolver().getTextureSafely(Rainbow.getAtlasIdFromMaterial(material), material.sprite()).orElse(null)) {
+            try (TextureResource texture = context.assetResolver().getBlockOrItemTextureSafely(material.sprite()).orElse(null)) {
                 if (texture != null) {
                     return new SpriteContents(material.sprite(), texture.sizeOfFrame(), texture.getFirstFrame(true));
                 }

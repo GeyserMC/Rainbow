@@ -36,7 +36,7 @@ public record BedrockGeometryContext(Optional<MappedGeometry> geometry,
         if (layer0Texture != null) {
             geometry = Optional.empty();
             animation = Optional.empty();
-            icon = TextureHolder.createBuiltIn(Rainbow.getAtlasIdFromMaterial(layer0Texture), layer0Texture.sprite());
+            icon = TextureHolder.createBuiltIn(layer0Texture.sprite());
         } else {
             // Unknown model (doesn't use layer0), so we immediately assume the geometry is custom
             // This check should probably be done differently (actually check if the model is 2D or 3D)

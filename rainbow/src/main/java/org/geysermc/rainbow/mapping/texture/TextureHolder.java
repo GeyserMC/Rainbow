@@ -30,12 +30,12 @@ public abstract class TextureHolder {
         return new CustomTextureHolder(identifier, supplier);
     }
 
-    public static TextureHolder createBuiltIn(Identifier identifier, Identifier atlas, Identifier source) {
-        return new BuiltInTextureHolder(identifier, atlas, source);
+    public static TextureHolder createBuiltIn(Identifier identifier, Identifier source) {
+        return new BuiltInTextureHolder(identifier, source);
     }
 
-    public static TextureHolder createBuiltIn(Identifier atlas, Identifier identifier) {
-        return createBuiltIn(identifier, atlas, identifier);
+    public static TextureHolder createBuiltIn(Identifier identifier) {
+        return createBuiltIn(identifier, identifier);
     }
 
     public static TextureHolder createNonExistent(Identifier identifier) {
