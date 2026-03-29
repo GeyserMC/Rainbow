@@ -27,7 +27,7 @@ public abstract class PictureInPictureRendererMixin implements AutoCloseable, Pi
         allowTextureCopy = true;
     }
 
-    @ModifyConstant(method = "prepareTexturesAndProjection", constant = @Constant(intValue = 12))
+    @ModifyConstant(method = "prepareTexturesAndProjection", constant = @Constant(intValue = 13))
     public int allowUsageCopySrc(int usage) {
         return allowTextureCopy ? usage | GpuTexture.USAGE_COPY_SRC : usage;
     }
