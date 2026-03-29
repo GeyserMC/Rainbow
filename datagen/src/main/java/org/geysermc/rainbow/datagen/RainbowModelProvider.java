@@ -4,15 +4,15 @@ import com.google.common.hash.Hashing;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.serialization.Codec;
 import net.fabricmc.fabric.api.client.datagen.v1.provider.FabricModelProvider;
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
 import net.minecraft.client.data.models.model.ModelInstance;
-import net.minecraft.client.renderer.block.model.BlockModel;
-import net.minecraft.client.renderer.block.model.ItemModelGenerator;
 import net.minecraft.client.renderer.item.ClientItem;
 import net.minecraft.client.resources.metadata.animation.AnimationMetadataSection;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.client.resources.model.ResolvedModel;
 import net.minecraft.client.resources.model.UnbakedModel;
+import net.minecraft.client.resources.model.cuboid.CuboidModel;
+import net.minecraft.client.resources.model.cuboid.ItemModelGenerator;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.data.CachedOutput;
@@ -62,7 +62,7 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
     private Map<Item, ClientItem> itemInfos;
     private Map<Identifier, ModelInstance> models;
 
-    protected RainbowModelProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries,
+    protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries,
                                    Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos, String packName,
                                    Identifier outputRoot, Path geyserMappingsPath, Path packPath) {
         super(output);
@@ -76,22 +76,22 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
         this.packPath = computedOutputRoot.resolve(packPath);
     }
 
-    protected RainbowModelProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries,
+    protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries,
                                    Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos, String packName,
                                    Identifier outputRoot) {
         this(output, registries, equipmentInfos, packName, outputRoot, Path.of("geyser_mappings.json"), Path.of("pack"));
     }
 
-    protected RainbowModelProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries,
+    protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries,
                                 Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos, String packName) {
         this(output, registries, equipmentInfos, packName, Identifier.withDefaultNamespace("bedrock"));
     }
 
-    protected RainbowModelProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries, String packName) {
+    protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries, String packName) {
         this(output, registries, Map.of(), packName);
     }
 
-    protected RainbowModelProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries) {
+    protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
         this(output, registries, Rainbow.MOD_ID + "-generated");
     }
 
@@ -179,8 +179,8 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
 
         @Override
         public Optional<ResolvedModel> getResolvedModel(Identifier identifier) {
-            return resolvedModelCache.computeIfAbsent(identifier, key -> Optional.ofNullable(models.get(identifier))
-                    .<UnbakedModel>map(instance -> BlockModel.fromStream(new StringReader(instance.get().toString())))
+            return resolvedModelCache.computeIfAbsent(identifier, _ -> Optional.ofNullable(models.get(identifier))
+                    .<UnbakedModel>map(instance -> CuboidModel.fromStream(new StringReader(instance.get().toString())))
                     .or(() -> {
                         if (identifier.equals(ItemModelGenerator.GENERATED_ITEM_MODEL_ID)) {
                             return Optional.of(new ItemModelGenerator());
@@ -189,7 +189,7 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
                     })
                     .or(() -> RainbowIO.safeIO(() -> {
                         try (BufferedReader reader = resourceManager.openAsReader(identifier.withPrefix("models/").withSuffix(".json"))) {
-                            return BlockModel.fromStream(reader);
+                            return CuboidModel.fromStream(reader);
                         }
                     }))
                     .map(model -> new ResolvedModel() {
