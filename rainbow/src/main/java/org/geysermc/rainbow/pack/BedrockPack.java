@@ -7,7 +7,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.CustomModelData;
 import org.geysermc.rainbow.CodecUtil;
 import org.geysermc.rainbow.PackConstants;
@@ -43,7 +43,7 @@ public class BedrockPack {
     private final BedrockTextures.Builder itemTextures = BedrockTextures.builder();
     private final Set<BedrockItem> bedrockItems = new HashSet<>();
     private final Set<Identifier> modelsMapped = new HashSet<>();
-    private final Set<Pair<Item, Integer>> customModelDataMapped = new HashSet<>();
+    private final Set<Pair<Holder<Item>, Integer>> customModelDataMapped = new HashSet<>();
 
     private final PackContext context;
     private final ProblemReporter reporter;
@@ -68,11 +68,7 @@ public class BedrockPack {
         return name;
     }
 
-    public MappingResult map(ItemStack stack) {
-        if (stack.isEmpty()) {
-            return MappingResult.NONE_MAPPED;
-        }
-
+    public MappingResult map(ItemStackTemplate stack) {
         AtomicBoolean problems = new AtomicBoolean();
         ProblemReporter mapReporter = new ProblemReporter() {
 
@@ -88,17 +84,17 @@ public class BedrockPack {
             }
         };
 
-        if (!stack.hasNonDefault(DataComponents.ITEM_MODEL)) {
-            CustomModelData customModelData = stack.get(DataComponents.CUSTOM_MODEL_DATA);
+        if (!stack.components().split().added().has(DataComponents.ITEM_MODEL)) {
+            CustomModelData customModelData = stack.components().split().added().get(DataComponents.CUSTOM_MODEL_DATA);
             Float firstNumber;
             if (customModelData == null || (firstNumber = customModelData.getFloat(0)) == null
-                    || !customModelDataMapped.add(Pair.of(stack.getItem(), firstNumber.intValue()))) {
+                    || !customModelDataMapped.add(Pair.of(stack.item(), firstNumber.intValue()))) {
                 return MappingResult.NONE_MAPPED;
             }
 
             BedrockItemMapper.tryMapStack(stack, firstNumber.intValue(), mapReporter, context);
         } else {
-            Identifier model = stack.get(DataComponents.ITEM_MODEL);
+            Identifier model = stack.components().split().added().get(DataComponents.ITEM_MODEL);
             assert model != null;
             if (!modelsMapped.add(model)) {
                 return MappingResult.NONE_MAPPED;
@@ -111,9 +107,7 @@ public class BedrockPack {
     }
 
     public MappingResult map(Holder<Item> item, DataComponentPatch patch) {
-        ItemStack stack = new ItemStack(item);
-        stack.applyComponents(patch);
-        return map(stack);
+        return map(new ItemStackTemplate(item, 1, patch));
     }
 
     public CompletableFuture<?> save() {

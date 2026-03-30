@@ -15,7 +15,7 @@ import net.minecraft.client.renderer.state.gui.pip.OversizedItemRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.client.mixin.PictureInPictureRendererAccessor;
 import org.geysermc.rainbow.image.NativeImageUtil;
@@ -33,9 +33,9 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class RenderedTextureHolder extends TextureHolder {
-    private final ItemStack stackToRender;
+    private final ItemStackTemplate stackToRender;
 
-    public RenderedTextureHolder(Identifier identifier, ItemStack stackToRender) {
+    public RenderedTextureHolder(Identifier identifier, ItemStackTemplate stackToRender) {
         super(identifier);
         this.stackToRender = stackToRender;
     }
@@ -48,7 +48,7 @@ public class RenderedTextureHolder extends TextureHolder {
     @Override
     public CompletableFuture<?> save(AssetResolver assetResolver, PackSerializer serializer, Path path, ProblemReporter reporter) {
         TrackingItemStackRenderState itemRenderState = new TrackingItemStackRenderState();
-        Minecraft.getInstance().getItemModelResolver().updateForTopItem(itemRenderState, stackToRender, ItemDisplayContext.GUI, null, null, 0);
+        Minecraft.getInstance().getItemModelResolver().updateForTopItem(itemRenderState, stackToRender.create(), ItemDisplayContext.GUI, null, null, 0);
         itemRenderState.setOversizedInGui(true);
 
         GuiItemRenderState guiItemRenderState = new GuiItemRenderState(new Matrix3x2f(), itemRenderState, 0, 0, null);

@@ -4,7 +4,7 @@ import net.minecraft.client.resources.model.ResolvedModel;
 import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.client.resources.model.sprite.TextureSlots;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mapping.animation.AnimationMapper;
@@ -22,7 +22,7 @@ public record BedrockGeometryContext(Optional<MappedGeometry> geometry,
             .map(Identifier::withDefaultNamespace)
             .toList();
 
-    public static BedrockGeometryContext create(Identifier bedrockIdentifier, ResolvedModel model, ItemStack stackToRender, PackContext context) {
+    public static BedrockGeometryContext create(Identifier bedrockIdentifier, ResolvedModel model, ItemStackTemplate stackToRender, PackContext context) {
         ResolvedModel parentModel = model.parent();
         // debugName() returns the resource location of the model as a string
         boolean handheld = parentModel != null && HANDHELD_MODELS.contains(Identifier.parse(parentModel.debugName()));

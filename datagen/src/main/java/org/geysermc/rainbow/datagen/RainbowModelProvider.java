@@ -14,7 +14,9 @@ import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.client.resources.model.cuboid.CuboidModel;
 import net.minecraft.client.resources.model.cuboid.ItemModelGenerator;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
@@ -27,6 +29,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.equipment.EquipmentAsset;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
+import org.geysermc.rainbow.datagen.mixin.DataComponentInitializersAccessor;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.texture.TextureResource;
@@ -61,6 +64,8 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
 
     private @Nullable Map<Item, ClientItem> itemInfos;
     private @Nullable Map<Identifier, ModelInstance> models;
+
+    private @Nullable Map<ResourceKey<?>, DataComponentMap.Builder> initializedItemComponents;
 
     protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries,
                                    Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos, String packName,
@@ -101,6 +106,9 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
 
         CompletableFuture<BedrockPack> bedrockPack = ClientPackLoader.openClientResources()
                 .thenCompose(resourceManager -> registries.thenApply(registries -> {
+                    // You're not really supposed to do this, but Rainbow *needs* the initialised components to function properly
+                    initializedItemComponents = ((DataComponentInitializersAccessor) BuiltInRegistries.DATA_COMPONENT_INITIALIZERS).invokeRunInitializers(registries);
+
                     try (resourceManager) {
                         BedrockPack pack = createBedrockPack(new Serializer(output, registries),
                                 new DatagenResolver(resourceManager, equipmentInfos,
@@ -126,8 +134,11 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
     protected abstract Item getVanillaItem(Item modded);
 
     protected DataComponentPatch getVanillaDataComponentPatch(Item modded) {
+        if (initializedItemComponents == null) {
+            throw new IllegalStateException("initializedItemComponents may not be null");
+        }
         DataComponentPatch.Builder builder = DataComponentPatch.builder();
-        modded.components().forEach(builder::set);
+        initializedItemComponents.get(modded.builtInRegistryHolder().key()).build().forEach(builder::set);
         return builder.build();
     }
 

@@ -4,7 +4,7 @@ import net.minecraft.client.resources.model.ResolvedModel;
 import net.minecraft.client.resources.model.geometry.UnbakedGeometry;
 import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mapping.texture.StitchedTextures;
@@ -18,7 +18,7 @@ import java.util.Map;
 public class MappedGeometryCache {
     private final Map<GeometryCacheKey, MappedGeometryInstance> cachedGeometry = new HashMap<>();
 
-    public MappedGeometry mapGeometry(Identifier bedrockIdentifier, ResolvedModel model, ItemStack stackToRender, PackContext context) {
+    public MappedGeometry mapGeometry(Identifier bedrockIdentifier, ResolvedModel model, ItemStackTemplate stackToRender, PackContext context) {
         GeometryCacheKey cacheKey = new GeometryCacheKey(model);
         MappedGeometry cached = cachedGeometry.get(cacheKey);
         if (cached != null) {

@@ -10,6 +10,7 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import org.geysermc.rainbow.client.PackManager;
 import org.geysermc.rainbow.client.mapper.InventoryMapper;
 import org.geysermc.rainbow.client.mapper.PackMapper;
@@ -45,10 +46,14 @@ public class PackGeneratorCommand {
                 .then(ClientCommands.literal("map")
                         .executes(runWithPack(packManager, (source, pack) -> {
                             ItemStack heldItem = source.getPlayer().getMainHandItem();
-                            switch (pack.map(heldItem)) {
-                                case NONE_MAPPED -> source.sendError(Component.translatable("commands.rainbow.no_item_mapped"));
-                                case PROBLEMS_OCCURRED -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item_problems"));
-                                case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item"));
+                            if (heldItem.isEmpty()) {
+                                source.sendError(Component.literal("Must hold an item to map"));
+                            } else {
+                                switch (pack.map(ItemStackTemplate.fromNonEmptyStack(heldItem))) {
+                                    case NONE_MAPPED -> source.sendError(Component.translatable("commands.rainbow.no_item_mapped"));
+                                    case PROBLEMS_OCCURRED -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item_problems"));
+                                    case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item"));
+                                }
                             }
                         }))
                 )
@@ -59,11 +64,13 @@ public class PackGeneratorCommand {
                             Inventory inventory = source.getPlayer().getInventory();
 
                             for (ItemStack stack : inventory) {
-                                BedrockPack.MappingResult result = pack.map(stack);
-                                if (result != BedrockPack.MappingResult.NONE_MAPPED) {
-                                    mapped++;
-                                    if (result == BedrockPack.MappingResult.PROBLEMS_OCCURRED) {
-                                        errors = true;
+                                if (!stack.isEmpty()) {
+                                    BedrockPack.MappingResult result = pack.map(ItemStackTemplate.fromNonEmptyStack(stack));
+                                    if (result != BedrockPack.MappingResult.NONE_MAPPED) {
+                                        mapped++;
+                                        if (result == BedrockPack.MappingResult.PROBLEMS_OCCURRED) {
+                                            errors = true;
+                                        }
                                     }
                                 }
                             }
