@@ -132,7 +132,7 @@ public class BedrockItemMapper {
                         bedrockIdentifier = itemModelIdentifier;
                     }
 
-                    BedrockGeometryContext geometry = BedrockGeometryContext.create(bedrockIdentifier, itemModel, context.finaliseTransformation(model.transformation()), context.stack, context.packContext);
+                    BedrockGeometryContext geometry = BedrockGeometryContext.create(bedrockIdentifier, itemModel, context.finaliseTransformation(model.transformation()), context.itemStack, context.packContext);
                     if (context.packContext.reportSuccesses()) {
                         // Not a problem, but just report to get the model printed in the report file
                         context.report("creating mapping for block model " + itemModelIdentifier);
@@ -224,7 +224,7 @@ public class BedrockItemMapper {
     }
 
     private record MappingContext(List<GeyserPredicate> predicateStack, Optional<Transformation> transformationStack,
-                                  ItemStackTemplate stack, ProblemReporter reporter,
+                                  ItemStackTemplate itemStack, ProblemReporter reporter,
                                   Function<GeyserBaseDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext) {
 
         public MappingContext(ItemStackTemplate stack, ProblemReporter reporter, Function<GeyserBaseDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext) {
@@ -232,15 +232,15 @@ public class BedrockItemMapper {
         }
 
         public MappingContext with(GeyserPredicate predicate, Optional<Transformation> transformation, String childName) {
-            return new MappingContext(Stream.concat(predicateStack.stream(), Stream.of(predicate)).toList(), addTransformation(transformation), stack, reporter.forChild(() -> childName), definitionCreator, packContext);
+            return new MappingContext(Stream.concat(predicateStack.stream(), Stream.of(predicate)).toList(), addTransformation(transformation), itemStack, reporter.forChild(() -> childName), definitionCreator, packContext);
         }
 
         public MappingContext with(Optional<Transformation> transformation, String childName) {
-            return new MappingContext(predicateStack, addTransformation(transformation), stack, reporter.forChild(() -> childName), definitionCreator, packContext);
+            return new MappingContext(predicateStack, addTransformation(transformation), itemStack, reporter.forChild(() -> childName), definitionCreator, packContext);
         }
 
         public MappingContext child(String childName)  {
-            return new MappingContext(predicateStack, transformationStack, stack, reporter.forChild(() -> childName), definitionCreator, packContext);
+            return new MappingContext(predicateStack, transformationStack, itemStack, reporter.forChild(() -> childName), definitionCreator, packContext);
         }
 
         public Transformation finaliseTransformation(Optional<Transformation> finalTransformation) {
@@ -248,22 +248,22 @@ public class BedrockItemMapper {
         }
 
         public void create(Identifier bedrockIdentifier, BedrockGeometryContext geometry) {
-            List<Identifier> tags = stack.is(ItemTags.TRIMMABLE_ARMOR) ? TRIMMABLE_ARMOR_TAGS : List.of();
+            List<Identifier> tags = itemStack.is(ItemTags.TRIMMABLE_ARMOR) ? TRIMMABLE_ARMOR_TAGS : List.of();
 
             GeyserBaseDefinition base = new GeyserBaseDefinition(bedrockIdentifier,
-                    Optional.ofNullable(stack.components().split().added().get(DataComponents.ITEM_NAME)).map(Component::tryCollapseToString),
+                    Optional.ofNullable(itemStack.components().split().added().get(DataComponents.ITEM_NAME)).map(Component::tryCollapseToString),
                     predicateStack,
-                    new GeyserBaseDefinition.BedrockOptions(Optional.empty(), true, geometry.handheld(), calculateProtectionValue(stack), tags),
-                    stack.components());
+                    new GeyserBaseDefinition.BedrockOptions(Optional.empty(), true, geometry.handheld(), calculateProtectionValue(itemStack), tags),
+                    itemStack.components());
             try {
-                packContext.mappings().map(stack.item(), definitionCreator.apply(base));
+                packContext.mappings().map(itemStack.item(), definitionCreator.apply(base));
             } catch (Exception exception) {
                 reporter.forChild(() -> "mapping with bedrock identifier " + bedrockIdentifier + " ").report(() -> "failed to pass mapping: " + exception.getMessage());
                 return;
             }
 
             packContext.itemConsumer().accept(new BedrockItem(bedrockIdentifier, base.textureName(), geometry,
-                    AttachableMapper.mapItem(packContext.assetResolver(), geometry, stack.components())));
+                    AttachableMapper.mapItem(packContext.assetResolver(), geometry, itemStack.components())));
         }
 
         public void report(String problem) {
