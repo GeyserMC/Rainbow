@@ -1,5 +1,6 @@
 package org.geysermc.rainbow.mapping.geometry;
 
+import com.mojang.math.Transformation;
 import net.minecraft.client.resources.model.ResolvedModel;
 import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.client.resources.model.sprite.TextureSlots;
@@ -22,7 +23,7 @@ public record BedrockGeometryContext(Optional<MappedGeometry> geometry,
             .map(Identifier::withDefaultNamespace)
             .toList();
 
-    public static BedrockGeometryContext create(Identifier bedrockIdentifier, ResolvedModel model, ItemStackTemplate stackToRender, PackContext context) {
+    public static BedrockGeometryContext create(Identifier bedrockIdentifier, ResolvedModel model, Transformation definitionTransformation, ItemStackTemplate stackToRender, PackContext context) {
         ResolvedModel parentModel = model.parent();
         // debugName() returns the resource location of the model as a string
         boolean handheld = parentModel != null && HANDHELD_MODELS.contains(Identifier.parse(parentModel.debugName()));

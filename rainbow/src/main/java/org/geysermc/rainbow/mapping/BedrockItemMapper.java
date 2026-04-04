@@ -36,7 +36,6 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.equipment.trim.TrimMaterial;
@@ -84,7 +83,7 @@ public class BedrockItemMapper {
         ItemModel.Unbaked vanillaModel = context.assetResolver().getClientItem(itemModel).map(ClientItem::model).orElseThrow();
         ProblemReporter childReporter = reporter.forChild(() -> "item model " + itemModel + " with custom model data " + customModelData + " ");
         // TODO 26.1 transformation translation
-        if (vanillaModel instanceof RangeSelectItemModel.Unbaked(Optional<Transformation> transformation, RangeSelectItemModelProperty property, float scale, List<RangeSelectItemModel.Entry> entries, Optional<ItemModel.Unbaked> fallback)) {
+        if (vanillaModel instanceof RangeSelectItemModel.Unbaked(Optional<Transformation> _, RangeSelectItemModelProperty property, float scale, List<RangeSelectItemModel.Entry> entries, Optional<ItemModel.Unbaked> fallback)) {
             // WHY, Mojang?
             if (property instanceof net.minecraft.client.renderer.item.properties.numeric.CustomModelDataProperty(int index)) {
                 if (index == 0) {
@@ -108,7 +107,7 @@ public class BedrockItemMapper {
 
     public static void mapItem(ItemModel.Unbaked model, ItemStackTemplate stack, ProblemReporter reporter,
                                Function<GeyserBaseDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext) {
-        mapItem(model, new MappingContext(List.of(), stack, reporter, definitionCreator, packContext));
+        mapItem(model, new MappingContext(stack, reporter, definitionCreator, packContext));
     }
 
     private static void mapItem(ItemModel.Unbaked model, MappingContext context) {
@@ -133,7 +132,7 @@ public class BedrockItemMapper {
                         bedrockIdentifier = itemModelIdentifier;
                     }
 
-                    BedrockGeometryContext geometry = BedrockGeometryContext.create(bedrockIdentifier, itemModel, context.stack, context.packContext);
+                    BedrockGeometryContext geometry = BedrockGeometryContext.create(bedrockIdentifier, itemModel, context.finaliseTransformation(model.transformation()), context.stack, context.packContext);
                     if (context.packContext.reportSuccesses()) {
                         // Not a problem, but just report to get the model printed in the report file
                         context.report("creating mapping for block model " + itemModelIdentifier);
@@ -161,8 +160,8 @@ public class BedrockItemMapper {
             return;
         }
 
-        mapItem(onTrue, context.with(new GeyserConditionPredicate(predicateProperty, true), "condition on true "));
-        mapItem(onFalse, context.with(new GeyserConditionPredicate(predicateProperty, false), "condition on false "));
+        mapItem(onTrue, context.with(new GeyserConditionPredicate(predicateProperty, true), model.transformation(), "condition on true "));
+        mapItem(onFalse, context.with(new GeyserConditionPredicate(predicateProperty, false), model.transformation(), "condition on false "));
     }
 
     private static void mapRangeSelectModel(RangeSelectItemModel.Unbaked model, MappingContext context) {
@@ -180,11 +179,11 @@ public class BedrockItemMapper {
             context.report("unsupported range dispatch model property " + getId(RangeSelectItemModelProperties.ID_MAPPER, property.type()) + ", only mapping fallback, if it is present");
         } else {
             for (RangeSelectItemModel.Entry entry : model.entries()) {
-                mapItem(entry.model(), context.with(new GeyserRangeDispatchPredicate(predicateProperty, entry.threshold(), model.scale()), "threshold " + entry.threshold()));
+                mapItem(entry.model(), context.with(new GeyserRangeDispatchPredicate(predicateProperty, entry.threshold(), model.scale()), model.transformation(), "threshold " + entry.threshold()));
             }
         }
 
-        model.fallback().ifPresent(fallback -> mapItem(fallback, context.child("range dispatch fallback")));
+        model.fallback().ifPresent(fallback -> mapItem(fallback, context.with(model.transformation(), "range dispatch fallback")));
     }
 
     @SuppressWarnings("unchecked")
@@ -206,33 +205,46 @@ public class BedrockItemMapper {
                 context.report("unsupported select model property display_context, only mapping \"gui\" case, if it exists");
                 for (SelectItemModel.SwitchCase<?> switchCase : cases) {
                     if (switchCase.values().contains(ItemDisplayContext.GUI)) {
-                        mapItem(switchCase.model(), context.child("select GUI display_context case (unsupported property) "));
+                        mapItem(switchCase.model(), context.with(model.transformation(), "select GUI display_context case (unsupported property) "));
                         return;
                     }
                 }
             }
             context.report("unsupported select model property " + getId(SelectItemModelProperties.ID_MAPPER, unbakedSwitch.property().type()) + ", only mapping fallback, if present");
-            model.fallback().ifPresent(fallback -> mapItem(fallback, context.child("select fallback case (unsupported property) ")));
+            model.fallback().ifPresent(fallback -> mapItem(fallback, context.with(model.transformation(), "select fallback case (unsupported property) ")));
             return;
         }
 
         cases.forEach(switchCase -> {
             switchCase.values().forEach(value -> {
-                mapItem(switchCase.model(), context.with(new GeyserMatchPredicate(dataConstructor.apply(value)), "select case " + value + " "));
+                mapItem(switchCase.model(), context.with(new GeyserMatchPredicate(dataConstructor.apply(value)), model.transformation(), "select case " + value + " "));
             });
         });
-        model.fallback().ifPresent(fallback -> mapItem(fallback, context.child("select fallback case ")));
+        model.fallback().ifPresent(fallback -> mapItem(fallback, context.with(model.transformation(), "select fallback case ")));
     }
 
-    private record MappingContext(List<GeyserPredicate> predicateStack, ItemStackTemplate stack, ProblemReporter reporter,
+    private record MappingContext(List<GeyserPredicate> predicateStack, Optional<Transformation> transformationStack,
+                                  ItemStackTemplate stack, ProblemReporter reporter,
                                   Function<GeyserBaseDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext) {
 
-        public MappingContext with(GeyserPredicate predicate, String childName) {
-            return new MappingContext(Stream.concat(predicateStack.stream(), Stream.of(predicate)).toList(), stack, reporter.forChild(() -> childName), definitionCreator, packContext);
+        public MappingContext(ItemStackTemplate stack, ProblemReporter reporter, Function<GeyserBaseDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext) {
+            this(List.of(), Optional.empty(), stack, reporter, definitionCreator, packContext);
+        }
+
+        public MappingContext with(GeyserPredicate predicate, Optional<Transformation> transformation, String childName) {
+            return new MappingContext(Stream.concat(predicateStack.stream(), Stream.of(predicate)).toList(), addTransformation(transformation), stack, reporter.forChild(() -> childName), definitionCreator, packContext);
+        }
+
+        public MappingContext with(Optional<Transformation> transformation, String childName) {
+            return new MappingContext(predicateStack, addTransformation(transformation), stack, reporter.forChild(() -> childName), definitionCreator, packContext);
         }
 
         public MappingContext child(String childName)  {
-            return new MappingContext(predicateStack, stack, reporter.forChild(() -> childName), definitionCreator, packContext);
+            return new MappingContext(predicateStack, transformationStack, stack, reporter.forChild(() -> childName), definitionCreator, packContext);
+        }
+
+        public Transformation finaliseTransformation(Optional<Transformation> finalTransformation) {
+            return addTransformation(finalTransformation).orElse(Transformation.IDENTITY);
         }
 
         public void create(Identifier bedrockIdentifier, BedrockGeometryContext geometry) {
@@ -256,6 +268,10 @@ public class BedrockItemMapper {
 
         public void report(String problem) {
             reporter.report(() -> problem);
+        }
+
+        private Optional<Transformation> addTransformation(Optional<Transformation> optionalChild) {
+            return optionalChild.flatMap(child -> transformationStack.map(parent -> parent.compose(child)).or(() -> optionalChild));
         }
 
         private static int calculateProtectionValue(ItemStackTemplate stack) {
