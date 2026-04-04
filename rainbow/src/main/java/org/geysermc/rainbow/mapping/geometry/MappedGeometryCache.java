@@ -1,5 +1,6 @@
 package org.geysermc.rainbow.mapping.geometry;
 
+import com.mojang.math.Transformation;
 import net.minecraft.client.resources.model.ResolvedModel;
 import net.minecraft.client.resources.model.geometry.UnbakedGeometry;
 import net.minecraft.client.resources.model.sprite.Material;
@@ -18,8 +19,8 @@ import java.util.Map;
 public class MappedGeometryCache {
     private final Map<GeometryCacheKey, MappedGeometryInstance> cachedGeometry = new HashMap<>();
 
-    public MappedGeometry mapGeometry(Identifier bedrockIdentifier, ResolvedModel model, ItemStackTemplate stackToRender, PackContext context) {
-        GeometryCacheKey cacheKey = new GeometryCacheKey(model);
+    public MappedGeometry mapGeometry(Identifier bedrockIdentifier, ResolvedModel model, Transformation transformation, ItemStackTemplate stackToRender, PackContext context) {
+        GeometryCacheKey cacheKey = new GeometryCacheKey(model, transformation);
         MappedGeometry cached = cachedGeometry.get(cacheKey);
         if (cached != null) {
             return cached.cachedCopy();
@@ -30,7 +31,7 @@ public class MappedGeometryCache {
         String safeIdentifier = Rainbow.bedrockSafeIdentifier(bedrockIdentifier);
 
         StitchedTextures stitchedTextures = StitchedTextures.stitchModelTextures(model.getTopTextureSlots(), context);
-        BedrockGeometry geometry = GeometryMapper.mapGeometry(safeIdentifier, "bone", model, stitchedTextures);
+        BedrockGeometry geometry = GeometryMapper.mapGeometry(safeIdentifier, "bone", model, transformation, stitchedTextures);
         TextureHolder icon = context.geometryRenderer().isPresent() ? context.geometryRenderer().orElseThrow().render(modelIdentifier, stackToRender)
                                                                     : TextureHolder.createNonExistent(modelIdentifier);
         MappedGeometryInstance instance = new MappedGeometryInstance(geometry, TextureHolder.createCustom(stitchedTexturesIdentifier, stitchedTextures.stitched()), icon);
@@ -38,10 +39,10 @@ public class MappedGeometryCache {
         return instance;
     }
 
-    private record GeometryCacheKey(UnbakedGeometry geometry, Map<String, Material> textures) {
+    private record GeometryCacheKey(UnbakedGeometry geometry, Transformation transformation, Map<String, Material> textures) {
 
-        private GeometryCacheKey(ResolvedModel model) {
-            this(model.getTopGeometry(), ((TextureSlotsAccessor) model.getTopTextureSlots()).getResolvedValues());
+        private GeometryCacheKey(ResolvedModel model, Transformation transformation) {
+            this(model.getTopGeometry(), transformation, ((TextureSlotsAccessor) model.getTopTextureSlots()).getResolvedValues());
         }
     }
 }

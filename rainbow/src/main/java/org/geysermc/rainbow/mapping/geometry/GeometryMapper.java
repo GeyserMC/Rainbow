@@ -1,5 +1,6 @@
 package org.geysermc.rainbow.mapping.geometry;
 
+import com.mojang.math.Transformation;
 import net.minecraft.client.resources.model.ResolvedModel;
 import net.minecraft.client.resources.model.cuboid.CuboidFace;
 import net.minecraft.client.resources.model.cuboid.CuboidModelElement;
@@ -14,12 +15,15 @@ import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public class GeometryMapper {
     private static final Vector3fc CENTRE_OFFSET = new Vector3f(8.0F, 0.0F, 8.0F);
 
-    public static BedrockGeometry mapGeometry(String identifier, String boneName, ResolvedModel model, StitchedTextures textures) {
+    public static BedrockGeometry mapGeometry(String identifier, String boneName, ResolvedModel model, Transformation transformation, StitchedTextures textures) {
         UnbakedGeometry top = model.getTopGeometry();
         if (top == UnbakedGeometry.EMPTY) {
             return BedrockGeometry.EMPTY;
@@ -39,7 +43,7 @@ public class GeometryMapper {
         Vector3f min = new Vector3f(Float.MAX_VALUE);
         Vector3f max = new Vector3f(Float.MIN_VALUE);
 
-        UnbakedCuboidGeometry geometry = (UnbakedCuboidGeometry) top;
+        UnbakedCuboidGeometry geometry = transformGeometry((UnbakedCuboidGeometry) top, transformation);
         for (CuboidModelElement element : geometry.elements()) {
             BedrockGeometry.Cube cube = mapCuboidModelElement(element, textures).build();
             bone.withCube(cube);
@@ -133,5 +137,24 @@ public class GeometryMapper {
             };
             default -> throw new IllegalArgumentException("Don't know how to transform rotation of type " + rotation.getClass() + " to bedrock rotation");
         };
+    }
+
+    private static UnbakedCuboidGeometry transformGeometry(UnbakedCuboidGeometry geometry, Transformation transformation) {
+        if (transformation == Transformation.IDENTITY) {
+            return geometry;
+        }
+        // Doesn't do anything with rotation yet
+        List<CuboidModelElement> transformedElements = new ArrayList<>();
+        for (CuboidModelElement element : geometry.elements()) {
+            transformedElements.add(new CuboidModelElement(transformVector(element.from(), transformation),
+                    transformVector(element.to(), transformation), element.faces(),
+                    element.rotation(), element.shade(), element.lightEmission()));
+        }
+        return new UnbakedCuboidGeometry(Collections.unmodifiableList(transformedElements));
+    }
+
+    private static Vector3fc transformVector(Vector3fc original, Transformation transformation) {
+        // Translate first, then scale
+        return original.add(transformation.translation(), new Vector3f()).mul(transformation.scale());
     }
 }

@@ -42,7 +42,7 @@ public record BedrockGeometryContext(Optional<MappedGeometry> geometry,
             // Unknown model (doesn't use layer0), so we immediately assume the geometry is custom
             // This check should probably be done differently (actually check if the model is 2D or 3D)
 
-            geometry = Optional.of(context.geometryCache().mapGeometry(bedrockIdentifier, model, stackToRender, context));
+            geometry = Optional.of(context.geometryCache().mapGeometry(bedrockIdentifier, model, definitionTransformation, stackToRender, context));
             animation = Optional.of(AnimationMapper.mapAnimation(Rainbow.bedrockSafeIdentifier(bedrockIdentifier), "bone", model.getTopTransforms()));
             icon = geometry.get().icon();
         }
