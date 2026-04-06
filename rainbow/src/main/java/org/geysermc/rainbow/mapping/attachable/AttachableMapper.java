@@ -40,7 +40,7 @@ public class AttachableMapper {
                         attachable.withAnimation("third_person", animation.thirdPerson());
                         attachable.withAnimation("head", animation.head());
                         attachable.withScript("animate", "first_person", "context.is_first_person == 1.0");
-                        attachable.withScript("animate", "third_person", "context.is_first_person == 0.0 && context.item_slot != 'head'");
+                        attachable.withScript("animate", "third_person", "context.is_first_person == 0.0 && (context.item_slot == 'main_hand' || context.item_slot == 'off_hand')");
                         attachable.withScript("animate", "head", "context.is_first_person == 0.0 && context.item_slot == 'head'");
                     });
                     return attachable.build();
