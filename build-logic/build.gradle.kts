@@ -15,4 +15,5 @@ dependencies {
     implementation(files(libs.javaClass.superclass.protectionDomain.codeSource.location))
 
     implementation(libs.fabric.loom)
+    implementation(libs.minotaur)
 }

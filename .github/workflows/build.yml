@@ -80,13 +80,13 @@ jobs:
             client/build/libs/Rainbow.jar
           changelog: ${{ steps.metadata.outputs.body }}
 
-#      - name: Publish to Modrinth
-#        if: ${{ success() && github.repository == 'GeyserMC/rainbow' && github.ref_name == 'master' }}
-#        env:
-#          CHANGELOG: ${{ steps.metadata.outputs.body }}
-#          BUILD_NUMBER: ${{ steps.release-info.outputs.curentRelease }}
-#          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-#        run: ./gradlew modrinth
+      - name: Publish to Modrinth
+        if: ${{ success() && github.repository == 'GeyserMC/Rainbow' && github.ref_name == 'master' }}
+        env:
+          CHANGELOG: ${{ steps.metadata.outputs.body }}
+          BUILD_NUMBER: ${{ steps.release-info.outputs.curentRelease }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: ./gradlew modrinth
 
       - name: Notify Discord
         if: ${{ (success() || failure()) && github.repository == 'GeyserMC/Rainbow' }}

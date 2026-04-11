@@ -1,6 +1,7 @@
 plugins {
     id("rainbow.base-conventions")
     id("rainbow.publish-conventions")
+    id("rainbow.modrinth-publish-conventions")
 }
 
 dependencies {
@@ -16,13 +17,15 @@ tasks {
         dependsOn(jarTask)
 
         from(jarTask.archiveFile)
-        rename {
-            "Rainbow.jar"
-        }
+        rename {"Rainbow.jar"}
         into(project.layout.buildDirectory.file("libs"))
     }
 
     named("build") {
         dependsOn(copyJarTask)
     }
+}
+
+modrinth {
+    uploadFile.set(tasks.jar)
 }
