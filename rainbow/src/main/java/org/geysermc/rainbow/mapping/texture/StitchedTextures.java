@@ -61,7 +61,7 @@ public record StitchedTextures(Map<String, TextureAtlasSprite> sprites, Supplier
 
     private static Optional<SpriteContents> readSpriteContents(Material material, PackContext context) {
         return RainbowIO.safeIO(() -> {
-            try (TextureResource texture = context.assetResolver().getBlockOrItemTextureSafely(material.sprite()).orElse(null)) {
+            try (TextureResource texture = context.assetResolver().getPossibleAtlasTextureSafely(material.sprite()).orElse(null)) {
                 if (texture != null) {
                     return new SpriteContents(material.sprite(), texture.sizeOfFrame(), texture.getFirstFrame(true));
                 }

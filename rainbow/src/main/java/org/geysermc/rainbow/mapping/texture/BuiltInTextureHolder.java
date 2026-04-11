@@ -21,7 +21,7 @@ public class BuiltInTextureHolder extends TextureHolder {
     @Override
     public Optional<byte[]> load(AssetResolver assetResolver, ProblemReporter reporter) {
         return RainbowIO.safeIO(() -> {
-            try (TextureResource texture = assetResolver.getBlockOrItemTextureSafely(source).orElse(null)) {
+            try (TextureResource texture = assetResolver.getPossibleAtlasTextureSafely(source).orElse(null)) {
                 Objects.requireNonNull(texture);
                 try (NativeImage firstFrame = texture.getFirstFrame(false)) {
                     return NativeImageUtil.writeToByteArray(firstFrame);

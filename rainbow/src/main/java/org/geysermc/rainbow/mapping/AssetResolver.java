@@ -22,9 +22,11 @@ public interface AssetResolver {
 
     Optional<TextureResource> getTexture(@Nullable Identifier atlas, Identifier identifier);
 
-    default Optional<TextureResource> getBlockOrItemTextureSafely(Identifier identifier) {
+    default Optional<TextureResource> getPossibleAtlasTextureSafely(Identifier identifier) {
         // Vanilla behaviour: when baking a Material, check item atlas first, then block atlas
         // (see ModelManager, MaterialBaker)
-        return getTexture(AtlasIds.ITEMS, identifier).or(() -> getTexture(AtlasIds.BLOCKS, identifier));
+        return getTexture(AtlasIds.ITEMS, identifier)
+                .or(() -> getTexture(AtlasIds.BLOCKS, identifier))
+                .or(() -> getTexture(null, identifier));
     }
 }
