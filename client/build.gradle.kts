@@ -4,6 +4,8 @@ plugins {
     id("rainbow.modrinth-publish-conventions")
 }
 
+val rainbowJarName = "Rainbow.jar"
+
 dependencies {
     implementation(project(":rainbow"))
     include(project(":rainbow"))
@@ -17,7 +19,7 @@ tasks {
         dependsOn(jarTask)
 
         from(jarTask.archiveFile)
-        rename {"Rainbow.jar"}
+        rename {rainbowJarName}
         into(project.layout.buildDirectory.file("libs"))
     }
 
@@ -27,5 +29,5 @@ tasks {
 }
 
 modrinth {
-    uploadFile.set(tasks.getByName<Copy>("copyRainbowClientJar"))
+    uploadFile.set(project.layout.buildDirectory.file("libs/$rainbowJarName"))
 }
