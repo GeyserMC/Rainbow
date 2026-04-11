@@ -24,6 +24,7 @@ public class ClientPackSerializer implements PackSerializer {
 
     public void prepare(HolderLookup.Provider registries) {
         this.registries = registries;
+        jsonExported = 0;
         texturesExported = 0;
     }
 
@@ -41,19 +42,19 @@ public class ClientPackSerializer implements PackSerializer {
             throw new IllegalStateException("saveJson called whilst registries was null");
         }
         DynamicOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, registries);
+        jsonExported++;
         return CompletableFuture.runAsync(() -> RainbowIO.safeIO(() -> {
             CodecUtil.trySaveJson(codec, object, path, ops);
-            jsonExported++;
         }), Util.backgroundExecutor().forName("PackSerializer-saveJson"));
     }
 
     @Override
     public CompletableFuture<?> saveTexture(byte[] texture, Path path) {
+        texturesExported++;
         return CompletableFuture.runAsync(() -> RainbowIO.safeIO(() -> {
             CodecUtil.ensureDirectoryExists(path.getParent());
             try (OutputStream outputTexture = new FileOutputStream(path.toFile())) {
                 outputTexture.write(texture);
-                texturesExported++;
             }
         }), Util.backgroundExecutor().forName("PackSerializer-saveTexture"));
     }

@@ -71,10 +71,13 @@ public final class PackManager {
     }
 
     public boolean finish(Runnable onFinish) {
-        currentPack.map(pack -> {
-            RainbowIO.safeIO(() -> Files.writeString(getExportPath().orElseThrow().resolve(REPORT_FILE), createPackSummary(pack, packSerializer)));
-            return pack.save();
-        }).ifPresent(future -> future.thenRun(onFinish));
+        currentPack.ifPresent(pack -> {
+            Path reportPath = EXPORT_DIRECTORY.resolve(pack.name()).resolve(REPORT_FILE);
+            pack.save().thenRun(() -> {
+                RainbowIO.safeIO(() -> Files.writeString(reportPath, createPackSummary(pack, packSerializer)));
+                onFinish.run();
+            });
+        });
         boolean wasPresent = currentPack.isPresent();
         currentPack = Optional.empty();
         return wasPresent;

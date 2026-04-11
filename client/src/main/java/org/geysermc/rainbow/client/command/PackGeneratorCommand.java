@@ -3,6 +3,8 @@ package org.geysermc.rainbow.client.command;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.datafixers.util.Pair;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.ChatFormatting;
@@ -13,11 +15,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 import org.geysermc.rainbow.client.PackManager;
 import org.geysermc.rainbow.client.mapper.InventoryMapper;
+import org.geysermc.rainbow.client.mapper.ItemSuggestionProvider;
 import org.geysermc.rainbow.client.mapper.PackMapper;
 import org.geysermc.rainbow.pack.BedrockPack;
 
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
 public class PackGeneratorCommand {
@@ -87,8 +91,8 @@ public class PackGeneratorCommand {
                 )
                 .then(ClientCommands.literal("auto")
                         /* This is disabled for now.
-                        .then(ClientCommandManager.literal("command")
-                                .then(ClientCommandManager.argument("suggestions", CommandSuggestionsArgumentType.TYPE)
+                        .then(ClientCommands.literal("command")
+                                .then(ClientCommands.argument("suggestions", CommandSuggestionsArgumentType.TYPE)
                                         .executes(context -> {
                                             Pair<String, CompletableFuture<Suggestions>> suggestions = CommandSuggestionsArgumentType.getSuggestions(context, "suggestions");
                                             String baseCommand = suggestions.getFirst();
@@ -119,6 +123,7 @@ public class PackGeneratorCommand {
                 )
                 .then(ClientCommands.literal("finish")
                         .executes(context -> {
+                            context.getSource().sendFeedback(Component.translatable("commands.rainbow.pack_finishing"));
                             Optional<Path> exportPath = packManager.getExportPath();
                             Runnable onFinish = () -> context.getSource().sendFeedback(Component.translatable("commands.rainbow.pack_finished_successfully").withStyle(style
                                     -> style.withUnderlined(true).withClickEvent(new ClickEvent.OpenFile(exportPath.orElseThrow()))));
