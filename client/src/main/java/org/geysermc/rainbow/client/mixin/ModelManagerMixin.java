@@ -1,50 +1,50 @@
 package org.geysermc.rainbow.client.mixin;
 
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ClientItem;
+import net.minecraft.client.resources.model.BlockStateModelLoader;
 import net.minecraft.client.resources.model.ClientItemInfoLoader;
 import net.minecraft.client.resources.model.ModelManager;
 import net.minecraft.client.resources.model.ResolvedModel;
+import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import org.geysermc.rainbow.client.accessor.ResolvedModelAccessor;
+import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 @Mixin(ModelManager.class)
 public abstract class ModelManagerMixin implements PreparableReloadListener, AutoCloseable, ResolvedModelAccessor {
     @Unique
-    private Map<Identifier, ResolvedModel> unbakedResolvedModels;
+    private @Nullable Map<Identifier, ResolvedModel> unbakedResolvedModels;
     @Unique
-    private Map<Identifier, ClientItem> clientItems;
+    private @Nullable Map<Identifier, ClientItem> clientItems;
 
-    @WrapOperation(method = "method_65753", at = @At(value = "INVOKE", target = "Ljava/util/concurrent/CompletableFuture;join()Ljava/lang/Object;", ordinal = 2))
-    private static Object setResolvedModels(CompletableFuture<?> instance, Operation<Object> original) {
-        Object resolved = original.call(instance);
+    @Inject(method = "discoverModelDependencies", at = @At("TAIL"))
+    private static void setResolvedAndItemFields(Map<Identifier, UnbakedModel> allModels, BlockStateModelLoader.LoadedModels blockStateModels, ClientItemInfoLoader.LoadedClientInfos itemInfos,
+                                                 // Method returns private record (ResolvedModels)
+                                                 @SuppressWarnings("rawtypes") CallbackInfoReturnable callbackInfoReturnable) {
+        // Ideally we'd somehow use the "this" instance, but that's not possible here since the method we inject into is a static one
+        ModelManagerMixin thiz = ((ModelManagerMixin) (Object) Minecraft.getInstance().getModelManager());
+
+        // Couldn't be bothered setting up access wideners, this resolves the second component of the ResolvedModels record, which is called "models"
         try {
-            // Couldn't be bothered setting up access wideners, this resolves the second component of the ResolvedModels record, which is called "models"
-            // Ideally we'd somehow use the "this" instance, but that's not possible here since the lambda we inject into is a static one
-            ((ModelManagerMixin) (Object) Minecraft.getInstance().getModelManager()).unbakedResolvedModels = (Map<Identifier, ResolvedModel>) resolved.getClass().getRecordComponents()[1].getAccessor().invoke(resolved);
-        } catch (IllegalAccessException | InvocationTargetException | ClassCastException exception) {
+            Object returnValue = callbackInfoReturnable.getReturnValue();
+            //noinspection unchecked
+            thiz.unbakedResolvedModels = (Map<Identifier, ResolvedModel>) returnValue.getClass().getRecordComponents()[1].getAccessor().invoke(returnValue);
+        } catch (InvocationTargetException | IllegalAccessException | ClassCastException exception) {
             throw new RuntimeException(exception);
         }
-        return resolved;
-    }
 
-    @WrapOperation(method = "method_65753", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/resources/model/ClientItemInfoLoader$LoadedClientInfos;contents()Ljava/util/Map;"))
-    private static Map<Identifier, ClientItem> setClientItems(ClientItemInfoLoader.LoadedClientInfos instance, Operation<Map<Identifier, ClientItem>> original) {
-        // Same note as above for not using "this"
-        ModelManagerMixin thiz = ((ModelManagerMixin) (Object) Minecraft.getInstance().getModelManager());
-        thiz.clientItems = original.call(instance);
-        return thiz.clientItems;
+        thiz.clientItems = itemInfos.contents();
     }
 
     @Override

@@ -2,7 +2,7 @@
   "required": true,
   "minVersion": "0.8",
   "package": "org.geysermc.rainbow.datagen.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_25",
   "client": [
     "ItemInfoCollectorAccessor",
     "ModelProviderMixin",
@@ -10,5 +10,8 @@
   ],
   "injectors": {
     "defaultRequire": 1
-  }
+  },
+  "mixins": [
+    "DataComponentInitializersAccessor"
+  ]
 }

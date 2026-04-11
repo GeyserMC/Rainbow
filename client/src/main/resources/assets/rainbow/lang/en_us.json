@@ -13,6 +13,7 @@
   "commands.rainbow.pack_created": "Created pack with name %s",
   "commands.rainbow.pack_finished_error": "Errors occurred whilst writing the pack to disk!",
   "commands.rainbow.pack_finished_successfully": "Wrote pack to disk",
+  "commands.rainbow.pack_finishing": "Writing pack to disk...",
   "commands.rainbow.stopped_automatic_mapping": "Stopped automatic mapping of custom items",
   "toast.rainbow.io_exception.description": "Please check your game logs for more information",
   "toast.rainbow.io_exception.title": "A filesystem error occurred in Rainbow!"

@@ -11,19 +11,17 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class BuiltInTextureHolder extends TextureHolder {
-    private final Identifier atlas;
     private final Identifier source;
 
-    public BuiltInTextureHolder(Identifier identifier, Identifier atlas, Identifier source) {
+    public BuiltInTextureHolder(Identifier identifier, Identifier source) {
         super(identifier);
-        this.atlas = atlas;
         this.source = source;
     }
 
     @Override
     public Optional<byte[]> load(AssetResolver assetResolver, ProblemReporter reporter) {
         return RainbowIO.safeIO(() -> {
-            try (TextureResource texture = assetResolver.getTextureSafely(atlas, source).orElse(null)) {
+            try (TextureResource texture = assetResolver.getPossibleAtlasTextureSafely(source).orElse(null)) {
                 Objects.requireNonNull(texture);
                 try (NativeImage firstFrame = texture.getFirstFrame(false)) {
                     return NativeImageUtil.writeToByteArray(firstFrame);

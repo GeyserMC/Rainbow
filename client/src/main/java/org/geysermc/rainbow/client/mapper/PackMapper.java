@@ -6,18 +6,19 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import org.geysermc.rainbow.client.PackManager;
 import org.geysermc.rainbow.pack.BedrockPack;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 
 public class PackMapper {
     private final PackManager packManager;
-    private CustomItemProvider itemProvider;
+    private @Nullable CustomItemProvider itemProvider;
 
     public PackMapper(PackManager packManager) {
         this.packManager = packManager;
     }
 
-    public void setItemProvider(CustomItemProvider itemProvider) {
+    public void setItemProvider(@Nullable CustomItemProvider itemProvider) {
         this.itemProvider = itemProvider;
     }
 
@@ -33,10 +34,10 @@ public class PackMapper {
                         .filter(result -> result != BedrockPack.MappingResult.NONE_MAPPED)
                         .count();
                 if (mapped != 0) {
-                    player.displayClientMessage(Component.translatable("chat.rainbow.mapped_items", mapped), false);
+                    player.sendSystemMessage(Component.translatable("chat.rainbow.mapped_items", mapped));
                 }
                 if (itemProvider.isDone()) {
-                    player.displayClientMessage(Component.translatable("chat.rainbow.automatic_mapping_finished"), false);
+                    player.sendSystemMessage(Component.translatable("chat.rainbow.automatic_mapping_finished"));
                     itemProvider = null;
                 }
             }, () -> itemProvider = null);

@@ -4,7 +4,7 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import org.geysermc.rainbow.CodecUtil;
+import net.minecraft.util.ExtraCodecs;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.pack.BedrockVersion;
 import org.joml.Vector3fc;
@@ -141,9 +141,9 @@ public record BedrockAnimation(BedrockVersion formatVersion, Map<String, Animati
     public record SimpleAnimation(Vector3fc position, Vector3fc rotation, Vector3fc scale) {
         public static final Codec<SimpleAnimation> CODEC = RecordCodecBuilder.create(instance ->
                 instance.group(
-                        CodecUtil.VECTOR3F_CODEC.fieldOf("position").forGetter(SimpleAnimation::position),
-                        CodecUtil.VECTOR3F_CODEC.fieldOf("rotation").forGetter(SimpleAnimation::rotation),
-                        CodecUtil.VECTOR3F_CODEC.fieldOf("scale").forGetter(SimpleAnimation::scale)
+                        ExtraCodecs.VECTOR3F.fieldOf("position").forGetter(SimpleAnimation::position),
+                        ExtraCodecs.VECTOR3F.fieldOf("rotation").forGetter(SimpleAnimation::rotation),
+                        ExtraCodecs.VECTOR3F.fieldOf("scale").forGetter(SimpleAnimation::scale)
                 ).apply(instance, SimpleAnimation::new)
         );
     }

@@ -1,9 +1,6 @@
 package org.geysermc.rainbow;
 
 import com.mojang.logging.LogUtils;
-import net.minecraft.client.renderer.texture.TextureAtlas;
-import net.minecraft.client.resources.model.Material;
-import net.minecraft.data.AtlasIds;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 
@@ -27,15 +24,5 @@ public class Rainbow {
 
     public static Identifier decorateTextureIdentifier(Identifier identifier) {
         return decorateIdentifier(identifier, "textures", "png");
-    }
-
-    public static Identifier getAtlasIdFromMaterial(Material material) {
-        Identifier atlasLocation = material.atlasLocation();
-        if (atlasLocation.equals(TextureAtlas.LOCATION_BLOCKS)) {
-            return AtlasIds.BLOCKS;
-        } else if (atlasLocation.equals(TextureAtlas.LOCATION_ITEMS)) {
-            return AtlasIds.ITEMS;
-        }
-        return atlasLocation;
     }
 }

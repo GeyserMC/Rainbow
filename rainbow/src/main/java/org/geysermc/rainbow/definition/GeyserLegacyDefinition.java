@@ -18,8 +18,8 @@ public record GeyserLegacyDefinition(GeyserBaseDefinition base, int customModelD
 
     @Override
     public boolean conflictsWith(Optional<Identifier> parentModel, GeyserItemDefinition other) {
-        if (other instanceof GeyserLegacyDefinition otherLegacy) {
-            return customModelData == otherLegacy.customModelData && base.conflictsWith(otherLegacy.base);
+        if (other instanceof GeyserLegacyDefinition(GeyserBaseDefinition otherBase, int otherModelData)) {
+            return customModelData == otherModelData && base.conflictsWith(otherBase);
         }
         return false;
     }

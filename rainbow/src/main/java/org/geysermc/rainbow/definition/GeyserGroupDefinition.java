@@ -3,7 +3,6 @@ package org.geysermc.rainbow.definition;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.Comparator;
 import java.util.List;
@@ -60,7 +59,7 @@ public record GeyserGroupDefinition(Optional<Identifier> model, List<GeyserMappi
     }
 
     @Override
-    public int compareTo(@NotNull GeyserMapping other) {
+    public int compareTo(GeyserMapping other) {
         if (other instanceof GeyserGroupDefinition(Optional<Identifier> otherModel, List<GeyserMapping> otherDefinitions)) {
             if (model.isPresent() && otherModel.isPresent()) {
                 return model.get().compareTo(otherModel.get());

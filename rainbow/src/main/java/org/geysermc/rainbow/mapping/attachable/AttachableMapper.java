@@ -7,7 +7,6 @@ import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.item.equipment.Equippable;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.geometry.BedrockGeometryContext;
 import org.geysermc.rainbow.mapping.texture.TextureHolder;
@@ -24,8 +23,7 @@ public class AttachableMapper {
         // Unfortunately we can't have both equippables and custom models, so we prefer the latter :(
         return (bedrockIdentifier, textureConsumer) -> geometryContext.geometry()
                 .map(geometry -> BedrockAttachable.geometry(bedrockIdentifier, geometry))
-                .or(() -> Optional.ofNullable(components.get(DataComponents.EQUIPPABLE))
-                        .flatMap(optional -> (Optional<Equippable>) optional)
+                .or(() -> Optional.ofNullable(components.split().added().get(DataComponents.EQUIPPABLE))
                         .flatMap(equippable -> equippable.assetId().flatMap(assetResolver::getEquipmentInfo).map(info -> Pair.of(equippable.slot(), info)))
                         .filter(assetInfo -> assetInfo.getSecond() != EquipmentAssetManager.MISSING)
                         .map(assetInfo -> assetInfo
@@ -33,7 +31,7 @@ public class AttachableMapper {
                         .filter(assetInfo -> !assetInfo.getSecond().isEmpty())
                         .map(assetInfo -> {
                             Identifier equipmentTexture = getTexture(assetInfo.getSecond(), getLayer(assetInfo.getFirst()));
-                            textureConsumer.accept(TextureHolder.createBuiltIn(null, equipmentTexture));
+                            textureConsumer.accept(TextureHolder.createBuiltIn(equipmentTexture));
                             return BedrockAttachable.equipment(bedrockIdentifier, assetInfo.getFirst(), equipmentTexture.getPath());
                         }))
                 .map(attachable -> {
@@ -42,7 +40,7 @@ public class AttachableMapper {
                         attachable.withAnimation("third_person", animation.thirdPerson());
                         attachable.withAnimation("head", animation.head());
                         attachable.withScript("animate", "first_person", "context.is_first_person == 1.0");
-                        attachable.withScript("animate", "third_person", "context.is_first_person == 0.0 && context.item_slot != 'head'");
+                        attachable.withScript("animate", "third_person", "context.is_first_person == 0.0 && (context.item_slot == 'main_hand' || context.item_slot == 'off_hand')");
                         attachable.withScript("animate", "head", "context.is_first_person == 0.0 && context.item_slot == 'head'");
                     });
                     return attachable.build();

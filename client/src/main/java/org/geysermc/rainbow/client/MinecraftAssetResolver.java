@@ -5,11 +5,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ClientItem;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.AtlasManager;
 import net.minecraft.client.resources.model.EquipmentAssetManager;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.client.resources.model.ModelManager;
 import net.minecraft.client.resources.model.ResolvedModel;
+import net.minecraft.client.resources.model.sprite.AtlasManager;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -21,6 +21,7 @@ import org.geysermc.rainbow.client.mixin.EntityRenderDispatcherAccessor;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.texture.TextureResource;
 import org.geysermc.rainbow.mixin.SpriteContentsAccessor;
+import org.jspecify.annotations.Nullable;
 
 import java.io.InputStream;
 import java.util.Optional;
@@ -54,7 +55,7 @@ public class MinecraftAssetResolver implements AssetResolver {
     }
 
     @Override
-    public Optional<TextureResource> getTexture(Identifier atlasId, Identifier identifier) {
+    public Optional<TextureResource> getTexture(@Nullable Identifier atlasId, Identifier identifier) {
         if (atlasId == null) {
             // Not in an atlas - so not animated, probably?
             return RainbowIO.safeIO(() -> {

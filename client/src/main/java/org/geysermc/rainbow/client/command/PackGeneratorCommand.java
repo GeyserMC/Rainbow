@@ -3,20 +3,25 @@ package org.geysermc.rainbow.client.command;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.datafixers.util.Pair;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import org.geysermc.rainbow.client.PackManager;
 import org.geysermc.rainbow.client.mapper.InventoryMapper;
+import org.geysermc.rainbow.client.mapper.ItemSuggestionProvider;
 import org.geysermc.rainbow.client.mapper.PackMapper;
 import org.geysermc.rainbow.pack.BedrockPack;
 
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
 public class PackGeneratorCommand {
@@ -26,9 +31,9 @@ public class PackGeneratorCommand {
                     .withClickEvent(new ClickEvent.SuggestCommand("/rainbow create "))));
 
     public static void register(CommandDispatcher<FabricClientCommandSource> dispatcher, PackManager packManager, PackMapper packMapper) {
-        dispatcher.register(ClientCommandManager.literal("rainbow")
-                .then(ClientCommandManager.literal("create")
-                        .then(ClientCommandManager.argument("name", StringArgumentType.word())
+        dispatcher.register(ClientCommands.literal("rainbow")
+                .then(ClientCommands.literal("create")
+                        .then(ClientCommands.argument("name", StringArgumentType.word())
                                 .executes(context -> {
                                     String name = StringArgumentType.getString(context, "name");
                                     try {
@@ -42,28 +47,34 @@ public class PackGeneratorCommand {
                                 })
                         )
                 )
-                .then(ClientCommandManager.literal("map")
+                .then(ClientCommands.literal("map")
                         .executes(runWithPack(packManager, (source, pack) -> {
                             ItemStack heldItem = source.getPlayer().getMainHandItem();
-                            switch (pack.map(heldItem)) {
-                                case NONE_MAPPED -> source.sendError(Component.translatable("commands.rainbow.no_item_mapped"));
-                                case PROBLEMS_OCCURRED -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item_problems"));
-                                case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item"));
+                            if (heldItem.isEmpty()) {
+                                source.sendError(Component.literal("Must hold an item to map"));
+                            } else {
+                                switch (pack.map(ItemStackTemplate.fromNonEmptyStack(heldItem))) {
+                                    case NONE_MAPPED -> source.sendError(Component.translatable("commands.rainbow.no_item_mapped"));
+                                    case PROBLEMS_OCCURRED -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item_problems"));
+                                    case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item"));
+                                }
                             }
                         }))
                 )
-                .then(ClientCommandManager.literal("mapinventory")
+                .then(ClientCommands.literal("mapinventory")
                         .executes(runWithPack(packManager, (source, pack) -> {
                             int mapped = 0;
                             boolean errors = false;
                             Inventory inventory = source.getPlayer().getInventory();
 
                             for (ItemStack stack : inventory) {
-                                BedrockPack.MappingResult result = pack.map(stack);
-                                if (result != BedrockPack.MappingResult.NONE_MAPPED) {
-                                    mapped++;
-                                    if (result == BedrockPack.MappingResult.PROBLEMS_OCCURRED) {
-                                        errors = true;
+                                if (!stack.isEmpty()) {
+                                    BedrockPack.MappingResult result = pack.map(ItemStackTemplate.fromNonEmptyStack(stack));
+                                    if (result != BedrockPack.MappingResult.NONE_MAPPED) {
+                                        mapped++;
+                                        if (result == BedrockPack.MappingResult.PROBLEMS_OCCURRED) {
+                                            errors = true;
+                                        }
                                     }
                                 }
                             }
@@ -78,10 +89,10 @@ public class PackGeneratorCommand {
                             }
                         }))
                 )
-                .then(ClientCommandManager.literal("auto")
+                .then(ClientCommands.literal("auto")
                         /* This is disabled for now.
-                        .then(ClientCommandManager.literal("command")
-                                .then(ClientCommandManager.argument("suggestions", CommandSuggestionsArgumentType.TYPE)
+                        .then(ClientCommands.literal("command")
+                                .then(ClientCommands.argument("suggestions", CommandSuggestionsArgumentType.TYPE)
                                         .executes(context -> {
                                             Pair<String, CompletableFuture<Suggestions>> suggestions = CommandSuggestionsArgumentType.getSuggestions(context, "suggestions");
                                             String baseCommand = suggestions.getFirst();
@@ -97,21 +108,22 @@ public class PackGeneratorCommand {
                                 )
                         )
                          */
-                        .then(ClientCommandManager.literal("inventory")
+                        .then(ClientCommands.literal("inventory")
                                 .executes(runWithPack(packManager, (source, pack) -> {
                                     packMapper.setItemProvider(InventoryMapper.INSTANCE);
                                     source.sendFeedback(Component.translatable("commands.rainbow.automatic_inventory_mapping"));
                                 }))
                         )
-                        .then(ClientCommandManager.literal("stop")
+                        .then(ClientCommands.literal("stop")
                                 .executes(runWithPack(packManager, (source, pack) -> {
                                     packMapper.setItemProvider(null);
                                     source.sendFeedback(Component.translatable("commands.rainbow.stopped_automatic_mapping"));
                                 }))
                         )
                 )
-                .then(ClientCommandManager.literal("finish")
+                .then(ClientCommands.literal("finish")
                         .executes(context -> {
+                            context.getSource().sendFeedback(Component.translatable("commands.rainbow.pack_finishing"));
                             Optional<Path> exportPath = packManager.getExportPath();
                             Runnable onFinish = () -> context.getSource().sendFeedback(Component.translatable("commands.rainbow.pack_finished_successfully").withStyle(style
                                     -> style.withUnderlined(true).withClickEvent(new ClickEvent.OpenFile(exportPath.orElseThrow()))));

@@ -4,7 +4,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
@@ -35,7 +34,7 @@ public interface GeyserPredicate {
         }
 
         @Override
-        public @NotNull String getSerializedName() {
+        public String getSerializedName() {
             return name;
         }
     }

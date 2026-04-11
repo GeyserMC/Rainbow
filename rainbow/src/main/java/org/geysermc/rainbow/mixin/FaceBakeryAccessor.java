@@ -1,7 +1,7 @@
 package org.geysermc.rainbow.mixin;
 
-import net.minecraft.client.renderer.block.model.BlockElementFace;
-import net.minecraft.client.renderer.block.model.FaceBakery;
+import net.minecraft.client.resources.model.cuboid.CuboidFace;
+import net.minecraft.client.resources.model.cuboid.FaceBakery;
 import net.minecraft.core.Direction;
 import org.joml.Vector3fc;
 import org.spongepowered.asm.mixin.Mixin;
@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 public interface FaceBakeryAccessor {
 
     @Invoker
-    static BlockElementFace.UVs invokeDefaultFaceUV(Vector3fc posFrom, Vector3fc posTo, Direction facing) {
+    static CuboidFace.UVs invokeDefaultFaceUV(Vector3fc posFrom, Vector3fc posTo, Direction facing) {
         throw new AssertionError();
     }
 }

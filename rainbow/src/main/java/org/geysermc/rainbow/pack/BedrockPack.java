@@ -7,7 +7,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.CustomModelData;
 import org.geysermc.rainbow.CodecUtil;
 import org.geysermc.rainbow.PackConstants;
@@ -20,7 +20,7 @@ import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
 import org.geysermc.rainbow.definition.GeyserMappings;
 import org.geysermc.rainbow.mapping.texture.TextureHolder;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -43,7 +43,7 @@ public class BedrockPack {
     private final BedrockTextures.Builder itemTextures = BedrockTextures.builder();
     private final Set<BedrockItem> bedrockItems = new HashSet<>();
     private final Set<Identifier> modelsMapped = new HashSet<>();
-    private final Set<Pair<Item, Integer>> customModelDataMapped = new HashSet<>();
+    private final Set<Pair<Holder<Item>, Integer>> customModelDataMapped = new HashSet<>();
 
     private final PackContext context;
     private final ProblemReporter reporter;
@@ -68,16 +68,12 @@ public class BedrockPack {
         return name;
     }
 
-    public MappingResult map(ItemStack stack) {
-        if (stack.isEmpty()) {
-            return MappingResult.NONE_MAPPED;
-        }
-
+    public MappingResult map(ItemStackTemplate stack) {
         AtomicBoolean problems = new AtomicBoolean();
         ProblemReporter mapReporter = new ProblemReporter() {
 
             @Override
-            public @NotNull ProblemReporter forChild(PathElement child) {
+            public ProblemReporter forChild(PathElement child) {
                 return reporter.forChild(child);
             }
 
@@ -88,19 +84,18 @@ public class BedrockPack {
             }
         };
 
-        Optional<? extends Identifier> patchedModel = stack.getComponentsPatch().get(DataComponents.ITEM_MODEL);
-        //noinspection OptionalAssignedToNull - annoying Mojang
-        if (patchedModel == null || patchedModel.isEmpty()) {
-            CustomModelData customModelData = stack.get(DataComponents.CUSTOM_MODEL_DATA);
+        if (!stack.components().split().added().has(DataComponents.ITEM_MODEL)) {
+            CustomModelData customModelData = stack.components().split().added().get(DataComponents.CUSTOM_MODEL_DATA);
             Float firstNumber;
             if (customModelData == null || (firstNumber = customModelData.getFloat(0)) == null
-                    || !customModelDataMapped.add(Pair.of(stack.getItem(), firstNumber.intValue()))) {
+                    || !customModelDataMapped.add(Pair.of(stack.item(), firstNumber.intValue()))) {
                 return MappingResult.NONE_MAPPED;
             }
 
             BedrockItemMapper.tryMapStack(stack, firstNumber.intValue(), mapReporter, context);
         } else {
-            Identifier model = patchedModel.get();
+            Identifier model = stack.components().split().added().get(DataComponents.ITEM_MODEL);
+            assert model != null;
             if (!modelsMapped.add(model)) {
                 return MappingResult.NONE_MAPPED;
             }
@@ -112,9 +107,7 @@ public class BedrockPack {
     }
 
     public MappingResult map(Holder<Item> item, DataComponentPatch patch) {
-        ItemStack stack = new ItemStack(item);
-        stack.applyComponents(patch);
-        return map(stack);
+        return map(new ItemStackTemplate(item, 1, patch));
     }
 
     public CompletableFuture<?> save() {
@@ -122,7 +115,7 @@ public class BedrockPack {
 
         futures.add(serializer.saveJson(GeyserMappings.CODEC, context.mappings(), paths.mappings()));
         manifest.ifPresent(manifest -> futures.add(serializer.saveJson(PackManifest.CODEC, manifest, paths.manifest())));
-        futures.add(serializer.saveJson(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), paths.itemAtlas()));
+        futures.add(serializer.saveJson(BedrockTextureAtlas.ITEM_ATLAS_CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), paths.itemAtlas()));
 
         Function<TextureHolder, CompletableFuture<?>> textureSaver = texture -> {
             Identifier textureIdentifier = Rainbow.decorateTextureIdentifier(texture.location());
@@ -179,14 +172,14 @@ public class BedrockPack {
         private final Path packRootPath;
         private final PackSerializer packSerializer;
         private final AssetResolver assetResolver;
-        private PackManifest manifest;
+        private @Nullable PackManifest manifest;
         private UnaryOperator<Path> attachablesPath = resolve(ATTACHABLES_DIRECTORY);
         private UnaryOperator<Path> geometryPath = resolve(GEOMETRY_DIRECTORY);
         private UnaryOperator<Path> animationPath = resolve(ANIMATION_DIRECTORY);
         private UnaryOperator<Path> manifestPath = resolve(MANIFEST_FILE);
         private UnaryOperator<Path> itemAtlasPath = resolve(ITEM_ATLAS_FILE);
-        private Path packZipFile = null;
-        private GeometryRenderer geometryRenderer = null;
+        private @Nullable Path packZipFile = null;
+        private @Nullable GeometryRenderer geometryRenderer = null;
         private Function<ProblemReporter.PathElement, ProblemReporter> reporter;
         private boolean reportSuccesses = false;
 
@@ -200,13 +193,13 @@ public class BedrockPack {
             manifest = defaultManifest(name);
         }
 
-        public Builder withManifest(PackManifest manifest) {
+        public Builder withManifest(@Nullable PackManifest manifest) {
             this.manifest = manifest;
             return this;
         }
 
         public Builder withAttachablesPath(Path absolute) {
-            return withAttachablesPath(path -> absolute);
+            return withAttachablesPath(_ -> absolute);
         }
 
         public Builder withAttachablesPath(UnaryOperator<Path> path) {
@@ -215,7 +208,7 @@ public class BedrockPack {
         }
 
         public Builder withGeometryPath(Path absolute) {
-            return withGeometryPath(path -> absolute);
+            return withGeometryPath(_ -> absolute);
         }
 
         public Builder withGeometryPath(UnaryOperator<Path> path) {
@@ -224,7 +217,7 @@ public class BedrockPack {
         }
 
         public Builder withAnimationPath(Path absolute) {
-            return withAnimationPath(path -> absolute);
+            return withAnimationPath(_ -> absolute);
         }
 
         public Builder withAnimationPath(UnaryOperator<Path> path) {
@@ -233,7 +226,7 @@ public class BedrockPack {
         }
 
         public Builder withManifestPath(Path absolute) {
-            return withManifestPath(path -> absolute);
+            return withManifestPath(_ -> absolute);
         }
 
         public Builder withManifestPath(UnaryOperator<Path> path) {
@@ -242,7 +235,7 @@ public class BedrockPack {
         }
 
         public Builder withItemAtlasPath(Path absolute) {
-            return withItemAtlasPath(path -> absolute);
+            return withItemAtlasPath(_ -> absolute);
         }
 
         public Builder withItemAtlasPath(UnaryOperator<Path> path) {

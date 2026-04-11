@@ -1,10 +1,11 @@
 package org.geysermc.rainbow.mapping.geometry;
 
-import net.minecraft.client.renderer.block.model.TextureSlots;
-import net.minecraft.client.resources.model.Material;
+import com.mojang.math.Transformation;
 import net.minecraft.client.resources.model.ResolvedModel;
+import net.minecraft.client.resources.model.sprite.Material;
+import net.minecraft.client.resources.model.sprite.TextureSlots;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mapping.animation.AnimationMapper;
@@ -22,7 +23,7 @@ public record BedrockGeometryContext(Optional<MappedGeometry> geometry,
             .map(Identifier::withDefaultNamespace)
             .toList();
 
-    public static BedrockGeometryContext create(Identifier bedrockIdentifier, ResolvedModel model, ItemStack stackToRender, PackContext context) {
+    public static BedrockGeometryContext create(Identifier bedrockIdentifier, ResolvedModel model, Transformation definitionTransformation, ItemStackTemplate stackToRender, PackContext context) {
         ResolvedModel parentModel = model.parent();
         // debugName() returns the resource location of the model as a string
         boolean handheld = parentModel != null && HANDHELD_MODELS.contains(Identifier.parse(parentModel.debugName()));
@@ -36,12 +37,12 @@ public record BedrockGeometryContext(Optional<MappedGeometry> geometry,
         if (layer0Texture != null) {
             geometry = Optional.empty();
             animation = Optional.empty();
-            icon = TextureHolder.createBuiltIn(Rainbow.getAtlasIdFromMaterial(layer0Texture), layer0Texture.texture());
+            icon = TextureHolder.createBuiltIn(layer0Texture.sprite());
         } else {
             // Unknown model (doesn't use layer0), so we immediately assume the geometry is custom
             // This check should probably be done differently (actually check if the model is 2D or 3D)
 
-            geometry = Optional.of(context.geometryCache().mapGeometry(bedrockIdentifier, model, stackToRender, context));
+            geometry = Optional.of(context.geometryCache().mapGeometry(bedrockIdentifier, model, definitionTransformation, stackToRender, context));
             animation = Optional.of(AnimationMapper.mapAnimation(Rainbow.bedrockSafeIdentifier(bedrockIdentifier), "bone", model.getTopTransforms()));
             icon = geometry.get().icon();
         }

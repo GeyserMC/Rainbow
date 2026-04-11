@@ -4,17 +4,19 @@ import com.google.common.hash.Hashing;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.serialization.Codec;
 import net.fabricmc.fabric.api.client.datagen.v1.provider.FabricModelProvider;
-import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
 import net.minecraft.client.data.models.model.ModelInstance;
-import net.minecraft.client.renderer.block.model.BlockModel;
-import net.minecraft.client.renderer.block.model.ItemModelGenerator;
 import net.minecraft.client.renderer.item.ClientItem;
 import net.minecraft.client.resources.metadata.animation.AnimationMetadataSection;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.client.resources.model.ResolvedModel;
 import net.minecraft.client.resources.model.UnbakedModel;
+import net.minecraft.client.resources.model.cuboid.CuboidModel;
+import net.minecraft.client.resources.model.cuboid.ItemModelGenerator;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
@@ -27,13 +29,13 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.equipment.EquipmentAsset;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
+import org.geysermc.rainbow.datagen.mixin.DataComponentInitializersAccessor;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.texture.TextureResource;
 import org.geysermc.rainbow.pack.BedrockPack;
 import org.jetbrains.annotations.ApiStatus;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +47,7 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -59,10 +62,12 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
     private final Path geyserMappingsPath;
     private final Path packPath;
 
-    private Map<Item, ClientItem> itemInfos;
-    private Map<Identifier, ModelInstance> models;
+    private @Nullable Map<Item, ClientItem> itemInfos;
+    private @Nullable Map<Identifier, ModelInstance> models;
 
-    protected RainbowModelProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries,
+    private @Nullable Map<ResourceKey<?>, DataComponentMap.Builder> initializedItemComponents;
+
+    protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries,
                                    Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos, String packName,
                                    Identifier outputRoot, Path geyserMappingsPath, Path packPath) {
         super(output);
@@ -76,34 +81,38 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
         this.packPath = computedOutputRoot.resolve(packPath);
     }
 
-    protected RainbowModelProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries,
+    protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries,
                                    Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos, String packName,
                                    Identifier outputRoot) {
         this(output, registries, equipmentInfos, packName, outputRoot, Path.of("geyser_mappings.json"), Path.of("pack"));
     }
 
-    protected RainbowModelProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries,
+    protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries,
                                 Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos, String packName) {
         this(output, registries, equipmentInfos, packName, Identifier.withDefaultNamespace("bedrock"));
     }
 
-    protected RainbowModelProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries, String packName) {
+    protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries, String packName) {
         this(output, registries, Map.of(), packName);
     }
 
-    protected RainbowModelProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> registries) {
+    protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
         this(output, registries, Rainbow.MOD_ID + "-generated");
     }
 
     @Override
-    public @NotNull CompletableFuture<?> run(CachedOutput output) {
+    public CompletableFuture<?> run(CachedOutput output) {
         CompletableFuture<?> vanillaModels = super.run(output);
 
         CompletableFuture<BedrockPack> bedrockPack = ClientPackLoader.openClientResources()
                 .thenCompose(resourceManager -> registries.thenApply(registries -> {
+                    // You're not really supposed to do this, but Rainbow *needs* the initialised components to function properly
+                    initializedItemComponents = ((DataComponentInitializersAccessor) BuiltInRegistries.DATA_COMPONENT_INITIALIZERS).invokeRunInitializers(registries);
+
                     try (resourceManager) {
                         BedrockPack pack = createBedrockPack(new Serializer(output, registries),
-                                new DatagenResolver(resourceManager, equipmentInfos, itemInfos, models)).build();
+                                new DatagenResolver(resourceManager, equipmentInfos,
+                                        Objects.requireNonNull(itemInfos), Objects.requireNonNull(models))).build();
 
                         Set<Item> sortedItemInfos = new TreeSet<>(Comparator.comparing(item -> item.builtInRegistryHolder().key().identifier()));
                         sortedItemInfos.addAll(itemInfos.keySet());
@@ -125,8 +134,11 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
     protected abstract Item getVanillaItem(Item modded);
 
     protected DataComponentPatch getVanillaDataComponentPatch(Item modded) {
+        if (initializedItemComponents == null) {
+            throw new IllegalStateException("initializedItemComponents may not be null");
+        }
         DataComponentPatch.Builder builder = DataComponentPatch.builder();
-        modded.components().forEach(builder::set);
+        initializedItemComponents.get(modded.builtInRegistryHolder().key()).build().forEach(builder::set);
         return builder.build();
     }
 
@@ -179,8 +191,8 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
 
         @Override
         public Optional<ResolvedModel> getResolvedModel(Identifier identifier) {
-            return resolvedModelCache.computeIfAbsent(identifier, key -> Optional.ofNullable(models.get(identifier))
-                    .<UnbakedModel>map(instance -> BlockModel.fromStream(new StringReader(instance.get().toString())))
+            return resolvedModelCache.computeIfAbsent(identifier, _ -> Optional.ofNullable(models.get(identifier))
+                    .<UnbakedModel>map(instance -> CuboidModel.fromStream(new StringReader(instance.get().toString())))
                     .or(() -> {
                         if (identifier.equals(ItemModelGenerator.GENERATED_ITEM_MODEL_ID)) {
                             return Optional.of(new ItemModelGenerator());
@@ -189,12 +201,12 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
                     })
                     .or(() -> RainbowIO.safeIO(() -> {
                         try (BufferedReader reader = resourceManager.openAsReader(identifier.withPrefix("models/").withSuffix(".json"))) {
-                            return BlockModel.fromStream(reader);
+                            return CuboidModel.fromStream(reader);
                         }
                     }))
                     .map(model -> new ResolvedModel() {
                         @Override
-                        public @NotNull UnbakedModel wrapped() {
+                        public UnbakedModel wrapped() {
                             return model;
                         }
 
@@ -204,7 +216,7 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
                         }
 
                         @Override
-                        public @NotNull String debugName() {
+                        public String debugName() {
                             return identifier.toString();
                         }
                     }));
@@ -221,7 +233,7 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
         }
 
         @Override
-        public Optional<TextureResource> getTexture(Identifier atlas, Identifier identifier) {
+        public Optional<TextureResource> getTexture(@Nullable Identifier atlas, Identifier identifier) {
             // We don't care about atlas since there are none loaded at datagen
             return resourceManager.getResource(Rainbow.decorateTextureIdentifier(identifier))
                     .flatMap(resource -> RainbowIO.safeIO(() -> {

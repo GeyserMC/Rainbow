@@ -31,6 +31,7 @@ public class CommandSuggestionsArgumentType implements ArgumentType<Pair<String,
     }
 
     public static Pair<String, CompletableFuture<Suggestions>> getSuggestions(CommandContext<?> context, String argument) {
+        //noinspection unchecked
         return context.getArgument(argument, Pair.class);
     }
 

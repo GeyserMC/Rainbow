@@ -1,14 +1,13 @@
 package org.geysermc.rainbow.mapping.texture;
 
 import com.mojang.blaze3d.platform.NativeImage;
-import net.minecraft.client.renderer.block.model.TextureSlots;
 import net.minecraft.client.renderer.texture.SpriteContents;
 import net.minecraft.client.renderer.texture.SpriteLoader;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.Material;
+import net.minecraft.client.resources.model.sprite.Material;
+import net.minecraft.client.resources.model.sprite.TextureSlots;
 import net.minecraft.data.AtlasIds;
 import net.minecraft.util.Util;
-import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mixin.SpriteContentsAccessor;
@@ -41,7 +40,7 @@ public record StitchedTextures(Map<String, TextureAtlasSprite> sprites, Supplier
 
         Map<String, TextureAtlasSprite> sprites = new HashMap<>();
         for (Map.Entry<String, Material> material : materials.entrySet()) {
-            TextureAtlasSprite sprite = preparations.getSprite(material.getValue().texture());
+            TextureAtlasSprite sprite = preparations.getSprite(material.getValue().sprite());
             // Sprite could be null when this material wasn't stitched, which happens when the texture simply doesn't exist within the loaded resourcepacks
             if (sprite != null) {
                 sprites.put(material.getKey(), sprite);
@@ -62,9 +61,9 @@ public record StitchedTextures(Map<String, TextureAtlasSprite> sprites, Supplier
 
     private static Optional<SpriteContents> readSpriteContents(Material material, PackContext context) {
         return RainbowIO.safeIO(() -> {
-            try (TextureResource texture = context.assetResolver().getTextureSafely(Rainbow.getAtlasIdFromMaterial(material), material.texture()).orElse(null)) {
+            try (TextureResource texture = context.assetResolver().getPossibleAtlasTextureSafely(material.sprite()).orElse(null)) {
                 if (texture != null) {
-                    return new SpriteContents(material.texture(), texture.sizeOfFrame(), texture.getFirstFrame(true));
+                    return new SpriteContents(material.sprite(), texture.sizeOfFrame(), texture.getFirstFrame(true));
                 }
             }
             return null;

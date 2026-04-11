@@ -1,7 +1,7 @@
 package org.geysermc.rainbow.client.render;
 
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
 import org.geysermc.rainbow.mapping.texture.TextureHolder;
 
@@ -11,7 +11,7 @@ public class MinecraftGeometryRenderer implements GeometryRenderer {
     public static final MinecraftGeometryRenderer INSTANCE = new MinecraftGeometryRenderer();
 
     @Override
-    public TextureHolder render(Identifier identifier, ItemStack stack) {
+    public TextureHolder render(Identifier identifier, ItemStackTemplate stack) {
         return new RenderedTextureHolder(identifier, stack);
     }
 }

@@ -13,7 +13,7 @@ import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.resources.CloseableResourceManager;
 import net.minecraft.server.packs.resources.MultiPackResourceManager;
 import net.minecraft.world.level.validation.DirectoryValidator;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -30,7 +30,7 @@ class ClientPackLoader {
         OptionSet parsed = parser.parse(FabricLoader.getInstance().getLaunchArguments(false));
 
         return new ClientPackSource(getExternalAssetSource(parseArgument(parsed, assetIndexSpec), parseArgument(parsed, assetsDirSpec)),
-                new DirectoryValidator(path -> false));
+                new DirectoryValidator(_ -> false));
     }
 
     static CompletableFuture<CloseableResourceManager> openClientResources() {
@@ -44,12 +44,11 @@ class ClientPackLoader {
         });
     }
 
-    private static Path getExternalAssetSource(String assetIndex, File assetDirectory) {
+    private static Path getExternalAssetSource(@Nullable String assetIndex, File assetDirectory) {
         return assetIndex == null ? assetDirectory.toPath() : IndexedAssetSource.createIndexFs(assetDirectory.toPath(), assetIndex);
     }
 
     // From Mojang's client/Main.java
-    @Nullable
     private static <T> T parseArgument(OptionSet set, OptionSpec<T> spec) {
         try {
             return set.valueOf(spec);

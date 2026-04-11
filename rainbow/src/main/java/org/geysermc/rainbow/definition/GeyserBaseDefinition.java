@@ -28,6 +28,7 @@ public record GeyserBaseDefinition(Identifier bedrockIdentifier, Optional<String
                         .filter(entry -> entry.getValue().isEmpty() || SUPPORTED_COMPONENTS.contains(entry.getKey()))
                         .forEach(entry -> {
                             if (entry.getValue().isPresent()) {
+                                //noinspection unchecked
                                 filtered.set((DataComponentType) entry.getKey(), entry.getValue().orElseThrow());
                             } else {
                                 filtered.remove(entry.getKey());

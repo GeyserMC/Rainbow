@@ -18,9 +18,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 public final class PackManager {
@@ -39,16 +39,18 @@ public final class PackManager {
     private static final Path PACK_ZIP_FILE = Path.of("pack.zip");
     private static final Path REPORT_FILE = Path.of("report.txt");
 
+    private final ClientPackSerializer packSerializer = new ClientPackSerializer();
     private Optional<BedrockPack> currentPack = Optional.empty();
 
     public void startPack(String name) throws IOException {
         if (currentPack.isPresent()) {
             throw new IllegalStateException("Already started a pack (" + currentPack.get().name() + ")");
         }
+        packSerializer.prepare(Objects.requireNonNull(Minecraft.getInstance().level).registryAccess());
 
         Path packDirectory = createPackDirectory(name);
-        BedrockPack pack = BedrockPack.builder(name, packDirectory.resolve(MAPPINGS_FILE), packDirectory.resolve(PACK_DIRECTORY),
-                        new MinecraftPackSerializer(Minecraft.getInstance()), new MinecraftAssetResolver(Minecraft.getInstance()))
+        BedrockPack pack = BedrockPack.builder(name, packDirectory.resolve(MAPPINGS_FILE), packDirectory.resolve(PACK_DIRECTORY), packSerializer,
+                        new MinecraftAssetResolver(Minecraft.getInstance()))
                 .withPackZipFile(packDirectory.resolve(PACK_ZIP_FILE))
                 .withGeometryRenderer(MinecraftGeometryRenderer.INSTANCE)
                 .reportSuccesses()
@@ -69,42 +71,68 @@ public final class PackManager {
     }
 
     public boolean finish(Runnable onFinish) {
-        currentPack.map(pack -> {
-            RainbowIO.safeIO(() -> Files.writeString(getExportPath().orElseThrow().resolve(REPORT_FILE), createPackSummary(pack)));
-            return pack.save();
-        }).ifPresent(future -> future.thenRun(onFinish));
+        currentPack.ifPresent(pack -> {
+            Path reportPath = EXPORT_DIRECTORY.resolve(pack.name()).resolve(REPORT_FILE);
+            pack.save().thenRun(() -> {
+                RainbowIO.safeIO(() -> Files.writeString(reportPath, createPackSummary(pack, packSerializer)));
+                onFinish.run();
+            });
+        });
         boolean wasPresent = currentPack.isPresent();
         currentPack = Optional.empty();
         return wasPresent;
     }
 
-    private static String createPackSummary(BedrockPack pack) {
+    private static String createPackSummary(BedrockPack pack, ClientPackSerializer packSerializer) {
         String problems = ((ProblemReporter.Collector) pack.getReporter()).getTreeReport();
         if (StringUtil.isBlank(problems)) {
             problems = "Well that's odd... there's nothing here!";
         }
 
         Set<BedrockItem> bedrockItems = pack.getBedrockItems();
-        //long attachables = bedrockItems.stream().filter(item -> item.attachableCreator().isPresent()).count();
         long geometries = bedrockItems.stream().filter(item -> item.geometryContext().geometry().isPresent()).count();
         long animations = bedrockItems.stream().filter(item -> item.geometryContext().animation().isPresent()).count();
 
         return """
+#### READ THIS FIRST ####
+What do I do now?
+
+In this folder, you'll find 2 important files along with this one:
+
+- geyser_mappings.json: put this in the "custom_mappings" folder in Geyser's config folder. These are the generated item mappings.
+- pack.zip: put this in the "packs" folder in Geyser's config folder. This is the generated bedrock resourcepack.
+
+Once you have taken those steps, restart your server. If everything went right, bedrock players should download
+the generated pack and see your custom items.
+
+IF YOU EXPERIENCE ANY ISSUES, please go to our Discord (https://discord.gg/geysermc) for support.
+Use the #custom-resource-packs channel, and make sure to include this report file.
+
+You can also open an issue report over at our issue tracker (https://github.com/GeyserMC/Rainbow/issues).
+Again, be sure to include this report file, and please make sure your issue is not already reported!
+If it is, you can help out by adding details to the existing report.
+
+Below, you'll find some statistics about the generated pack, and a mapping report,
+which will list any models converted, and any problems that occurred during mapping.
+#########################
+
 -- PACK GENERATION REPORT --
 // %s
 
 Generated pack: %s
 Mappings written: %d
+
 Item texture atlas size: %d
-Attachables tried to export: FIXME
-Geometry files tried to export: %d
-Animations tried to export: %d
-Textures tried to export: FIXME
+Geometries exported: %d
+Animations exported: %d
+
+JSON-files written: %d
+Textures exported: %d
 
 -- MAPPING TREE REPORT --
 %s
 """.formatted(randomSummaryComment(), pack.name(), pack.getMappings(), pack.getItemTextureAtlasSize(),
-                geometries, animations, problems);
+                geometries, animations, packSerializer.jsonExported(), packSerializer.texturesExported(), problems);
     }
 
     private static String randomSummaryComment() {

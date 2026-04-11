@@ -3,7 +3,7 @@ package org.geysermc.rainbow.client.mapper;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.protocol.game.ServerboundChatCommandPacket;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +19,7 @@ public class ItemSuggestionProvider implements CustomItemProvider {
         remainingCommands = new ArrayList<>(commands);
     }
 
-    public Stream<ItemStack> nextItems(LocalPlayer player, ClientPacketListener connection) {
+    public Stream<ItemStackTemplate> nextItems(LocalPlayer player, ClientPacketListener connection) {
         if (!remainingCommands.isEmpty() || waitingOnItem) {
             if (waitingOnClear && player.getInventory().isEmpty()) {
                 waitingOnClear = false;
@@ -28,7 +28,9 @@ public class ItemSuggestionProvider implements CustomItemProvider {
                 waitingOnItem = true;
             } else {
                 if (!player.getInventory().isEmpty()) {
-                    Stream<ItemStack> items = player.getInventory().getNonEquipmentItems().stream();
+                    Stream<ItemStackTemplate> items = player.getInventory().getNonEquipmentItems().stream()
+                            .filter(stack -> !stack.isEmpty())
+                            .map(ItemStackTemplate::fromNonEmptyStack);
                     connection.send(new ServerboundChatCommandPacket("clear"));
 
                     waitingOnItem = false;

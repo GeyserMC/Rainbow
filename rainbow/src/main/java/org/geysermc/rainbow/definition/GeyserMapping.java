@@ -4,7 +4,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.util.StringRepresentable;
-import org.jetbrains.annotations.NotNull;
 
 public interface GeyserMapping extends Comparable<GeyserMapping> {
 
@@ -39,7 +38,7 @@ public interface GeyserMapping extends Comparable<GeyserMapping> {
         }
 
         @Override
-        public @NotNull String getSerializedName() {
+        public String getSerializedName() {
             return name;
         }
     }

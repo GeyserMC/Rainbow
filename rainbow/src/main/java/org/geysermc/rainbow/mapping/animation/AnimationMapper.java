@@ -1,7 +1,7 @@
 package org.geysermc.rainbow.mapping.animation;
 
-import net.minecraft.client.renderer.block.model.ItemTransform;
-import net.minecraft.client.renderer.block.model.ItemTransforms;
+import net.minecraft.client.resources.model.cuboid.ItemTransform;
+import net.minecraft.client.resources.model.cuboid.ItemTransforms;
 import org.geysermc.rainbow.pack.animation.BedrockAnimation;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
