@@ -244,5 +244,11 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
                         }
                     }));
         }
+
+        @Override
+        public Map<String, Map<String, String>> getForeignLanguages() {
+            // FIXME
+            return Map.of();
+        }
     }
 }

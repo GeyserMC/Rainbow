@@ -37,6 +37,7 @@ public final class PackManager {
     private static final Path PACK_DIRECTORY = Path.of("pack");
     private static final Path MAPPINGS_FILE = Path.of("geyser_mappings.json");
     private static final Path PACK_ZIP_FILE = Path.of("pack.zip");
+    private static final Path PACK_LANG_FOLDER = Path.of("lang");
     private static final Path REPORT_FILE = Path.of("report.txt");
 
     private final ClientPackSerializer packSerializer = new ClientPackSerializer();
@@ -52,6 +53,7 @@ public final class PackManager {
         BedrockPack pack = BedrockPack.builder(name, packDirectory.resolve(MAPPINGS_FILE), packDirectory.resolve(PACK_DIRECTORY), packSerializer,
                         new MinecraftAssetResolver(Minecraft.getInstance()))
                 .withPackZipFile(packDirectory.resolve(PACK_ZIP_FILE))
+                .withLanguageFolder(packDirectory.resolve(PACK_LANG_FOLDER))
                 .withGeometryRenderer(MinecraftGeometryRenderer.INSTANCE)
                 .reportSuccesses()
                 .build();
@@ -97,10 +99,11 @@ public final class PackManager {
 #### READ THIS FIRST ####
 What do I do now?
 
-In this folder, you'll find 2 important files along with this one:
+In this folder, you'll find 3 important files/folders along with this one:
 
 - geyser_mappings.json: put this in the "custom_mappings" folder in Geyser's config folder. These are the generated item mappings.
 - pack.zip: put this in the "packs" folder in Geyser's config folder. This is the generated bedrock resourcepack.
+- lang: put all files in this folder in the "locales/overrides" folder in Geyser's config folder. These are the exported custom translation strings.
 
 Once you have taken those steps, restart your server. If everything went right, bedrock players should download
 the generated pack and see your custom items.
