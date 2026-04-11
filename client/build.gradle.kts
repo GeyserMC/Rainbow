@@ -27,5 +27,5 @@ tasks {
 }
 
 modrinth {
-    uploadFile.set(tasks.jar)
+    uploadFile.set(tasks.getByName<Copy>("copyRainbowClientJar"))
 }

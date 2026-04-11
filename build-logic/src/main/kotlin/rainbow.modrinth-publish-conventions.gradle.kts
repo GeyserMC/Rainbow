@@ -2,6 +2,8 @@ plugins {
     id("com.modrinth.minotaur")
 }
 
+tasks.modrinth.get().dependsOn(tasks.modrinthSyncBody)
+
 modrinth {
     token.set(System.getenv("MODRINTH_TOKEN") ?: "")
     debugMode.set(System.getenv("MODRINTH_TOKEN") == null)
@@ -16,4 +18,6 @@ modrinth {
     dependencies {
         required.project("P7dR8mSH") // Fabric API
     }
+
+    syncBodyFrom.set(rootProject.file("README.md").readText())
 }
