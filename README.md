@@ -29,10 +29,11 @@ you use them as follows:
 3. Once you have mapped all of your custom items, use `/rainbow finish` to finish the pack. Rainbow will then export the resourcepack and item mappings it has created.
 
 When you've finished your pack, navigate to the `.minecraft/rainbow/<name>` folder. You can also click on the `Wrote pack to disk` in chat to open this folder.
-In this folder, you'll find 3 important files:
+In this folder, you'll find 4 important files/folders:
 
 - `geyser_mappings.json`: you need to put this file in the `custom_mappings` folder in Geyser's config folder.
 - `pack.zip`: you need to put this file in the `packs` folder in Geyser's config folder.
+- `lang`: you need to put all files in this folder in the `locales/overrides` folder in Geyser's config folder.
 - `report.txt`: you don't need to do anything with this file, but it contains information about generated assets and possible problems that occurred.
 
 Once you have taken these steps, restart your server. Bedrock players should then download the generated pack upon joining,
@@ -70,3 +71,5 @@ Rainbow is currently capable of the following:
   - Simple custom armour items, by analysing an item's `minecraft:equippable` component and loaded equipment assets.
   - 3D items, by converting the Java model to a bedrock one, and generating an attachable and animations for it, as well as rendering a custom GUI icon.
     - Is able to translate display transformations for the head, first-person and third-person item slots.
+- Exporting merged language files from loaded resourcepacks to a folder, for easy copying to Geyser's locales/overrides folder.
+  - Files from different resourcepacks for the same language are merged together.
