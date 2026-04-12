@@ -64,7 +64,7 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
 
     public static BedrockAttachable.Builder geometry(Identifier identifier, MappedGeometry geometry) {
         return builder(identifier)
-                .withMaterial(DisplaySlot.DEFAULT, VanillaMaterials.ENTITY)
+                .withMaterial(DisplaySlot.DEFAULT, VanillaMaterials.ENTITY_ALPHATEST)
                 .withMaterial(DisplaySlot.ENCHANTED, VanillaMaterials.ENTITY_ALPHATEST_GLINT)
                 .withTexture(DisplaySlot.DEFAULT, geometry.stitchedTextures().location().getPath())
                 .withTexture(DisplaySlot.ENCHANTED, VanillaTextures.ENCHANTED_ITEM_GLINT)
