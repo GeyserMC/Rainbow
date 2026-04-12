@@ -126,6 +126,8 @@ public class BedrockPack {
             futures.add(item.save(serializer, paths.attachables(), paths.geometry(), paths.animation(), textureSaver));
         }
 
+        paths.languageOutput().ifPresent(languageFolder -> futures.addAll(LanguageUtil.saveLanguages(context.assetResolver(), reporter, serializer, languageFolder)));
+
         if (reporter instanceof AutoCloseable closeable) {
             try {
                 closeable.close();
@@ -134,7 +136,7 @@ public class BedrockPack {
 
         CompletableFuture<?> packSerializingFinished = CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
         if (paths.zipOutput().isPresent()) {
-            return packSerializingFinished.thenAcceptAsync(object -> RainbowIO.safeIO(() -> CodecUtil.tryZipDirectory(paths.packRoot(), paths.zipOutput().get())));
+            return packSerializingFinished.thenAcceptAsync(_ -> RainbowIO.safeIO(() -> CodecUtil.tryZipDirectory(paths.packRoot(), paths.zipOutput().get())));
         }
         return packSerializingFinished;
     }
@@ -179,6 +181,7 @@ public class BedrockPack {
         private UnaryOperator<Path> manifestPath = resolve(MANIFEST_FILE);
         private UnaryOperator<Path> itemAtlasPath = resolve(ITEM_ATLAS_FILE);
         private @Nullable Path packZipFile = null;
+        private @Nullable Path languageFolder = null;
         private @Nullable GeometryRenderer geometryRenderer = null;
         private Function<ProblemReporter.PathElement, ProblemReporter> reporter;
         private boolean reportSuccesses = false;
@@ -248,6 +251,11 @@ public class BedrockPack {
             return this;
         }
 
+        public Builder withLanguageFolder(Path absolute) {
+            languageFolder = absolute;
+            return this;
+        }
+
         public Builder withGeometryRenderer(GeometryRenderer renderer) {
             geometryRenderer = renderer;
             return this;
@@ -266,7 +274,7 @@ public class BedrockPack {
         public BedrockPack build() {
             PackPaths paths = new PackPaths(mappingsPath, packRootPath, attachablesPath.apply(packRootPath),
                     geometryPath.apply(packRootPath), animationPath.apply(packRootPath), manifestPath.apply(packRootPath),
-                    itemAtlasPath.apply(packRootPath), Optional.ofNullable(packZipFile));
+                    itemAtlasPath.apply(packRootPath), Optional.ofNullable(packZipFile), Optional.ofNullable(languageFolder));
             return new BedrockPack(name, Optional.ofNullable(manifest), paths, packSerializer, assetResolver, Optional.ofNullable(geometryRenderer),
                     reporter.apply(() -> "Bedrock pack " + name + " "), reportSuccesses);
         }

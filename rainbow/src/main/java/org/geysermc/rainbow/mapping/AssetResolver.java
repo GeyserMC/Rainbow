@@ -10,6 +10,7 @@ import net.minecraft.world.item.equipment.EquipmentAsset;
 import org.geysermc.rainbow.mapping.texture.TextureResource;
 import org.jspecify.annotations.Nullable;
 
+import java.util.Map;
 import java.util.Optional;
 
 public interface AssetResolver {
@@ -29,4 +30,6 @@ public interface AssetResolver {
                 .or(() -> getTexture(AtlasIds.BLOCKS, identifier))
                 .or(() -> getTexture(null, identifier));
     }
+
+    Map<String, Map<String, String>> getForeignLanguages();
 }
