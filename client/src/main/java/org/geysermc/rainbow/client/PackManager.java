@@ -104,6 +104,7 @@ In this folder, you'll find 3 important files/folders along with this one:
 - geyser_mappings.json: put this in the "custom_mappings" folder in Geyser's config folder. These are the generated item mappings.
 - pack.zip: put this in the "packs" folder in Geyser's config folder. This is the generated bedrock resourcepack.
 - lang: put all files in this folder in the "locales/overrides" folder in Geyser's config folder. These are the exported custom translation strings.
+  - The folder can be empty or non-existent if no language files are found. This is usually not an issue!
 
 Once you have taken those steps, restart your server. If everything went right, bedrock players should download
 the generated pack and see your custom items.

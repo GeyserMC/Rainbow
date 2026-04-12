@@ -34,6 +34,7 @@ In this folder, you'll find 4 important files/folders:
 - `geyser_mappings.json`: you need to put this file in the `custom_mappings` folder in Geyser's config folder.
 - `pack.zip`: you need to put this file in the `packs` folder in Geyser's config folder.
 - `lang`: you need to put all files in this folder in the `locales/overrides` folder in Geyser's config folder.
+  - The folder can be empty or non-existent if no language files are found. This is usually not an issue! 
 - `report.txt`: you don't need to do anything with this file, but it contains information about generated assets and possible problems that occurred.
 
 Once you have taken these steps, restart your server. Bedrock players should then download the generated pack upon joining,
