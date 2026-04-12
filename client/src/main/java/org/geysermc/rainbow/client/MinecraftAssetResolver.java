@@ -2,6 +2,7 @@ package org.geysermc.rainbow.client;
 
 import com.google.gson.JsonParser;
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.serialization.JsonOps;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ClientItem;
@@ -24,13 +25,13 @@ import org.geysermc.rainbow.client.mixin.EntityRenderDispatcherAccessor;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.texture.TextureResource;
 import org.geysermc.rainbow.mixin.SpriteContentsAccessor;
+import org.geysermc.rainbow.pack.LanguageUtil;
 import org.jspecify.annotations.Nullable;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 public class MinecraftAssetResolver implements AssetResolver {
     private final ModelManager modelManager;
@@ -84,6 +85,10 @@ public class MinecraftAssetResolver implements AssetResolver {
 
     @Override
     public Map<String, Map<String, String>> getForeignLanguages() {
+        // Ideally we'd not load the language keys again each time, but it's not possible to make use
+        // of MC's own language cache here, because MC only loads keys for en_us and the user's language, and,
+        // it is not possible to tell which keys are vanilla there.
+
         Map<Identifier, Resource> languageFiles = resourceManager.listResources("lang", langFile -> langFile.getPath().endsWith(".json"));
 
         Map<String, Map<String, String>> foreignLanguages = new Object2ObjectOpenHashMap<>();
@@ -99,9 +104,7 @@ public class MinecraftAssetResolver implements AssetResolver {
 
             Map<String, String> languageKeys = RainbowIO.safeIO(() -> {
                 try (BufferedReader reader = languageFile.getValue().openAsReader()) {
-                    return JsonParser.parseReader(reader).getAsJsonObject().asMap().entrySet().stream()
-                            .map(translationKey -> Map.entry(translationKey.getKey(), translationKey.getValue().getAsString()))
-                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                    return LanguageUtil.LANGUAGE_FILE_CODEC.parse(JsonOps.INSTANCE, JsonParser.parseReader(reader)).getOrThrow();
                 }
             }, Map.of());
 

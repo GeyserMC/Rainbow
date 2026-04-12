@@ -3,8 +3,10 @@ package org.geysermc.rainbow.datagen;
 import com.google.common.hash.Hashing;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.serialization.Codec;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.fabricmc.fabric.api.client.datagen.v1.provider.FabricModelProvider;
 import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricLanguageProvider;
 import net.minecraft.client.data.models.model.ModelInstance;
 import net.minecraft.client.renderer.item.ClientItem;
 import net.minecraft.client.resources.metadata.animation.AnimationMetadataSection;
@@ -30,11 +32,13 @@ import net.minecraft.world.item.equipment.EquipmentAsset;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.datagen.mixin.DataComponentInitializersAccessor;
+import org.geysermc.rainbow.datagen.mixin.FabricLanguageProviderAccessor;
+import org.geysermc.rainbow.datagen.mixin.LanguageProviderDataAccessor;
+import org.geysermc.rainbow.datagen.mixin.ModelProviderDataAccessor;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.texture.TextureResource;
 import org.geysermc.rainbow.pack.BedrockPack;
-import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,64 +49,61 @@ import java.io.InputStream;
 import java.io.StringReader;
 import java.nio.file.Path;
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 
-public abstract class RainbowModelProvider extends FabricModelProvider {
+public abstract class RainbowDataProvider implements DataProvider {
     private static final Logger PROBLEM_LOGGER = LoggerFactory.getLogger(Rainbow.MOD_ID);
 
     private final CompletableFuture<HolderLookup.Provider> registries;
-    private final Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos;
     private final String packName;
-    private final Path geyserMappingsPath;
-    private final Path packPath;
-
-    private @Nullable Map<Item, ClientItem> itemInfos;
-    private @Nullable Map<Identifier, ModelInstance> models;
+    private final Providers providers;
+    private final Paths paths;
 
     private @Nullable Map<ResourceKey<?>, DataComponentMap.Builder> initializedItemComponents;
 
-    protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries,
-                                   Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos, String packName,
-                                   Identifier outputRoot, Path geyserMappingsPath, Path packPath) {
-        super(output);
+    protected RainbowDataProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries, String packName,
+                                  Identifier outputRoot, Providers providers, Paths paths) {
         this.registries = registries;
-        this.equipmentInfos = equipmentInfos;
         this.packName = packName;
+        this.providers = providers;
 
         Path computedOutputRoot = output.createPathProvider(PackOutput.Target.RESOURCE_PACK, outputRoot.getPath())
-                .file(outputRoot, "").getParent();
-        this.geyserMappingsPath = computedOutputRoot.resolve(geyserMappingsPath);
-        this.packPath = computedOutputRoot.resolve(packPath);
+                .file(outputRoot, "").getParent(); // getParent() returns root -> assets/<output namespace>/<output path>
+        this.paths = paths.resolveFrom(computedOutputRoot);
     }
 
-    protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries,
-                                   Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos, String packName,
-                                   Identifier outputRoot) {
-        this(output, registries, equipmentInfos, packName, outputRoot, Path.of("geyser_mappings.json"), Path.of("pack"));
+    protected RainbowDataProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries, String packName,
+                                  Identifier outputRoot, Providers providers) {
+        this(output, registries, packName, outputRoot, providers, Paths.DEFAULT);
     }
 
-    protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries,
-                                Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos, String packName) {
-        this(output, registries, equipmentInfos, packName, Identifier.withDefaultNamespace("bedrock"));
+    protected RainbowDataProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries, String packName,
+                                  Providers providers) {
+        this(output, registries, packName, Identifier.withDefaultNamespace("bedrock"), providers);
     }
 
-    protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries, String packName) {
-        this(output, registries, Map.of(), packName);
+    protected RainbowDataProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries, String packName,
+                                  FabricModelProvider modelProvider) {
+        this(output, registries, packName, new Providers(modelProvider, Optional.empty(), Map.of()));
     }
 
-    protected RainbowModelProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
-        this(output, registries, Rainbow.MOD_ID + "-generated");
+    protected RainbowDataProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries, FabricModelProvider modelProvider) {
+        this(output, registries, Rainbow.MOD_ID + "-generated", modelProvider);
     }
 
     @Override
     public CompletableFuture<?> run(CachedOutput output) {
-        CompletableFuture<?> vanillaModels = super.run(output);
+        CompletableFuture<?> models = providers.models.run(output);
+        CompletableFuture<?> languages = providers.languages
+                .map(providers -> providers.stream()
+                        .map(provider -> provider.run(output))
+                        .collect(() -> CompletableFuture.completedFuture(null), CompletableFuture::allOf, CompletableFuture::allOf))
+                .orElseGet(() -> CompletableFuture.completedFuture(null));
 
         CompletableFuture<BedrockPack> bedrockPack = ClientPackLoader.openClientResources()
                 .thenCompose(resourceManager -> registries.thenApply(registries -> {
@@ -110,12 +111,10 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
                     initializedItemComponents = ((DataComponentInitializersAccessor) BuiltInRegistries.DATA_COMPONENT_INITIALIZERS).invokeRunInitializers(registries);
 
                     try (resourceManager) {
-                        BedrockPack pack = createBedrockPack(new Serializer(output, registries),
-                                new DatagenResolver(resourceManager, equipmentInfos,
-                                        Objects.requireNonNull(itemInfos), Objects.requireNonNull(models))).build();
+                        BedrockPack pack = createBedrockPack(new Serializer(output, registries), new DatagenResolver(resourceManager, providers)).build();
 
                         Set<Item> sortedItemInfos = new TreeSet<>(Comparator.comparing(item -> item.builtInRegistryHolder().key().identifier()));
-                        sortedItemInfos.addAll(itemInfos.keySet());
+                        sortedItemInfos.addAll(providers.getItemInfos().keySet());
                         for (Item item : sortedItemInfos) {
                             pack.map(getVanillaItem(item).builtInRegistryHolder(), getVanillaDataComponentPatch(item));
                         }
@@ -123,11 +122,12 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
                     }
                 }));
 
-        return CompletableFuture.allOf(vanillaModels, bedrockPack.thenCompose(BedrockPack::save));
+        return CompletableFuture.allOf(models, languages, bedrockPack.thenCompose(BedrockPack::save));
     }
 
     protected BedrockPack.Builder createBedrockPack(PackSerializer serializer, AssetResolver resolver) {
-        return BedrockPack.builder(packName, geyserMappingsPath, packPath, serializer, resolver)
+        return BedrockPack.builder(packName, paths.geyserMappingsPath, paths.packPath, serializer, resolver)
+                .withLanguageFolder(paths.langPath)
                 .withReporter(path -> new ProblemReporter.ScopedCollector(path, PROBLEM_LOGGER));
     }
 
@@ -142,17 +142,49 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
         return builder.build();
     }
 
-    @ApiStatus.Internal
-    public void setItemInfos(Map<Item, ClientItem> itemInfos) {
-        this.itemInfos = itemInfos;
+    public static class Providers {
+        private final FabricModelProvider models;
+        private final Optional<List<FabricLanguageProvider>> languages;
+        private final Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos;
+
+        public Providers(FabricModelProvider models, Optional<List<FabricLanguageProvider>> languages,
+                         Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos) {
+            this.models = models;
+            this.languages = languages;
+            this.equipmentInfos = equipmentInfos;
+        }
+
+        public static Providers create(FabricModelProvider models, Optional<FabricLanguageProvider> languages,
+                                       Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos) {
+            return new Providers(models, languages.map(List::of), equipmentInfos);
+        }
+
+        private Map<Item, ClientItem> getItemInfos() {
+            return ((ModelProviderDataAccessor) models).rainbow$getItemInfos();
+        }
+
+        private Map<Identifier, ModelInstance> getModels() {
+            return ((ModelProviderDataAccessor) models).rainbow$getModels();
+        }
     }
 
-    @ApiStatus.Internal
-    public void setModels(Map<Identifier, ModelInstance> models) {
-        this.models = models;
+    public record Paths(Path geyserMappingsPath, Path packPath, Path langPath) {
+        // TODO reduce default duplication with PackManager in client
+        public static final Paths DEFAULT = new Paths(Path.of("geyser_mappings.json"), Path.of("pack"), Path.of("lang"));
+
+        public Paths resolveFrom(Path root) {
+            return new Paths(root.resolve(geyserMappingsPath), root.resolve(packPath), root.resolve(langPath));
+        }
     }
 
-    private record Serializer(CachedOutput output, HolderLookup.Provider registries) implements PackSerializer {
+    private static class Serializer implements PackSerializer {
+        private final CachedOutput output;
+        private final HolderLookup.Provider registries;
+
+        private Serializer(CachedOutput output, HolderLookup.Provider registries) {
+            this.output = output;
+            this.registries = registries;
+        }
 
         @Override
         public <T> CompletableFuture<?> saveJson(Codec<T> codec, T object, Path path) {
@@ -173,20 +205,34 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
 
     private static class DatagenResolver implements AssetResolver {
         private final ResourceManager resourceManager;
-        private final Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos;
+        private final Providers providers;
+
+        private final Map<Identifier, Optional<ResolvedModel>> resolvedModelCache = new Object2ObjectOpenHashMap<>();
         private final Map<Identifier, ClientItem> itemInfos;
         private final Map<Identifier, ModelInstance> models;
-        private final Map<Identifier, Optional<ResolvedModel>> resolvedModelCache = new HashMap<>();
+        private final Map<String, Map<String, String>> foreignLanguages;
 
-        private DatagenResolver(ResourceManager resourceManager, Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos,
-                                Map<Item, ClientItem> itemInfos, Map<Identifier, ModelInstance> models) {
+        private DatagenResolver(ResourceManager resourceManager, Providers providers) {
             this.resourceManager = resourceManager;
-            this.equipmentInfos = equipmentInfos;
-            this.itemInfos = new HashMap<>();
-            for (Map.Entry<Item, ClientItem> entry : itemInfos.entrySet()) {
+            this.providers = providers;
+
+            this.itemInfos = new Object2ObjectOpenHashMap<>();
+            for (Map.Entry<Item, ClientItem> entry : providers.getItemInfos().entrySet()) {
                 this.itemInfos.put(entry.getKey().builtInRegistryHolder().key().identifier(), entry.getValue());
             }
-            this.models = models;
+            this.models = providers.getModels();
+
+            // FabricLanguageProvider builds translation entries in a CompletableFuture, but that should have been finished by now
+            foreignLanguages = new Object2ObjectOpenHashMap<>();
+            providers.languages.ifPresent(languages -> languages.forEach(provider -> {
+                foreignLanguages.compute(((FabricLanguageProviderAccessor) provider).getLanguageCode(), (_, existingKeys) -> {
+                    if (existingKeys == null) {
+                        return new Object2ObjectOpenHashMap<>(((LanguageProviderDataAccessor) provider).rainbow$getTranslationEntries());
+                    }
+                    existingKeys.putAll(((LanguageProviderDataAccessor) provider).rainbow$getTranslationEntries());
+                    return existingKeys;
+                });
+            }));
         }
 
         @Override
@@ -229,7 +275,7 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
 
         @Override
         public Optional<EquipmentClientInfo> getEquipmentInfo(ResourceKey<EquipmentAsset> key) {
-            return Optional.ofNullable(equipmentInfos.get(key));
+            return Optional.ofNullable(providers.equipmentInfos.get(key));
         }
 
         @Override
@@ -247,8 +293,7 @@ public abstract class RainbowModelProvider extends FabricModelProvider {
 
         @Override
         public Map<String, Map<String, String>> getForeignLanguages() {
-            // FIXME
-            return Map.of();
+            return foreignLanguages;
         }
     }
 }
