@@ -51,7 +51,7 @@ public final class PackManager {
 
         Path packDirectory = createPackDirectory(name);
         BedrockPack pack = BedrockPack.builder(name, packDirectory.resolve(MAPPINGS_FILE), packDirectory.resolve(PACK_DIRECTORY), packSerializer,
-                        new MinecraftAssetResolver(Minecraft.getInstance()))
+                        new ClientAssetResolver(Minecraft.getInstance()))
                 .withPackZipFile(packDirectory.resolve(PACK_ZIP_FILE))
                 .withLanguageFolder(packDirectory.resolve(PACK_LANG_FOLDER))
                 .withGeometryRenderer(MinecraftGeometryRenderer.INSTANCE)

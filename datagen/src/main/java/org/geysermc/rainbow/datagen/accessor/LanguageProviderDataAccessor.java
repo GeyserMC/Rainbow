@@ -1,4 +1,4 @@
-package org.geysermc.rainbow.datagen.mixin;
+package org.geysermc.rainbow.datagen.accessor;
 
 import java.util.Map;
 

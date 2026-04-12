@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.sugar.Local;
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricLanguageProvider;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
+import org.geysermc.rainbow.datagen.accessor.LanguageProviderDataAccessor;
 import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;

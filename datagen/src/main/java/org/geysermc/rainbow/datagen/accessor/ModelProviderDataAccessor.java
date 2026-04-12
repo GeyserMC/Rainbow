@@ -1,4 +1,4 @@
-package org.geysermc.rainbow.datagen.mixin;
+package org.geysermc.rainbow.datagen.accessor;
 
 import net.minecraft.client.data.models.model.ModelInstance;
 import net.minecraft.client.renderer.item.ClientItem;

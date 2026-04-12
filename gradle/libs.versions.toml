@@ -1,5 +1,6 @@
 [versions]
 minecraft-release = "26.1.2"
+minecraft-supported-base = "26.1"
 minecraft-supported-modrinth = "26.1,26.1.1,26.1.2"
 
 fabric-loom = "1.16.1"

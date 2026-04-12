@@ -26,7 +26,7 @@ dependencies {
 tasks {
     processResources {
         inputs.property("version", fmjVersion)
-        inputs.property("supported_versions", libs.versions.minecraft.release.get())
+        inputs.property("minecraft_version", libs.versions.minecraft.supported.base.get())
         inputs.property("loader_version", libs.versions.fabric.loader.get())
         filteringCharset = "UTF-8"
 
@@ -34,7 +34,7 @@ tasks {
             expand(
                 mapOf(
                     "version" to fmjVersion,
-                    "minecraft_version" to libs.versions.minecraft.release.get(),
+                    "minecraft_version" to libs.versions.minecraft.supported.base.get(),
                     "loader_version" to libs.versions.fabric.loader.get()
                 )
             )

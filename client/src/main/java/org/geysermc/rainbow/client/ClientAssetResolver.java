@@ -2,7 +2,6 @@ package org.geysermc.rainbow.client;
 
 import com.google.gson.JsonParser;
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.serialization.JsonOps;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ClientItem;
@@ -25,21 +24,21 @@ import org.geysermc.rainbow.client.mixin.EntityRenderDispatcherAccessor;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.texture.TextureResource;
 import org.geysermc.rainbow.mixin.SpriteContentsAccessor;
-import org.geysermc.rainbow.pack.LanguageUtil;
 import org.jspecify.annotations.Nullable;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
-public class MinecraftAssetResolver implements AssetResolver {
+public class ClientAssetResolver implements AssetResolver {
     private final ModelManager modelManager;
     private final EquipmentAssetManager equipmentAssetManager;
     private final ResourceManager resourceManager;
     private final AtlasManager atlasManager;
 
-    public MinecraftAssetResolver(Minecraft minecraft) {
+    public ClientAssetResolver(Minecraft minecraft) {
         modelManager = minecraft.getModelManager();
         equipmentAssetManager = ((EntityRenderDispatcherAccessor) minecraft.getEntityRenderDispatcher()).getEquipmentAssets();
         resourceManager = minecraft.getResourceManager();
@@ -104,7 +103,9 @@ public class MinecraftAssetResolver implements AssetResolver {
 
             Map<String, String> languageKeys = RainbowIO.safeIO(() -> {
                 try (BufferedReader reader = languageFile.getValue().openAsReader()) {
-                    return LanguageUtil.LANGUAGE_FILE_CODEC.parse(JsonOps.INSTANCE, JsonParser.parseReader(reader)).getOrThrow();
+                    return JsonParser.parseReader(reader).getAsJsonObject().asMap().entrySet().stream()
+                            .map(translationKey -> Map.entry(translationKey.getKey(), translationKey.getValue().getAsString()))
+                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
                 }
             }, Map.of());
 
