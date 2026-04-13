@@ -1,16 +1,21 @@
 package org.geysermc.rainbow.pack.rendercontroller;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.DynamicOps;
+import com.mojang.serialization.Keyable;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import org.geysermc.rainbow.CodecUtil;
+import org.geysermc.rainbow.codec.DispatchedMapMapCodec;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public record BedrockRenderControllers(Map<String, RenderController> renderControllers) {
     public static final Codec<BedrockRenderControllers> CODEC = RecordCodecBuilder.create(instance ->
@@ -46,41 +51,40 @@ public record BedrockRenderControllers(Map<String, RenderController> renderContr
     }
 
     // TODO expand this for the full render controller format
-    public record RenderController(String geometry, Map<String, String> materials, List<String> textures,
-                                   Optional<UVAnimation> uvAnimation) {
-        private static final Codec<Map<String, String>> MATERIALS_CODEC = Codec.unboundedMap(Codec.STRING, Codec.STRING).listOf()
-                .xmap(materials -> materials.stream()
-                                .flatMap(map -> map.entrySet().stream())
-                                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)),
-                        materials -> materials.entrySet().stream()
-                                .map(Map::ofEntries)
-                                .toList());
+    public record RenderController(Map<RenderProperty<?>, Map<String, List<String>>> arrays, RenderPropertyMap properties, Optional<UVAnimation> uvAnimation) {
+        private static final Codec<Map<RenderProperty<?>, Map<String, List<String>>>> ARRAYS_CODEC = Codec.unboundedMap(RenderProperty.CODEC,
+                Codec.unboundedMap(Codec.STRING, Codec.STRING.listOf()));
         public static final Codec<RenderController> CODEC = RecordCodecBuilder.create(instance ->
                 instance.group(
-                        Codec.STRING.fieldOf("geometry").forGetter(RenderController::geometry),
-                        MATERIALS_CODEC.fieldOf("materials").forGetter(RenderController::materials),
-                        Codec.STRING.listOf().fieldOf("textures").forGetter(RenderController::textures),
+                        ARRAYS_CODEC.optionalFieldOf("arrays", Map.of()).forGetter(RenderController::arrays),
+                        RenderPropertyMap.MAP_CODEC.forGetter(RenderController::properties),
                         UVAnimation.CODEC.optionalFieldOf("uv_anim").forGetter(RenderController::uvAnimation)
                 ).apply(instance, RenderController::new)
         );
 
         public static class Builder {
-            private final String geometry;
-            private final Map<String, String> materials = new HashMap<>();
-            private final List<String> textures = new ArrayList<>();
+            private final Map<RenderProperty<?>, Map<String, List<String>>> arrays = new HashMap<>();
+            private final Map<RenderProperty<?>, ?> properties = new HashMap<>();
             private @Nullable UVAnimation uvAnimation;
 
             public Builder(String geometry) {
-                this.geometry = geometry;
+                withRenderProperty(RenderProperty.GEOMETRY, geometry);
             }
 
-            public Builder withMaterial(String option, String material) {
-                materials.put(option, material);
+            public Builder withArray(RenderProperty<?> property, String name, List<String> values) {
+                arrays.compute(property, (_, arrayMap) -> {
+                    if (arrayMap == null) {
+                        return Map.of(name, values);
+                    }
+                    Map<String, List<String>> merged = new HashMap<>(arrayMap);
+                    merged.put(name, values);
+                    return Map.copyOf(merged);
+                });
                 return this;
             }
 
-            public Builder withTexture(String texture) {
-                textures.add(texture);
+            public <T> Builder withRenderProperty(RenderProperty<T> property, T value) {
+                ((Map) properties).put(property, value);
                 return this;
             }
 
@@ -90,8 +94,58 @@ public record BedrockRenderControllers(Map<String, RenderController> renderContr
             }
 
             public RenderController build() {
-                return new RenderController(geometry, Map.copyOf(materials), List.copyOf(textures), Optional.ofNullable(uvAnimation));
+                return new RenderController(Map.copyOf(arrays), new RenderPropertyMap(Map.copyOf(properties)), Optional.ofNullable(uvAnimation));
             }
+        }
+    }
+
+    public record RenderPropertyMap(Map<RenderProperty<?>, ?> map) {
+        public static final MapCodec<RenderPropertyMap> MAP_CODEC = new DispatchedMapMapCodec<>(RenderProperty.CODEC, RenderProperty::codec, RenderProperty.KEYS)
+                .xmap(RenderPropertyMap::new, propertyMap -> (Map) propertyMap.map);
+
+        public <T> @Nullable T get(RenderProperty<T> property) {
+            //noinspection unchecked
+            return (T) map.get(property);
+        }
+
+        public <T> T getOrDefault(RenderProperty<T> property, T defaultValue) {
+            T value = get(property);
+            return value == null ? defaultValue : value;
+        }
+    }
+
+    public record RenderProperty<T>(String name, Codec<T> codec) {
+        private static final Map<String, RenderProperty<?>> properties = new HashMap<>();
+        public static final Codec<RenderProperty<?>> CODEC = Codec.STRING.comapFlatMap(RenderProperty::getByName, RenderProperty::name);
+        public static final Keyable KEYS = new Keyable() {
+            @Override
+            public <T> Stream<T> keys(DynamicOps<T> ops) {
+                return properties.keySet().stream().map(ops::createString);
+            }
+        };
+
+        public static final RenderProperty<String> GEOMETRY = register("geometry", Codec.STRING);
+        public static final RenderProperty<Map<String, String>> MATERIALS = register("materials", Codec.unboundedMap(Codec.STRING, Codec.STRING).listOf()
+                .xmap(materials -> materials.stream()
+                                .flatMap(map -> map.entrySet().stream())
+                                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)),
+                        materials -> materials.entrySet().stream()
+                                .map(Map::ofEntries)
+                                .toList()));
+        public static final RenderProperty<List<String>> TEXTURES = register("textures", Codec.STRING.listOf());
+
+        public static DataResult<RenderProperty<?>> getByName(String name) {
+            RenderProperty<?> property = properties.get(name);
+            if (property == null) {
+                return DataResult.error(() -> "Unknown render property " + name);
+            }
+            return DataResult.success(property);
+        }
+
+        private static <T> RenderProperty<T> register(String name, Codec<T> codec) {
+            RenderProperty<T> property = new RenderProperty<>(name, codec);
+            properties.put(name, property);
+            return property;
         }
     }
 
