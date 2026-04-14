@@ -19,7 +19,7 @@ import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
 import org.geysermc.rainbow.definition.GeyserMappings;
-import org.geysermc.rainbow.mapping.texture.TextureHolder;
+import org.geysermc.rainbow.mapping.texture.TextureSerializer;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
@@ -117,13 +117,13 @@ public class BedrockPack {
         manifest.ifPresent(manifest -> futures.add(serializer.saveJson(PackManifest.CODEC, manifest, paths.manifest())));
         futures.add(serializer.saveJson(BedrockTextureAtlas.ITEM_ATLAS_CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), paths.itemAtlas()));
 
-        Function<TextureHolder, CompletableFuture<?>> textureSaver = texture -> {
+        TextureSerializer textureSerializer = texture -> {
             Identifier textureIdentifier = Rainbow.decorateTextureIdentifier(texture.location());
             return texture.save(context.assetResolver(), serializer, paths.packRoot().resolve(textureIdentifier.getPath()), reporter);
         };
 
         for (BedrockItem item : bedrockItems) {
-            futures.add(item.save(serializer, paths.attachables(), paths.geometry(), paths.animation(), textureSaver));
+            futures.add(item.save(serializer, paths, textureSerializer));
         }
 
         paths.languageOutput().ifPresent(languageFolder -> futures.addAll(LanguageUtil.saveLanguages(context.assetResolver(), reporter, serializer, languageFolder)));
