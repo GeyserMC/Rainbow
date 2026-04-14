@@ -20,6 +20,15 @@ public class CustomTextureHolder extends TextureHolder {
 
     @Override
     public Optional<byte[]> load(AssetResolver assetResolver, ProblemReporter reporter) {
-        return RainbowIO.safeIO(() -> NativeImageUtil.writeToByteArray(supplier.get()));
+        return RainbowIO.safeIO(() -> {
+            NativeImage texture;
+            try {
+                texture = supplier.get();
+            } catch (Exception exception) {
+                reporter.report(() -> "unable to get texture for " + identifier + "; please provide it manually");
+                return null;
+            }
+            return NativeImageUtil.writeToByteArray(texture);
+        });
     }
 }

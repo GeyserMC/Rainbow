@@ -56,7 +56,7 @@ public record StitchedTextures(Map<String, TextureAtlasSprite> sprites, Supplier
                 .map(material -> readSpriteContents(material, context))
                 .<SpriteContents>mapMulti(Optional::ifPresent)
                 .toList();
-        return  ((SpriteLoaderAccessor) spriteLoader).invokeStitch(sprites, 0, Util.backgroundExecutor());
+        return ((SpriteLoaderAccessor) spriteLoader).invokeStitch(sprites, 0, Util.backgroundExecutor());
     }
 
     private static Optional<SpriteContents> readSpriteContents(Material material, PackContext context) {
