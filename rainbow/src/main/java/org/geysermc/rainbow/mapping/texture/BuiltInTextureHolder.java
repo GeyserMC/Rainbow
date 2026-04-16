@@ -23,7 +23,7 @@ public class BuiltInTextureHolder extends TextureHolder {
         return RainbowIO.safeIO(() -> {
             try (TextureResource texture = assetResolver.getPossibleAtlasTextureSafely(source).orElse(null)) {
                 Objects.requireNonNull(texture);
-                try (NativeImage firstFrame = texture.getFirstFrame(false)) {
+                try (NativeImage firstFrame = texture.getFirstFrame()) {
                     return NativeImageUtil.writeToByteArray(firstFrame);
                 }
             } catch (NullPointerException exception) {

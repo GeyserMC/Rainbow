@@ -286,7 +286,7 @@ public abstract class RainbowDataProvider implements DataProvider {
                         Optional<AnimationMetadataSection> animationMetadata = resource.metadata().getSection(AnimationMetadataSection.TYPE);
                         try (InputStream textureStream = resource.open()) {
                             NativeImage texture = NativeImage.read(textureStream);
-                            return new TextureResource(texture, animationMetadata.map(animation -> animation.calculateFrameSize(texture.getWidth(), texture.getHeight())));
+                            return TextureResource.create(texture, animationMetadata);
                         }
                     }));
         }
