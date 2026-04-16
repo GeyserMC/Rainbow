@@ -10,6 +10,7 @@ import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.data.AtlasIds;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
+import net.minecraft.world.item.ItemStackTemplate;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.mapping.PackAssetCache;
@@ -29,36 +30,13 @@ import java.util.stream.Stream;
 
 public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<ModelTextures>, PackSerializer.Serializable {
 
-    ModelTextures EMPTY = new ModelTextures() {
-        @Override
-        public int width() {
-            return 0;
-        }
-
-        @Override
-        public int height() {
-            return 0;
-        }
-
-        @Override
-        public Optional<SpriteInfo> getSprite(String key) {
-            return Optional.empty();
-        }
-
-        @Override
-        public CompletableFuture<?> save(PackSerializingContext context) {
-            return PackSerializer.noop();
-        }
-
-        @Override
-        public void close() {}
-    };
-
     int width();
 
     int height();
 
     Optional<SpriteInfo> getSprite(String key);
+
+    Identifier icon();
 
     @Override
     default ModelTextures cachedCopy() {
@@ -70,23 +48,35 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
 
     record SpriteInfo(int x, int y, int width, int height) {}
 
-    static ModelTextures load(ResolvedModel model, PackContext context) {
+    static ModelTextures load(ItemStackTemplate stack, ResolvedModel model, PackContext context) {
         Map<String, Material> materials = new HashMap<>(((TextureSlotsAccessor) model.getTopTextureSlots()).getResolvedValues());
         materials.remove(UnbakedModel.PARTICLE_TEXTURE_REFERENCE);
+
+        Identifier modelIdentifier = Rainbow.getModelIdentifier(model);
+
         if (materials.size() == 1) {
             Material singleMaterial = materials.values().stream().findAny().orElseThrow();
-            return RainbowIO.safeIO(() -> {
+            return RainbowIO.<ModelTextures>safeIO(() -> {
                 try (TextureResource texture = context.assetResolver().getPossibleAtlasTextureSafely(singleMaterial.sprite()).orElse(null)) {
                     if (texture != null) {
-                        return new SingleTexture(texture);
+                        return new SingleTexture(texture, createIcon(modelIdentifier, stack, materials, context));
                     }
                 }
                 return null;
-            }, EMPTY);
+            }, () -> new MissingTexture(modelIdentifier));
         }
-        Identifier modelIdentifier = Rainbow.getModelIdentifier(model);
+
         Identifier stitchedTexturesIdentifier = modelIdentifier.withSuffix("_stitched");
-        return StitchedTextures.stitchModelTextures(stitchedTexturesIdentifier, materials, context);
+        return StitchedTextures.stitchModelTextures(stitchedTexturesIdentifier, materials, createIcon(modelIdentifier, stack, materials, context), context);
+    }
+
+    private static TextureHolder createIcon(Identifier identifier, ItemStackTemplate stack, Map<String, Material> materials, PackContext context) {
+        // Fallback to trying layer0 when there is no renderer
+        return context.geometryRenderer()
+                .map(renderer -> renderer.render(identifier, stack))
+                .or(() -> Optional.ofNullable(materials.get("layer0"))
+                        .map(material -> TextureHolder.createBuiltIn(identifier, material.sprite())))
+                .orElseGet(() -> TextureHolder.createNonExistent(identifier));
     }
 
     record CachedTexture(ModelTextures delegate) implements ModelTextures {
@@ -107,6 +97,11 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
         }
 
         @Override
+        public Identifier icon() {
+            return delegate.icon();
+        }
+
+        @Override
         public CompletableFuture<?> save(PackSerializingContext context) {
             return PackSerializer.noop();
         }
@@ -115,10 +110,37 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
         public void close() {}
     }
 
-    record SingleTexture(SpriteInfo sprite, TextureResource texture) implements ModelTextures {
+    record MissingTexture(Identifier icon) implements ModelTextures {
 
-        public SingleTexture(TextureResource texture) {
-            this(new SpriteInfo(0, 0, texture.sizeOfFrame().width(), texture.sizeOfFrame().height()), texture);
+        @Override
+        public int width() {
+            return 0;
+        }
+
+        @Override
+        public int height() {
+            return 0;
+        }
+
+        @Override
+        public Optional<SpriteInfo> getSprite(String key) {
+            return Optional.empty();
+        }
+
+        @Override
+        public CompletableFuture<?> save(PackSerializingContext context) {
+            // TODO needs report maybe?
+            return PackSerializer.noop();
+        }
+
+        @Override
+        public void close() {}
+    }
+
+    record SingleTexture(SpriteInfo sprite, TextureResource texture, TextureHolder iconTexture) implements ModelTextures {
+
+        public SingleTexture(TextureResource texture, TextureHolder icon) {
+            this(new SpriteInfo(0, 0, texture.sizeOfFrame().width(), texture.sizeOfFrame().height()), texture, icon);
         }
 
         @Override
@@ -137,6 +159,11 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
         }
 
         @Override
+        public Identifier icon() {
+            return iconTexture.location();
+        }
+
+        @Override
         public CompletableFuture<?> save(PackSerializingContext context) {
             // TODO FIXME
             return null;
@@ -148,7 +175,7 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
         }
     }
 
-    record StitchedTextures(Map<String, SpriteInfo> sprites, TextureHolder stitched, int width, int height) implements ModelTextures {
+    record StitchedTextures(Map<String, SpriteInfo> sprites, TextureHolder stitched, int width, int height, TextureHolder iconTexture) implements ModelTextures {
         // Not sure if 16384 should be the max supported texture size, but it seems to work well enough.
         // Max supported texture size seems to mostly be a driver thing, to not let the stitched texture get too big for uploading it to the GPU
         // This is not an issue for us
@@ -163,14 +190,19 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
         }
 
         @Override
+        public Identifier icon() {
+            return iconTexture.location();
+        }
+
+        @Override
         public CompletableFuture<?> save(PackSerializingContext context) {
-            return stitched.save(context);
+            return iconTexture.with(stitched).save(context);
         }
 
         @Override
         public void close() {}
 
-        private static StitchedTextures stitchModelTextures(Identifier stitchedTexturesIdentifier, Map<String, Material> materials, PackContext context) {
+        private static StitchedTextures stitchModelTextures(Identifier stitchedTexturesIdentifier, Map<String, Material> materials, TextureHolder icon, PackContext context) {
             SpriteLoader.Preparations preparations = prepareStitching(materials.values().stream(), context);
 
             Map<String, SpriteInfo> sprites = new HashMap<>();
@@ -181,7 +213,8 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
                     sprites.put(material.getKey(), new SpriteInfo(sprite.getX(), sprite.getY(), sprite.contents().width(), sprite.contents().height()));
                 }
             }
-            return new StitchedTextures(Map.copyOf(sprites), TextureHolder.createCustom(stitchedTexturesIdentifier, () -> stitchTextureAtlas(preparations)), preparations.width(), preparations.height());
+            return new StitchedTextures(Map.copyOf(sprites), TextureHolder.createCustom(stitchedTexturesIdentifier, () -> stitchTextureAtlas(preparations)),
+                    preparations.width(), preparations.height(), icon);
         }
 
         private static SpriteLoader.Preparations prepareStitching(Stream<Material> materials, PackContext context) {

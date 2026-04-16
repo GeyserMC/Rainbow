@@ -9,7 +9,8 @@ import org.geysermc.rainbow.pack.PackPaths;
 import java.util.Optional;
 
 // TODO maybe split the responsibilities of this class
-public final class PackContext {
+// TODO close this
+public final class PackContext implements AutoCloseable {
     private final GeyserMappings mappings;
     private final PackPaths paths;
     private final BedrockItemConsumer itemConsumer;
@@ -59,5 +60,10 @@ public final class PackContext {
 
     public MappedGeometryCache geometryCache() {
         return geometryCache;
+    }
+
+    @Override
+    public void close() throws Exception {
+        textureCache.close();
     }
 }
