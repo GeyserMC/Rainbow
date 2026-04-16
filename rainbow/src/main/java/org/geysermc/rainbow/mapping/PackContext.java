@@ -3,6 +3,7 @@ package org.geysermc.rainbow.mapping;
 import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
 import org.geysermc.rainbow.definition.GeyserMappings;
 import org.geysermc.rainbow.mapping.geometry.MappedGeometryCache;
+import org.geysermc.rainbow.mapping.texture.ModelTextureCache;
 import org.geysermc.rainbow.pack.PackPaths;
 
 import java.util.Optional;
@@ -14,6 +15,7 @@ public final class PackContext {
     private final AssetResolver assetResolver;
     private final Optional<GeometryRenderer> geometryRenderer;
     private final boolean reportSuccesses;
+    private final ModelTextureCache textureCache = new ModelTextureCache();
     private final MappedGeometryCache geometryCache = new MappedGeometryCache();
 
     public PackContext(GeyserMappings mappings, PackPaths paths, BedrockItemConsumer itemConsumer, AssetResolver assetResolver,
@@ -48,6 +50,10 @@ public final class PackContext {
 
     public boolean reportSuccesses() {
         return reportSuccesses;
+    }
+
+    public ModelTextureCache textureCache() {
+        return textureCache;
     }
 
     public MappedGeometryCache geometryCache() {

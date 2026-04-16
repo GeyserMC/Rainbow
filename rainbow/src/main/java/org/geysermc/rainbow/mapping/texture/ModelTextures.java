@@ -7,10 +7,10 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.ResolvedModel;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.client.resources.model.sprite.Material;
-import net.minecraft.client.resources.model.sprite.TextureSlots;
 import net.minecraft.data.AtlasIds;
 import net.minecraft.util.Util;
 import org.geysermc.rainbow.RainbowIO;
+import org.geysermc.rainbow.mapping.PackAssetCache;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mixin.SpriteContentsAccessor;
 import org.geysermc.rainbow.mixin.SpriteLoaderAccessor;
@@ -23,7 +23,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-public interface ModelTextures extends AutoCloseable {
+public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<ModelTextures> {
 
     ModelTextures EMPTY = new ModelTextures() {
         @Override
@@ -51,6 +51,14 @@ public interface ModelTextures extends AutoCloseable {
 
     Optional<SpriteInfo> getSprite(String key);
 
+    @Override
+    default ModelTextures cachedCopy() {
+        if (this instanceof CachedTexture) {
+            return this;
+        }
+        return new CachedTexture(this);
+    }
+
     record SpriteInfo(int x, int y, int width, int height) {}
 
     static ModelTextures load(ResolvedModel model, PackContext context) {
@@ -68,6 +76,27 @@ public interface ModelTextures extends AutoCloseable {
             }, EMPTY);
         }
         return StitchedTextures.stitchModelTextures(materials, context);
+    }
+
+    record CachedTexture(ModelTextures delegate) implements ModelTextures {
+
+        @Override
+        public int width() {
+            return delegate.width();
+        }
+
+        @Override
+        public int height() {
+            return delegate.height();
+        }
+
+        @Override
+        public Optional<SpriteInfo> getSprite(String key) {
+            return delegate.getSprite(key);
+        }
+
+        @Override
+        public void close() {}
     }
 
     record SingleTexture(SpriteInfo sprite, TextureResource texture) implements ModelTextures {
