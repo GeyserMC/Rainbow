@@ -4,7 +4,6 @@ import net.minecraft.resources.Identifier;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.mapping.texture.TextureHolder;
 import org.geysermc.rainbow.pack.attachable.BedrockAttachable;
-import org.geysermc.rainbow.pack.geometry.BedrockGeometry;
 
 import java.nio.file.Path;
 import java.util.Optional;
@@ -20,8 +19,8 @@ public record PackPaths(Path mappings, Path packRoot, Path attachables, Path geo
         return attachables.resolve(Rainbow.bedrockSafeIdentifier(attachable.info().identifier()) + ".json");
     }
 
-    public Path geometryPath(BedrockGeometry geometry) {
-        return geometries.resolve(geometry.definitions().getFirst().info().identifier() + ".geo.json");
+    public Path geometryPath(String identifier) {
+        return geometries.resolve(identifier + ".geo.json");
     }
 
     public Path texturePath(TextureHolder texture) {
