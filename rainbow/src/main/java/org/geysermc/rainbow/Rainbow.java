@@ -1,6 +1,7 @@
 package org.geysermc.rainbow;
 
 import com.mojang.logging.LogUtils;
+import net.minecraft.client.resources.model.ResolvedModel;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 
@@ -24,5 +25,9 @@ public class Rainbow {
 
     public static Identifier decorateTextureIdentifier(Identifier identifier) {
         return decorateIdentifier(identifier, "textures", "png");
+    }
+
+    public static Identifier getModelIdentifier(ResolvedModel model) {
+        return Identifier.parse(model.debugName());
     }
 }

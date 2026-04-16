@@ -1,21 +1,18 @@
 package org.geysermc.rainbow.mapping.geometry;
 
 import org.geysermc.rainbow.mapping.PackSerializer;
+import org.geysermc.rainbow.mapping.PackSerializingContext;
 import org.geysermc.rainbow.mapping.texture.TextureHolder;
-import org.geysermc.rainbow.mapping.texture.TextureSerializer;
 
-import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 
-public interface MappedGeometry {
+public interface MappedGeometry extends PackSerializer.Serializable {
 
     String identifier();
 
     TextureHolder stitchedTextures();
 
     TextureHolder icon();
-
-    CompletableFuture<?> save(PackSerializer serializer, Path geometryDirectory, TextureSerializer textureSerializer);
 
     default CachedGeometry cachedCopy() {
         if (this instanceof CachedGeometry cached) {
@@ -27,8 +24,8 @@ public interface MappedGeometry {
     record CachedGeometry(String identifier, TextureHolder stitchedTextures, TextureHolder icon) implements MappedGeometry {
 
         @Override
-        public CompletableFuture<?> save(PackSerializer serializer, Path geometryDirectory, TextureSerializer textureSerializer) {
-            return CompletableFuture.completedFuture(null);
+        public CompletableFuture<?> save(PackSerializingContext context) {
+            return PackSerializer.noop();
         }
     }
 }

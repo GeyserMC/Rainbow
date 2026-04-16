@@ -21,6 +21,7 @@ import org.geysermc.rainbow.client.mixin.PictureInPictureRendererAccessor;
 import org.geysermc.rainbow.image.NativeImageUtil;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.PackSerializer;
+import org.geysermc.rainbow.mapping.PackSerializingContext;
 import org.geysermc.rainbow.mapping.texture.TextureHolder;
 import org.joml.Matrix3x2f;
 
@@ -46,7 +47,7 @@ public class RenderedTextureHolder extends TextureHolder {
     }
 
     @Override
-    public CompletableFuture<?> save(AssetResolver assetResolver, PackSerializer serializer, Path path, ProblemReporter reporter) {
+    public CompletableFuture<?> save(PackSerializingContext context) {
         TrackingItemStackRenderState itemRenderState = new TrackingItemStackRenderState();
         Minecraft.getInstance().getItemModelResolver().updateForTopItem(itemRenderState, stackToRender.create(), ItemDisplayContext.GUI, null, null, 0);
         itemRenderState.setOversizedInGui(true);
@@ -63,7 +64,7 @@ public class RenderedTextureHolder extends TextureHolder {
             //noinspection DataFlowIssue
             ((PictureInPictureCopyRenderer) itemRenderer).rainbow$allowTextureCopy();
             itemRenderer.prepare(oversizedRenderState, new GuiRenderState(), 4);
-            writeAsPNG(serializer, path, ((PictureInPictureRendererAccessor) itemRenderer).getTexture(), lock, condition);
+            writeAsPNG(context.serializer(), context.paths().texturePath(this), ((PictureInPictureRendererAccessor) itemRenderer).getTexture(), lock, condition);
         }
 
         return CompletableFuture.runAsync(() -> {

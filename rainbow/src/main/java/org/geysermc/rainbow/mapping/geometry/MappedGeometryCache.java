@@ -26,7 +26,8 @@ public class MappedGeometryCache {
             return cached.cachedCopy();
         }
 
-        Identifier modelIdentifier = Identifier.parse(model.debugName());
+        // TODO get rid of these 2 identifiers here, now in ModelTextures, render icon for everything when possible
+        Identifier modelIdentifier = Rainbow.getModelIdentifier(model);
         Identifier stitchedTexturesIdentifier = modelIdentifier.withSuffix("_stitched");
         String safeIdentifier = Rainbow.bedrockSafeIdentifier(bedrockIdentifier);
 

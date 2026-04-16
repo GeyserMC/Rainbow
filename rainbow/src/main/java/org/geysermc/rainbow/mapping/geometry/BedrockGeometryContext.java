@@ -8,20 +8,30 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStackTemplate;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.mapping.PackContext;
+import org.geysermc.rainbow.mapping.PackSerializer;
+import org.geysermc.rainbow.mapping.PackSerializingContext;
 import org.geysermc.rainbow.mapping.animation.AnimationMapper;
 import org.geysermc.rainbow.mapping.animation.BedrockAnimationContext;
 import org.geysermc.rainbow.mapping.texture.TextureHolder;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 public record BedrockGeometryContext(Optional<MappedGeometry> geometry,
                                      Optional<BedrockAnimationContext> animation, TextureHolder icon,
-                                     boolean handheld) {
+                                     boolean handheld) implements PackSerializer.Serializable {
     private static final List<Identifier> HANDHELD_MODELS = Stream.of("item/handheld", "item/handheld_rod", "item/handheld_mace")
             .map(Identifier::withDefaultNamespace)
             .toList();
+
+    @Override
+    public CompletableFuture<?> save(PackSerializingContext context) {
+        return PackSerializer.Serializable.wrapOptional(geometry)
+                .with(animation) // TODO maybe move this out of this
+                .save(context);
+    }
 
     public static BedrockGeometryContext create(Identifier bedrockIdentifier, ResolvedModel model, Transformation definitionTransformation, ItemStackTemplate stackToRender, PackContext context) {
         ResolvedModel parentModel = model.parent();

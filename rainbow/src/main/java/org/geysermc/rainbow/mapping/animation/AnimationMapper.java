@@ -42,7 +42,7 @@ public class AnimationMapper {
         // Note that for items marked as equippable, the 3D model only shows up when having the item equipped on the head, and the icon is used when holding the item in hand
         // Interestingly when an item is NOT marked equippable (so the player can't equip it normally), the 3D model does show up properly both in hand and on head
         // I think this is a bedrock bug and not something we can fix
-        return new BedrockAnimationContext(BedrockAnimation.builder()
+        return new BedrockAnimationContext(identifier, BedrockAnimation.builder()
                 .withAnimation(identifier + ".hold_first_person", BedrockAnimation.animation()
                         .withLoopMode(BedrockAnimation.LoopMode.LOOP)
                         .withBone(bone, firstPersonPosition, firstPersonRotation, firstPersonScale))

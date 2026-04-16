@@ -10,13 +10,12 @@ import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.EquipmentSlot;
 import org.geysermc.rainbow.PackConstants;
-import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.mapping.PackSerializer;
+import org.geysermc.rainbow.mapping.PackSerializingContext;
 import org.geysermc.rainbow.mapping.geometry.MappedGeometry;
 import org.geysermc.rainbow.pack.BedrockTextures;
 import org.geysermc.rainbow.pack.BedrockVersion;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -27,7 +26,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo info) {
+public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo info) implements PackSerializer.Serializable {
     public static final Codec<BedrockAttachable> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
                     BedrockVersion.STRING_CODEC.fieldOf("format_version").forGetter(BedrockAttachable::formatVersion),
@@ -35,9 +34,11 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
             ).apply(instance, BedrockAttachable::new)
     );
 
-    public CompletableFuture<?> save(PackSerializer serializer, Path attachablesDirectory) {
+    @Override
+    @Deprecated // TODO move this to context later so it's not in the pack package
+    public CompletableFuture<?> save(PackSerializingContext context) {
         // Get a safe attachable path by using Geyser's way of getting icons
-        return serializer.saveJson(CODEC, this, attachablesDirectory.resolve(Rainbow.bedrockSafeIdentifier(info.identifier) + ".json"));
+        return context.serializer().saveJson(CODEC, this, context.paths().attachablePath(this));
     }
 
     public static Builder builder(Identifier identifier) {
