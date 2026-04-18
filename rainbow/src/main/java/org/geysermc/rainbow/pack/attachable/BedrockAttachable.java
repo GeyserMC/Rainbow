@@ -5,14 +5,12 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.EquipmentSlot;
 import org.geysermc.rainbow.PackConstants;
-import org.geysermc.rainbow.mapping.PackSerializer;
-import org.geysermc.rainbow.mapping.PackSerializingContext;
-import org.geysermc.rainbow.mapping.geometry.MappedGeometry;
 import org.geysermc.rainbow.pack.BedrockTextures;
 import org.geysermc.rainbow.pack.BedrockVersion;
 
@@ -23,23 +21,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo info) implements PackSerializer.Serializable {
+public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo info) {
     public static final Codec<BedrockAttachable> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
                     BedrockVersion.STRING_CODEC.fieldOf("format_version").forGetter(BedrockAttachable::formatVersion),
                     AttachableInfo.CODEC.fieldOf("description").fieldOf("minecraft:attachable").forGetter(BedrockAttachable::info)
             ).apply(instance, BedrockAttachable::new)
     );
-
-    @Override
-    @Deprecated // TODO move this to context later so it's not in the pack package
-    public CompletableFuture<?> save(PackSerializingContext context) {
-        // Get a safe attachable path by using Geyser's way of getting icons
-        return context.serializer().saveJson(CODEC, this, context.paths().attachablePath(this));
-    }
 
     public static Builder builder(Identifier identifier) {
         return new Builder(identifier);
@@ -63,20 +53,18 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
                 .withRenderController(VanillaRenderControllers.ARMOR);
     }
 
-    public static BedrockAttachable.Builder geometry(Identifier identifier, MappedGeometry geometry) {
+    public static BedrockAttachable.Builder geometry(Identifier identifier, String geometry) {
         return builder(identifier)
                 .withMaterial(DisplaySlot.DEFAULT, VanillaMaterials.ENTITY_ALPHATEST)
                 .withMaterial(DisplaySlot.ENCHANTED, VanillaMaterials.ENTITY_ALPHATEST_GLINT)
-                .withTexture(DisplaySlot.DEFAULT, geometry.stitchedTextures().location().getPath())
                 .withTexture(DisplaySlot.ENCHANTED, VanillaTextures.ENCHANTED_ITEM_GLINT)
-                .withGeometry(DisplaySlot.DEFAULT, geometry.identifier())
-                .withRenderController(VanillaRenderControllers.ITEM_DEFAULT);
+                .withGeometry(DisplaySlot.DEFAULT, geometry);
     }
 
     public static class Builder {
         private final Identifier identifier;
         private final EnumMap<DisplaySlot, String> materials = new EnumMap<>(DisplaySlot.class);
-        private final EnumMap<DisplaySlot, String> textures = new EnumMap<>(DisplaySlot.class);
+        private final Map<String, String> textures = new Object2ObjectOpenHashMap<>();
         private final EnumMap<DisplaySlot, String> geometries = new EnumMap<>(DisplaySlot.class);
         private final Map<String, String> animations = new HashMap<>();
         private final Map<String, List<Script>> scripts = new HashMap<>();
@@ -92,6 +80,10 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
         }
 
         public Builder withTexture(DisplaySlot slot, String texture) {
+            return withTexture(slot.name, texture);
+        }
+
+        public Builder withTexture(String slot, String texture) {
             textures.put(slot, BedrockTextures.TEXTURES_FOLDER + texture);
             return this;
         }
@@ -126,7 +118,7 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
 
         public BedrockAttachable build() {
             return new BedrockAttachable(PackConstants.ENGINE_VERSION,
-                    new AttachableInfo(identifier, verifyDefault(materials), verifyDefault(textures), verifyDefault(geometries), Map.copyOf(animations),
+                    new AttachableInfo(identifier, verifyDefault(materials), Map.copyOf(textures), verifyDefault(geometries), Map.copyOf(animations),
                             new Scripts(Map.copyOf(scripts)), List.copyOf(renderControllers)));
         }
 
@@ -134,11 +126,11 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
             if (!map.containsKey(DisplaySlot.DEFAULT)) {
                 throw new IllegalStateException("DisplayMap must have a default key");
             }
-            return new DisplayMap(map);
+            return new DisplayMap(Map.copyOf(map));
         }
     }
 
-    public record AttachableInfo(Identifier identifier, DisplayMap materials, DisplayMap textures,
+    public record AttachableInfo(Identifier identifier, DisplayMap materials, Map<String, String> textures,
                                  DisplayMap geometry, Map<String, String> animations, Scripts scripts,
                                  List<String> renderControllers) {
         private static final Codec<Map<String, String>> STRING_MAP_CODEC = Codec.unboundedMap(Codec.STRING, Codec.STRING);
@@ -146,7 +138,7 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
                 instance.group(
                         Identifier.CODEC.fieldOf("identifier").forGetter(AttachableInfo::identifier),
                         DisplayMap.CODEC.fieldOf("materials").forGetter(AttachableInfo::materials),
-                        DisplayMap.CODEC.fieldOf("textures").forGetter(AttachableInfo::textures),
+                        Codec.unboundedMap(Codec.STRING, Codec.STRING).fieldOf("textures").forGetter(AttachableInfo::textures),
                         DisplayMap.CODEC.fieldOf("geometry").forGetter(AttachableInfo::geometry),
                         STRING_MAP_CODEC.optionalFieldOf("animations", Map.of()).forGetter(AttachableInfo::animations),
                         Scripts.CODEC.optionalFieldOf("scripts", Scripts.EMPTY).forGetter(AttachableInfo::scripts),
@@ -155,7 +147,7 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
         );
     }
 
-    public record DisplayMap(EnumMap<DisplaySlot, String> map) {
+    public record DisplayMap(Map<DisplaySlot, String> map) {
         public static final Codec<DisplayMap> CODEC = Codec.unboundedMap(DisplaySlot.CODEC, Codec.STRING)
                 .xmap(map -> map.isEmpty() ? new DisplayMap(new EnumMap<>(DisplaySlot.class)) : new DisplayMap(new EnumMap<>(map)), DisplayMap::map);
     }

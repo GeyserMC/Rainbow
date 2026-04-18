@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 public final class RainbowIO {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -28,10 +27,6 @@ public final class RainbowIO {
 
     public static <T> T safeIO(IOSupplier<T> supplier, T defaultValue) {
         return safeIO(supplier).orElse(defaultValue);
-    }
-
-    public static <T> T safeIO(IOSupplier<T> supplier, Supplier<T> defaultValue) {
-        return safeIO(supplier).orElseGet(defaultValue);
     }
 
     public static void safeIO(IORunnable runnable) {

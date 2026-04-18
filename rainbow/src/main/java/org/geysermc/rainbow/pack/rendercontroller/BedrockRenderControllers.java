@@ -24,6 +24,11 @@ public record BedrockRenderControllers(Map<String, RenderController> renderContr
                     Codec.unboundedMap(Codec.STRING, RenderController.CODEC).fieldOf("render_controllers").forGetter(BedrockRenderControllers::renderControllers)
             ).apply(instance, (_, renderControllers) -> new BedrockRenderControllers(renderControllers))
     );
+    public static final Map<String, String> DEFAULT_MATERIAL = Map.of("*", "variable.is_enchanted ? Material.enchanted : Material.default");
+
+    public static String formatRenderControllerName(String name) {
+        return "controller.render." + name;
+    }
 
     public static Builder builder() {
         return new Builder();

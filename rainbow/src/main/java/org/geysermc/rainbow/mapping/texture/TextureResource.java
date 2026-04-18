@@ -11,7 +11,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 
-public record TextureResource(NativeImage texture, Optional<FrameSize> frameSize, List<FrameInfo> frames, int frameRowCount) implements AutoCloseable {
+public record TextureResource(NativeImage texture, Optional<FrameSize> frameSize, List<FrameInfo> frames,
+                              int frameRowCount, int totalFrameCount) implements AutoCloseable {
 
     public static TextureResource createAnimated(NativeImage texture, AnimationMetadataSection animation) {
         // Inspired by: SpriteContents#createAnimatedTexture
@@ -24,7 +25,7 @@ public record TextureResource(NativeImage texture, Optional<FrameSize> frameSize
 
         if (totalFrameCount <= 1) {
             // Early return: 1 frame can never be animated
-            return new TextureResource(texture, Optional.empty(), List.of(), 1);
+            return new TextureResource(texture, Optional.empty(), List.of(), 1, totalFrameCount);
         }
 
         List<FrameInfo> frames = new ArrayList<>();
@@ -47,15 +48,16 @@ public record TextureResource(NativeImage texture, Optional<FrameSize> frameSize
             }
         }
 
-        return new TextureResource(texture, Optional.of(frameSize), Collections.unmodifiableList(frames), frameRowCount);
+        return new TextureResource(texture, Optional.of(frameSize), Collections.unmodifiableList(frames), frameRowCount, totalFrameCount);
     }
 
     public static TextureResource createAnimated(NativeImage texture, FrameSize frameSize, List<FrameInfo> frames, int frameRowCount) {
-        return new TextureResource(texture, Optional.of(frameSize), frames, frameRowCount);
+        int frameColCount = texture.getHeight() / frameSize.height();
+        return new TextureResource(texture, Optional.of(frameSize), frames, frameRowCount, frameRowCount * frameColCount);
     }
 
     public static TextureResource createNonAnimated(NativeImage texture) {
-        return new TextureResource(texture, Optional.empty(), List.of(), 1);
+        return new TextureResource(texture, Optional.empty(), List.of(), 1, 1);
     }
 
     public static TextureResource create(NativeImage texture, Optional<AnimationMetadataSection> animationMetadata) {
@@ -82,12 +84,16 @@ public record TextureResource(NativeImage texture, Optional<FrameSize> frameSize
         FrameInfo frame = frames.get(index);
         FrameSize size = sizeOfFrame();
 
-        int frameX = getFrameX(frame.index);
-        int frameY = getFrameY(frame.index);
+        int frameX = getFrameX(frame.index) * size.width();
+        int frameY = getFrameY(frame.index) * size.height();
 
         NativeImage image = new NativeImage(size.width(), size.height(), false);
         texture.copyRect(image, frameX, frameY, 0, 0, size.width(), size.height(), false, false);
         return image;
+    }
+
+    public int frameReferenceCount() {
+        return Math.max(1, frames.size());
     }
 
     public FrameSize sizeOfFrame() {

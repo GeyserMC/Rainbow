@@ -159,6 +159,7 @@ public class BedrockPack implements PackSerializer.Serializable {
         private static final Path ATTACHABLES_DIRECTORY = Path.of("attachables");
         private static final Path GEOMETRY_DIRECTORY = Path.of("models/entity");
         private static final Path ANIMATION_DIRECTORY = Path.of("animations");
+        private static final Path RENDER_CONTROLLERS_DIRECTORY = Path.of("render_controllers");
 
         private static final Path MANIFEST_FILE = Path.of("manifest.json");
         private static final Path ITEM_ATLAS_FILE = Path.of("textures/item_texture.json");
@@ -172,6 +173,7 @@ public class BedrockPack implements PackSerializer.Serializable {
         private UnaryOperator<Path> attachablesPath = resolve(ATTACHABLES_DIRECTORY);
         private UnaryOperator<Path> geometryPath = resolve(GEOMETRY_DIRECTORY);
         private UnaryOperator<Path> animationPath = resolve(ANIMATION_DIRECTORY);
+        private UnaryOperator<Path> renderControllersPath = resolve(RENDER_CONTROLLERS_DIRECTORY);
         private UnaryOperator<Path> manifestPath = resolve(MANIFEST_FILE);
         private UnaryOperator<Path> itemAtlasPath = resolve(ITEM_ATLAS_FILE);
         private @Nullable Path packZipFile = null;
@@ -222,6 +224,15 @@ public class BedrockPack implements PackSerializer.Serializable {
             return this;
         }
 
+        public Builder withRenderControllersPath(Path absolute) {
+            return withRenderControllersPath(_ -> absolute);
+        }
+
+        public Builder withRenderControllersPath(UnaryOperator<Path> path) {
+            renderControllersPath = path;
+            return this;
+        }
+
         public Builder withManifestPath(Path absolute) {
             return withManifestPath(_ -> absolute);
         }
@@ -267,8 +278,9 @@ public class BedrockPack implements PackSerializer.Serializable {
 
         public BedrockPack build() {
             PackPaths paths = new PackPaths(mappingsPath, packRootPath, attachablesPath.apply(packRootPath),
-                    geometryPath.apply(packRootPath), animationPath.apply(packRootPath), manifestPath.apply(packRootPath),
-                    itemAtlasPath.apply(packRootPath), Optional.ofNullable(packZipFile), Optional.ofNullable(languageFolder));
+                    geometryPath.apply(packRootPath), animationPath.apply(packRootPath), renderControllersPath.apply(packRootPath),
+                    manifestPath.apply(packRootPath), itemAtlasPath.apply(packRootPath),
+                    Optional.ofNullable(packZipFile), Optional.ofNullable(languageFolder));
             return new BedrockPack(name, Optional.ofNullable(manifest), paths, packSerializer, assetResolver, Optional.ofNullable(geometryRenderer),
                     reporter.apply(() -> "Bedrock pack " + name + " "), reportSuccesses);
         }

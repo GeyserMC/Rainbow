@@ -1,14 +1,8 @@
 package org.geysermc.rainbow.mapping.attachable;
 
-import com.mojang.datafixers.util.Pair;
-import net.minecraft.client.resources.model.EquipmentAssetManager;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
-import net.minecraft.core.component.DataComponentPatch;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EquipmentSlot;
-import org.geysermc.rainbow.mapping.AssetResolver;
-import org.geysermc.rainbow.mapping.geometry.BedrockGeometryContext;
 import org.geysermc.rainbow.mapping.texture.TextureHolder;
 import org.geysermc.rainbow.pack.attachable.BedrockAttachable;
 
@@ -18,7 +12,7 @@ import java.util.function.Consumer;
 
 public class AttachableMapper {
 
-    public static AttachableCreator mapItem(AssetResolver assetResolver, BedrockGeometryContext geometryContext, DataComponentPatch components) {
+    /*public static AttachableCreator mapItem(AssetResolver assetResolver, BedrockGeometryContext geometryContext, DataComponentPatch components) {
         // Crazy optional statement
         // Unfortunately we can't have both equippables and custom models, so we prefer the latter :(
         return (bedrockIdentifier, textureConsumer) -> geometryContext.geometry()
@@ -45,7 +39,7 @@ public class AttachableMapper {
                     });
                     return attachable.build();
                 });
-    }
+    }*/
 
     private static EquipmentClientInfo.LayerType getLayer(EquipmentSlot slot) {
         return slot == EquipmentSlot.LEGS ? EquipmentClientInfo.LayerType.HUMANOID_LEGGINGS : EquipmentClientInfo.LayerType.HUMANOID;

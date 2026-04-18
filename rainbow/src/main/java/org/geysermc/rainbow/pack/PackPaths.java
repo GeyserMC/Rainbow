@@ -9,7 +9,7 @@ import java.nio.file.Path;
 import java.util.Optional;
 
 public record PackPaths(Path mappings, Path packRoot, Path attachables, Path geometries, Path animations,
-                        Path manifest, Path itemAtlas, Optional<Path> zipOutput, Optional<Path> languageOutput) {
+                        Path renderControllers, Path manifest, Path itemAtlas, Optional<Path> zipOutput, Optional<Path> languageOutput) {
 
     public Path animationPath(String identifier) {
         return animations.resolve(identifier + ".animation.json");
@@ -21,6 +21,10 @@ public record PackPaths(Path mappings, Path packRoot, Path attachables, Path geo
 
     public Path geometryPath(String identifier) {
         return geometries.resolve(identifier + ".geo.json");
+    }
+
+    public Path renderControllersPath(String identifier) {
+        return renderControllers.resolve(identifier + ".render_controllers.json");
     }
 
     public Path texturePath(TextureHolder texture) {

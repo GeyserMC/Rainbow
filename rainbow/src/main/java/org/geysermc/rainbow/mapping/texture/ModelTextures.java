@@ -20,7 +20,12 @@ import org.geysermc.rainbow.mapping.PackSerializingContext;
 import org.geysermc.rainbow.mixin.SpriteContentsAccessor;
 import org.geysermc.rainbow.mixin.SpriteLoaderAccessor;
 import org.geysermc.rainbow.mixin.TextureSlotsAccessor;
+import org.geysermc.rainbow.pack.attachable.BedrockAttachable;
+import org.geysermc.rainbow.pack.attachable.VanillaRenderControllers;
+import org.geysermc.rainbow.pack.rendercontroller.BedrockRenderControllers;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +42,14 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
     Optional<SpriteInfo> getSprite(String key);
 
     Identifier icon();
+
+    boolean requiresAttachable();
+
+    default BedrockAttachable.Builder applyToAttachable(BedrockAttachable.Builder builder) {
+        return builder
+                .withTexture(BedrockAttachable.DisplaySlot.DEFAULT, icon().getPath())
+                .withRenderController(VanillaRenderControllers.ITEM_DEFAULT);
+    }
 
     @Override
     default ModelTextures cachedCopy() {
@@ -56,14 +69,9 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
 
         if (materials.size() == 1) {
             Material singleMaterial = materials.values().stream().findAny().orElseThrow();
-            return RainbowIO.<ModelTextures>safeIO(() -> {
-                try (TextureResource texture = context.assetResolver().getPossibleAtlasTextureSafely(singleMaterial.sprite()).orElse(null)) {
-                    if (texture != null) {
-                        return new SingleTexture(texture, createIcon(modelIdentifier, stack, materials, context));
-                    }
-                }
-                return null;
-            }, () -> new MissingTexture(modelIdentifier));
+            return context.assetResolver().getPossibleAtlasTextureSafely(singleMaterial.sprite())
+                    .<ModelTextures>map(texture -> new SingleTexture(texture, createIcon(modelIdentifier, stack, materials, context)))
+                    .orElseGet(() -> new MissingTexture(modelIdentifier));
         }
 
         Identifier stitchedTexturesIdentifier = modelIdentifier.withSuffix("_stitched");
@@ -102,6 +110,16 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
         }
 
         @Override
+        public boolean requiresAttachable() {
+            return delegate.requiresAttachable();
+        }
+
+        @Override
+        public BedrockAttachable.Builder applyToAttachable(BedrockAttachable.Builder builder) {
+            return delegate.applyToAttachable(builder);
+        }
+
+        @Override
         public CompletableFuture<?> save(PackSerializingContext context) {
             return PackSerializer.noop();
         }
@@ -128,9 +146,13 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
         }
 
         @Override
+        public boolean requiresAttachable() {
+            return false;
+        }
+
+        @Override
         public CompletableFuture<?> save(PackSerializingContext context) {
-            // TODO needs report maybe?
-            return PackSerializer.noop();
+            return TextureHolder.createNonExistent(icon).save(context);
         }
 
         @Override
@@ -164,14 +186,76 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
         }
 
         @Override
+        public boolean requiresAttachable() {
+            return texture.frameReferenceCount() > 1;
+        }
+
+        @Override
+        public BedrockAttachable.Builder applyToAttachable(BedrockAttachable.Builder builder) {
+            if (texture.frameReferenceCount() > 1) {
+                builder.withRenderController(getRenderControllerIdentifier());
+                for (int frame = 0; frame < texture.totalFrameCount(); frame++) {
+                    builder.withTexture("frame_" + frame, getFrameIdentifier(frame).getPath());
+                }
+                return builder;
+            } else {
+                return ModelTextures.super.applyToAttachable(builder);
+            }
+        }
+
+        @Override
         public CompletableFuture<?> save(PackSerializingContext context) {
-            // TODO FIXME
-            return null;
+            if (texture.frameReferenceCount() == 1) {
+                return TextureHolder.createCustom(getFrameIdentifier(0), texture::getFirstFrame)
+                        .with(iconTexture)
+                        .save(context);
+            }
+
+            PackSerializer.Serializable serializableStack = iconTexture;
+
+            for (int frame = 0; frame < texture.totalFrameCount(); frame++) {
+                int i = frame;
+                serializableStack = serializableStack.with(TextureHolder.createCustom(getFrameIdentifier(frame), () -> texture.getFrame(i)));
+            }
+
+            serializableStack = serializableStack.with(PackSerializer.Serializable.wrapCodec(BedrockRenderControllers.CODEC, createRenderController(),
+                    paths -> paths.renderControllersPath(getRenderControllerIdentifier())));
+            return serializableStack.save(context);
         }
 
         @Override
         public void close() {
             texture.close();
+        }
+
+        private Identifier getFrameIdentifier(int index) {
+            return icon().withSuffix("_" + index);
+        }
+
+        private BedrockRenderControllers createRenderController() {
+            return BedrockRenderControllers.builder()
+                    .withRenderController(getRenderControllerIdentifier(), BedrockRenderControllers.renderController("Geometry.default")
+                            .withArray(BedrockRenderControllers.RenderProperty.TEXTURES, "Array.frames", createTextureReferenceArray())
+                            .withRenderProperty(BedrockRenderControllers.RenderProperty.MATERIALS, BedrockRenderControllers.DEFAULT_MATERIAL)
+                            .withRenderProperty(BedrockRenderControllers.RenderProperty.TEXTURES, createTextureRenderProperty()))
+                    .build();
+        }
+
+        private String getRenderControllerIdentifier() {
+            return BedrockRenderControllers.formatRenderControllerName(Rainbow.bedrockSafeIdentifier(iconTexture.location()));
+        }
+
+        private List<String> createTextureReferenceArray() {
+            // TODO implement time component
+            List<String> textures = new ArrayList<>();
+            for (int frame = 0; frame < texture.frameReferenceCount(); frame++) {
+                textures.add("Texture.frame_" + texture.getFrameInfo(frame).index());
+            }
+            return Collections.unmodifiableList(textures);
+        }
+
+        private List<String> createTextureRenderProperty() {
+            return List.of("Array.frames[math.mod(math.floor(q.life_time * 20.0), %d)]".formatted(texture.frameReferenceCount()), "Texture.enchanted");
         }
     }
 
@@ -192,6 +276,18 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
         @Override
         public Identifier icon() {
             return iconTexture.location();
+        }
+
+        @Override
+        public boolean requiresAttachable() {
+            return true;
+        }
+
+        @Override
+        public BedrockAttachable.Builder applyToAttachable(BedrockAttachable.Builder builder) {
+            return builder
+                    .withTexture(BedrockAttachable.DisplaySlot.DEFAULT, stitched.location().getPath())
+                    .withRenderController(VanillaRenderControllers.ITEM_DEFAULT);
         }
 
         @Override
