@@ -33,7 +33,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<ModelTextures>, PackSerializer.Serializable {
+public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, PackSerializer.Serializable {
 
     int width();
 
@@ -70,7 +70,11 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
         if (materials.size() == 1) {
             Material singleMaterial = materials.values().stream().findAny().orElseThrow();
             return context.assetResolver().getPossibleAtlasTextureSafely(singleMaterial.sprite())
-                    .<ModelTextures>map(texture -> new SingleTexture(texture, createIcon(modelIdentifier, stack, materials, context)))
+                    .<ModelTextures>map(texture -> {
+                        try (texture) {
+                            return new SingleTexture(singleMaterial.sprite(), texture, createIcon(modelIdentifier, stack, materials, context));
+                        }
+                    })
                     .orElseGet(() -> new MissingTexture(modelIdentifier));
         }
 
@@ -123,9 +127,6 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
         public CompletableFuture<?> save(PackSerializingContext context) {
             return PackSerializer.noop();
         }
-
-        @Override
-        public void close() {}
     }
 
     record MissingTexture(Identifier icon) implements ModelTextures {
@@ -154,15 +155,13 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
         public CompletableFuture<?> save(PackSerializingContext context) {
             return TextureHolder.createNonExistent(icon).save(context);
         }
-
-        @Override
-        public void close() {}
     }
 
-    record SingleTexture(SpriteInfo sprite, TextureResource texture, TextureHolder iconTexture) implements ModelTextures {
+    record SingleTexture(SpriteInfo sprite, Identifier texture, ExtractedAnimationInfo animation, TextureHolder iconTexture) implements ModelTextures {
 
-        public SingleTexture(TextureResource texture, TextureHolder icon) {
-            this(new SpriteInfo(0, 0, texture.sizeOfFrame().width(), texture.sizeOfFrame().height()), texture, icon);
+        public SingleTexture(Identifier texture, TextureResource openedTexture, TextureHolder icon) {
+            this(new SpriteInfo(0, 0, openedTexture.sizeOfFrame().width(), openedTexture.sizeOfFrame().height()), texture,
+                    new ExtractedAnimationInfo(openedTexture.totalFrameCount(), openedTexture.frameReferenceCount()), icon);
         }
 
         @Override
@@ -187,14 +186,14 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
 
         @Override
         public boolean requiresAttachable() {
-            return texture.frameReferenceCount() > 1;
+            return animation.references > 1;
         }
 
         @Override
         public BedrockAttachable.Builder applyToAttachable(BedrockAttachable.Builder builder) {
-            if (texture.frameReferenceCount() > 1) {
+            if (animation.references > 1) {
                 builder.withRenderController(getRenderControllerIdentifier());
-                for (int frame = 0; frame < texture.totalFrameCount(); frame++) {
+                for (int frame = 0; frame < animation.frames; frame++) {
                     builder.withTexture("frame_" + frame, getFrameIdentifier(frame).getPath());
                 }
                 return builder;
@@ -205,39 +204,37 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
 
         @Override
         public CompletableFuture<?> save(PackSerializingContext context) {
-            if (texture.frameReferenceCount() == 1) {
-                return TextureHolder.createCustom(getFrameIdentifier(0), texture::getFirstFrame)
+            if (animation.references == 1) {
+                return TextureHolder.createBuiltIn(getFrameIdentifier(0), texture)
                         .with(iconTexture)
                         .save(context);
             }
 
-            PackSerializer.Serializable serializableStack = iconTexture;
+            // Texture must exist at this point, else a missing texture would've been returned by the load function
+            try (TextureResource openedTexture = context.assetResolver().getPossibleAtlasTextureSafely(texture).orElseThrow()) {
+                PackSerializer.Serializable serializableStack = iconTexture;
 
-            for (int frame = 0; frame < texture.totalFrameCount(); frame++) {
-                int i = frame;
-                serializableStack = serializableStack.with(TextureHolder.createCustom(getFrameIdentifier(frame), () -> texture.getFrame(i)));
+                for (int frame = 0; frame < animation.frames; frame++) {
+                    int i = frame;
+                    serializableStack = serializableStack.with(TextureHolder.createCustom(getFrameIdentifier(frame), () -> openedTexture.getFrame(i)));
+                }
+
+                serializableStack = serializableStack.with(PackSerializer.Serializable.wrapCodec(BedrockRenderControllers.CODEC, createRenderController(openedTexture),
+                        paths -> paths.renderControllersPath(getRenderControllerIdentifier())));
+                return serializableStack.save(context);
             }
-
-            serializableStack = serializableStack.with(PackSerializer.Serializable.wrapCodec(BedrockRenderControllers.CODEC, createRenderController(),
-                    paths -> paths.renderControllersPath(getRenderControllerIdentifier())));
-            return serializableStack.save(context);
-        }
-
-        @Override
-        public void close() {
-            texture.close();
         }
 
         private Identifier getFrameIdentifier(int index) {
             return icon().withSuffix("_" + index);
         }
 
-        private BedrockRenderControllers createRenderController() {
+        private BedrockRenderControllers createRenderController(TextureResource texture) {
             return BedrockRenderControllers.builder()
                     .withRenderController(getRenderControllerIdentifier(), BedrockRenderControllers.renderController("Geometry.default")
-                            .withArray(BedrockRenderControllers.RenderProperty.TEXTURES, "Array.frames", createTextureReferenceArray())
+                            .withArray(BedrockRenderControllers.RenderProperty.TEXTURES, "Array.frames", createTextureReferenceArray(texture))
                             .withRenderProperty(BedrockRenderControllers.RenderProperty.MATERIALS, BedrockRenderControllers.DEFAULT_MATERIAL)
-                            .withRenderProperty(BedrockRenderControllers.RenderProperty.TEXTURES, createTextureRenderProperty()))
+                            .withRenderProperty(BedrockRenderControllers.RenderProperty.TEXTURES, createTextureRenderProperty(texture)))
                     .build();
         }
 
@@ -245,7 +242,7 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
             return BedrockRenderControllers.formatRenderControllerName(Rainbow.bedrockSafeIdentifier(iconTexture.location()));
         }
 
-        private List<String> createTextureReferenceArray() {
+        private static List<String> createTextureReferenceArray(TextureResource texture) {
             // TODO implement time component
             List<String> textures = new ArrayList<>();
             for (int frame = 0; frame < texture.frameReferenceCount(); frame++) {
@@ -254,9 +251,11 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
             return Collections.unmodifiableList(textures);
         }
 
-        private List<String> createTextureRenderProperty() {
+        private static List<String> createTextureRenderProperty(TextureResource texture) {
             return List.of("Array.frames[math.mod(math.floor(q.life_time * 20.0), %d)]".formatted(texture.frameReferenceCount()), "Texture.enchanted");
         }
+
+        private record ExtractedAnimationInfo(int frames, int references) {}
     }
 
     record StitchedTextures(Map<String, SpriteInfo> sprites, TextureHolder stitched, int width, int height, TextureHolder iconTexture) implements ModelTextures {
@@ -294,9 +293,6 @@ public interface ModelTextures extends AutoCloseable, PackAssetCache.Cacheable<M
         public CompletableFuture<?> save(PackSerializingContext context) {
             return iconTexture.with(stitched).save(context);
         }
-
-        @Override
-        public void close() {}
 
         private static StitchedTextures stitchModelTextures(Identifier stitchedTexturesIdentifier, Map<String, Material> materials, TextureHolder icon, PackContext context) {
             SpriteLoader.Preparations preparations = prepareStitching(materials.values().stream(), context);

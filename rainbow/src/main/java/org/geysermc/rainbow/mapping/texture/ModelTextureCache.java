@@ -9,18 +9,10 @@ import org.geysermc.rainbow.mixin.TextureSlotsAccessor;
 
 import java.util.Map;
 
-public class ModelTextureCache extends PackAssetCache<ModelTextureCache.Key, ModelTextures> implements AutoCloseable {
+public class ModelTextureCache extends PackAssetCache<ModelTextureCache.Key, ModelTextures> {
 
     public ModelTextures load(ItemStackTemplate stack, ResolvedModel model, PackContext context) {
         return getOrCompute(new Key(model), () -> ModelTextures.load(stack, model, context));
-    }
-
-    @Override
-    public void close() throws Exception {
-        for (ModelTextures value : values()) {
-            value.close();
-        }
-        clear();
     }
 
     public record Key(Map<String, Material> textures) {

@@ -10,7 +10,7 @@ import org.geysermc.rainbow.mapping.texture.ModelTextures;
 import java.util.concurrent.CompletableFuture;
 
 public record BedrockItem(Identifier identifier, String textureName, ModelTextures textures, BedrockGeometryContext geometryContext,
-                          BedrockAttachableContext attachableContext) implements PackSerializer.Serializable, AutoCloseable {
+                          BedrockAttachableContext attachableContext) implements PackSerializer.Serializable {
 
     @Override
     public CompletableFuture<?> save(PackSerializingContext context) {
@@ -21,13 +21,5 @@ public record BedrockItem(Identifier identifier, String textureName, ModelTextur
                 .with(geometryContext)
                 .with(attachableContext)
                 .save(context);
-    }
-
-    // FIXME this method is never called
-    @Override
-    public void close() throws Exception {
-        // Is closed here and in the cache, which is in the context
-        // Where do we close this?
-        textures.close();
     }
 }
