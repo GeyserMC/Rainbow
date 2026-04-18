@@ -28,6 +28,7 @@ public class Rainbow {
     }
 
     public static Identifier getModelIdentifier(ResolvedModel model) {
+        // debugName() returns the resource location of the model as a string
         return Identifier.parse(model.debugName());
     }
 }

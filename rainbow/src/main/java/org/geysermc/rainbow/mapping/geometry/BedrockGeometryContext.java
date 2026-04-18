@@ -2,8 +2,7 @@ package org.geysermc.rainbow.mapping.geometry;
 
 import com.mojang.math.Transformation;
 import net.minecraft.client.resources.model.ResolvedModel;
-import net.minecraft.client.resources.model.sprite.Material;
-import net.minecraft.client.resources.model.sprite.TextureSlots;
+import net.minecraft.client.resources.model.cuboid.UnbakedCuboidGeometry;
 import net.minecraft.resources.Identifier;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.mapping.PackContext;
@@ -32,22 +31,20 @@ public record BedrockGeometryContext(Optional<MappedGeometry> geometry,
     }
 
     public static BedrockGeometryContext create(Identifier bedrockIdentifier, ResolvedModel model, Transformation definitionTransformation, ModelTextures textures, PackContext context) {
+        boolean isFlatBuiltin = false;
+        if (!(model.getTopGeometry() instanceof UnbakedCuboidGeometry)) {
+            isFlatBuiltin = true;
+            model = new FlatBuiltinItemModel(context.assetResolver(), model);
+        }
+
         ResolvedModel parentModel = model.parent();
-        // debugName() returns the resource location of the model as a string
-        boolean handheld = parentModel != null && HANDHELD_MODELS.contains(Identifier.parse(parentModel.debugName()));
+        boolean handheld = parentModel != null && HANDHELD_MODELS.contains(Rainbow.getModelIdentifier(model));
 
-        // TODO improve check: UnbakedGeometry impl check
-        TextureSlots textureSlots = model.getTopTextureSlots();
-        Material layer0Texture = textureSlots.getMaterial("layer0");
-        Optional<MappedGeometry> geometry;
-        Optional<BedrockAnimationContext> animation;
+        Optional<MappedGeometry> geometry = Optional.empty();
+        Optional<BedrockAnimationContext> animation = Optional.empty();
 
-        if (layer0Texture != null) {
-            geometry = Optional.empty();
-            animation = Optional.of(AnimationMapper.mapAnimation(Rainbow.bedrockSafeIdentifier(bedrockIdentifier), "body", model.getTopTransforms()));
-        } else {
-            // Unknown model (doesn't use layer0), so we immediately assume the geometry is custom
-            // This check should probably be done differently (actually check if the model is 2D or 3D)
+        if (textures.requiresAttachable() || !isFlatBuiltin) {
+            // Not flat built-in model, or textures require an attachable (e.g. texture is animated), so map geometry and animation
 
             geometry = Optional.of(context.geometryCache().mapGeometry(bedrockIdentifier, model, definitionTransformation, textures));
             animation = Optional.of(AnimationMapper.mapAnimation(Rainbow.bedrockSafeIdentifier(bedrockIdentifier), "bone", model.getTopTransforms()));

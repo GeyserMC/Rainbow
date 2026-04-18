@@ -1,0 +1,13 @@
+{
+  "_comment": "See ItemModelGenerator, this is a 2D approximation of how it bakes models",
+  "elements": [
+    {
+      "from": [0, 0, 7.5],
+      "to": [16, 16, 7.5],
+      "faces": {
+        "north": {"uv": [16, 0, 0, 16], "texture": "#layer0"},
+        "south": {"uv": [0, 0, 16, 16], "texture": "#layer0"}
+      }
+    }
+  ]
+}
