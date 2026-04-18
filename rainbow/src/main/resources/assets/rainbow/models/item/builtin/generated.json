@@ -1,5 +1,9 @@
 {
   "_comment": "See ItemModelGenerator, this is a 2D approximation of how it bakes models",
+  "textures": {
+    "layer0": "minecraft:missingno",
+    "particle": "#layer0"
+  },
   "elements": [
     {
       "from": [0, 0, 7.5],

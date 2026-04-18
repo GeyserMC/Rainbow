@@ -230,11 +230,12 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
         }
 
         private BedrockRenderControllers createRenderController(TextureResource texture) {
+            List<String> textureReferences = createTextureReferenceArray(texture);
             return BedrockRenderControllers.builder()
                     .withRenderController(getRenderControllerIdentifier(), BedrockRenderControllers.renderController("Geometry.default")
-                            .withArray(BedrockRenderControllers.RenderProperty.TEXTURES, "Array.frames", createTextureReferenceArray(texture))
+                            .withArray(BedrockRenderControllers.RenderProperty.TEXTURES, "Array.frames", textureReferences)
                             .withRenderProperty(BedrockRenderControllers.RenderProperty.MATERIALS, BedrockRenderControllers.DEFAULT_MATERIAL)
-                            .withRenderProperty(BedrockRenderControllers.RenderProperty.TEXTURES, createTextureRenderProperty(texture)))
+                            .withRenderProperty(BedrockRenderControllers.RenderProperty.TEXTURES, createTextureRenderProperty(textureReferences.size())))
                     .build();
         }
 
@@ -243,16 +244,19 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
         }
 
         private static List<String> createTextureReferenceArray(TextureResource texture) {
-            // TODO implement time component
             List<String> textures = new ArrayList<>();
             for (int frame = 0; frame < texture.frameReferenceCount(); frame++) {
-                textures.add("Texture.frame_" + texture.getFrameInfo(frame).index());
+                TextureResource.FrameInfo frameInfo = texture.getFrameInfo(frame);
+                // Very poor implementation of the time component, just repeat the frame for however many ticks
+                for (int i = 0; i < frameInfo.time(); i++) {
+                    textures.add("Texture.frame_" + frameInfo.index());
+                }
             }
             return Collections.unmodifiableList(textures);
         }
 
-        private static List<String> createTextureRenderProperty(TextureResource texture) {
-            return List.of("Array.frames[math.mod(math.floor(q.life_time * 20.0), %d)]".formatted(texture.frameReferenceCount()), "Texture.enchanted");
+        private static List<String> createTextureRenderProperty(int frames) {
+            return List.of("Array.frames[math.mod(math.floor(q.life_time * 20.0), %d)]".formatted(frames), "Texture.enchanted");
         }
 
         private record ExtractedAnimationInfo(int frames, int references) {}
