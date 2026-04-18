@@ -14,9 +14,6 @@ public record BedrockItem(Identifier identifier, String textureName, ModelTextur
 
     @Override
     public CompletableFuture<?> save(PackSerializingContext context) {
-        //List<TextureHolder> attachableTextures = new ArrayList<>();
-        //Optional<BedrockAttachable> createdAttachable = attachableCreator.create(identifier, attachableTextures::add);
-
         return textures
                 .with(geometryContext)
                 .with(attachableContext)

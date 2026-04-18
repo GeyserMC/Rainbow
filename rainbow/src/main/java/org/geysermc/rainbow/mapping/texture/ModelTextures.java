@@ -205,9 +205,8 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
         @Override
         public CompletableFuture<?> save(PackSerializingContext context) {
             if (animation.references == 1) {
-                return TextureHolder.createBuiltIn(getFrameIdentifier(0), texture)
-                        .with(iconTexture)
-                        .save(context);
+                // If no animation, just save the texture
+                return TextureHolder.createBuiltIn(texture).save(context);
             }
 
             // Texture must exist at this point, else a missing texture would've been returned by the load function
@@ -226,7 +225,7 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
         }
 
         private Identifier getFrameIdentifier(int index) {
-            return icon().withSuffix("_" + index);
+            return texture.withSuffix("_" + index);
         }
 
         private BedrockRenderControllers createRenderController(TextureResource texture) {

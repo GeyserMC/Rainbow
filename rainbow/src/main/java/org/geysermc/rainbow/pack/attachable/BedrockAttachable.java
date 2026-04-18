@@ -1,5 +1,6 @@
 package org.geysermc.rainbow.pack.attachable;
 
+import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -35,22 +36,33 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
         return new Builder(identifier);
     }
 
-    public static BedrockAttachable.Builder equipment(Identifier identifier, EquipmentSlot slot, String texture) {
+    public static BedrockAttachable.Builder equipment(Identifier identifier, EquipmentSlot slot, String texture, boolean glider) {
         String script = switch (slot) {
-            case HEAD -> "v.helmet_layer_visible = 0.0;";
-            case CHEST -> "v.chest_layer_visible = 0.0;";
-            case LEGS -> "v.leg_layer_visible = 0.0;";
-            case FEET -> "v.boot_layer_visible = 0.0;";
+            case HEAD -> "variable.helmet_layer_visible = 0.0;";
+            case CHEST -> "variable.chest_layer_visible = 0.0;";
+            case LEGS -> "variable.leg_layer_visible = 0.0;";
+            case FEET -> "variable.boot_layer_visible = 0.0;";
             default -> "";
         };
-        return builder(identifier)
-                .withMaterial(DisplaySlot.DEFAULT, VanillaMaterials.ARMOR)
-                .withMaterial(DisplaySlot.ENCHANTED, VanillaMaterials.ARMOR_ENCHANTED)
+        Builder builder = builder(identifier)
+                .withMaterial(DisplaySlot.DEFAULT, glider ? VanillaMaterials.ELYTRA : VanillaMaterials.ARMOR)
+                .withMaterial(DisplaySlot.ENCHANTED, glider ? VanillaMaterials.ELYTRA_GLINT : VanillaMaterials.ARMOR_ENCHANTED)
                 .withTexture(DisplaySlot.DEFAULT, texture)
                 .withTexture(DisplaySlot.ENCHANTED, VanillaTextures.ENCHANTED_ACTOR_GLINT)
-                .withGeometry(DisplaySlot.DEFAULT, Objects.requireNonNull(VanillaGeometries.fromEquipmentSlot(slot)))
+                .withGeometry(DisplaySlot.DEFAULT, Objects.requireNonNull(VanillaGeometries.fromEquipmentSlot(slot, glider)))
                 .withScript("parent_setup", script)
                 .withRenderController(VanillaRenderControllers.ARMOR);
+
+        if (glider) {
+            builder.withAnimation("default_controller", VanillaAnimations.ELYTRA_CONTROLLER);
+            builder.withAnimation("default", VanillaAnimations.ELYTRA_DEFAULT);
+            builder.withAnimation("gliding", VanillaAnimations.ELYTRA_GLIDING);
+            builder.withAnimation("sneaking", VanillaAnimations.ELYTRA_SNEAKING);
+            builder.withAnimation("sleeping", VanillaAnimations.ELYTRA_SLEEPING);
+            builder.withAnimation("swimming", VanillaAnimations.ELYTRA_SWIMMING);
+            builder.withScript("animate", List.of("default_controller"));
+        }
+        return builder;
     }
 
     public static BedrockAttachable.Builder geometry(Identifier identifier, String geometry) {
@@ -104,11 +116,15 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
         }
 
         public Builder withScript(String key, String script, String condition) {
-            return withScript(key, new Script(script, Optional.of(condition)));
+            return withScript(key, new Script(Either.left(script), Optional.of(condition)));
         }
 
         public Builder withScript(String key, String script) {
-            return withScript(key, new Script(script, Optional.empty()));
+            return withScript(key, new Script(Either.left(script), Optional.empty()));
+        }
+
+        public Builder withScript(String key, List<String> scripts) {
+            return withScript(key, new Script(Either.right(List.copyOf(scripts)), Optional.empty()));
         }
 
         public Builder withRenderController(String controller) {
@@ -175,23 +191,29 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
         public static final Scripts EMPTY = new Scripts(Map.of());
     }
 
-    public record Script(String script, Optional<String> condition) {
+    // TODO clean this up
+    public record Script(Either<String, List<String>> script, Optional<String> condition) {
         private static final Codec<Script> SCRIPT_WITH_CONDITION_CODEC = Codec.unboundedMap(Codec.STRING, Codec.STRING).flatXmap(
                 scriptMap -> {
                     if (scriptMap.size() != 1) {
                         return DataResult.error(() -> "Script with condition must have exactly one key-value pair");
                     }
                     String script = scriptMap.keySet().iterator().next();
-                    return DataResult.success(new Script(script, Optional.of(scriptMap.get(script))));
+                    return DataResult.success(new Script(Either.left(script), Optional.of(scriptMap.get(script))));
                 },
-                script -> script.condition.map(condition -> DataResult.success(Map.of(script.script, condition)))
+                script -> script.condition.map(condition -> DataResult.success(Map.of(script.script.left().orElseThrow(), condition)))
                         .orElse(DataResult.error(() -> "Script must have a condition"))
         );
+        private static final Codec<Script> SCRIPT_LIST_CODEC = Codec.STRING.listOf().flatComapMap(scripts -> new Script(Either.right(scripts), Optional.empty()), script ->
+                script.script.map(_ -> DataResult.error(() -> "Script must have a list of scripts"), DataResult::success));
         public static final Codec<Script> CODEC = SCRIPT_WITH_CONDITION_CODEC.mapResult(new Codec.ResultFunction<>() {
             @Override
             public <T> DataResult<Pair<Script, T>> apply(DynamicOps<T> ops, T input, DataResult<Pair<Script, T>> decoded) {
                 if (decoded.isError()) {
-                    return Codec.STRING.map(script -> new Script(script, Optional.empty())).decode(ops, input);
+                    decoded = SCRIPT_LIST_CODEC.decode(ops, input);
+                    if (decoded.isError()) {
+                        return Codec.STRING.map(script -> new Script(Either.left(script), Optional.empty())).decode(ops, input);
+                    }
                 }
                 return decoded;
             }
@@ -199,7 +221,10 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
             @Override
             public <T> DataResult<T> coApply(DynamicOps<T> ops, Script input, DataResult<T> encoded) {
                 if (encoded.isError()) {
-                    return Codec.STRING.encodeStart(ops, input.script);
+                    encoded = SCRIPT_LIST_CODEC.encodeStart(ops, input);
+                    if (encoded.isError()) {
+                        return input.script.map(script -> Codec.STRING.encodeStart(ops, script), _ -> DataResult.error(() -> "Script must be a single script"));
+                    }
                 }
                 return encoded;
             }

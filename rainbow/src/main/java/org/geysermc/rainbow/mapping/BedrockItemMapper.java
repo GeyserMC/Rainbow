@@ -245,7 +245,7 @@ public class BedrockItemMapper {
                         ModelTextures textures = packContext.textureCache().load(itemStack, itemModel, packContext);
 
                         BedrockGeometryContext geometry = BedrockGeometryContext.create(bedrockIdentifier, itemModel, finaliseTransformation(model.transformation()), textures, packContext);
-                        BedrockAttachableContext attachable = BedrockAttachableContext.create(bedrockIdentifier, itemStack, geometry, textures);
+                        BedrockAttachableContext attachable = BedrockAttachableContext.create(bedrockIdentifier, itemStack, geometry, textures, packContext);
 
                         if (packContext.reportSuccesses()) {
                             // Not a problem, but just report to get the model printed in the report file
@@ -282,7 +282,7 @@ public class BedrockItemMapper {
         }
 
         private static int calculateProtectionValue(ItemStackTemplate stack) {
-            ItemAttributeModifiers modifiers = stack.components().split().added().get(DataComponents.ATTRIBUTE_MODIFIERS);
+            ItemAttributeModifiers modifiers = stack.get(DataComponents.ATTRIBUTE_MODIFIERS);
             if (modifiers != null) {
                 return modifiers.modifiers().stream()
                         .filter(modifier -> modifier.attribute() == Attributes.ARMOR && modifier.modifier().operation() == AttributeModifier.Operation.ADD_VALUE)
