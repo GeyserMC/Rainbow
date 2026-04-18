@@ -16,7 +16,7 @@ import org.geysermc.rainbow.mapping.texture.ModelTextures;
 import org.geysermc.rainbow.mapping.texture.TextureHolder;
 import org.geysermc.rainbow.pack.PackPaths;
 import org.geysermc.rainbow.pack.attachable.BedrockAttachable;
-import org.geysermc.rainbow.pack.attachable.VanillaGeometries;
+import org.geysermc.rainbow.pack.geometry.VanillaGeometries;
 
 import java.util.List;
 import java.util.Optional;

@@ -1,5 +1,7 @@
 package org.geysermc.rainbow.client.render;
 
+import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStackTemplate;
 import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
@@ -12,6 +14,11 @@ public class MinecraftGeometryRenderer implements GeometryRenderer {
 
     @Override
     public TextureHolder render(Identifier identifier, ItemStackTemplate stack) {
-        return new RenderedTextureHolder(identifier, stack);
+        // Don't render enchantment glint
+        DataComponentPatch.Builder renderedComponents = DataComponentPatch.builder();
+        stack.components().split().added().forEach(renderedComponents::set);
+        stack.components().split().removed().forEach(renderedComponents::remove);
+        renderedComponents.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, false);
+        return new RenderedTextureHolder(identifier, new ItemStackTemplate(stack.item().value(), renderedComponents.build()));
     }
 }

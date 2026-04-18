@@ -14,6 +14,9 @@ import net.minecraft.world.entity.EquipmentSlot;
 import org.geysermc.rainbow.PackConstants;
 import org.geysermc.rainbow.pack.BedrockTextures;
 import org.geysermc.rainbow.pack.BedrockVersion;
+import org.geysermc.rainbow.pack.animation.VanillaAnimations;
+import org.geysermc.rainbow.pack.geometry.VanillaGeometries;
+import org.geysermc.rainbow.pack.rendercontroller.VanillaRenderControllers;
 
 import java.util.ArrayList;
 import java.util.EnumMap;

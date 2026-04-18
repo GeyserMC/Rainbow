@@ -1,4 +1,4 @@
-package org.geysermc.rainbow.pack.attachable;
+package org.geysermc.rainbow.pack.geometry;
 
 import net.minecraft.world.entity.EquipmentSlot;
 import org.jspecify.annotations.Nullable;

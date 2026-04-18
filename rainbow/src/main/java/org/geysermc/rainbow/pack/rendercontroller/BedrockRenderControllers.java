@@ -10,6 +10,7 @@ import org.geysermc.rainbow.CodecUtil;
 import org.geysermc.rainbow.codec.DispatchedMapMapCodec;
 import org.jspecify.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,7 +84,7 @@ public record BedrockRenderControllers(Map<String, RenderController> renderContr
                     }
                     Map<String, List<String>> merged = new HashMap<>(arrayMap);
                     merged.put(name, values);
-                    return Map.copyOf(merged);
+                    return Collections.unmodifiableMap(merged);
                 });
                 return this;
             }

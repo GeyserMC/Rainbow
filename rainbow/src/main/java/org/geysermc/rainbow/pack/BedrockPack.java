@@ -22,6 +22,7 @@ import org.geysermc.rainbow.definition.GeyserMappings;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -136,7 +137,7 @@ public class BedrockPack implements PackSerializer.Serializable {
     }
 
     public Set<BedrockItem> getBedrockItems() {
-        return Set.copyOf(bedrockItems);
+        return Collections.unmodifiableSet(bedrockItems);
     }
 
     public int getItemTextureAtlasSize() {

@@ -21,7 +21,7 @@ import org.geysermc.rainbow.mixin.SpriteContentsAccessor;
 import org.geysermc.rainbow.mixin.SpriteLoaderAccessor;
 import org.geysermc.rainbow.mixin.TextureSlotsAccessor;
 import org.geysermc.rainbow.pack.attachable.BedrockAttachable;
-import org.geysermc.rainbow.pack.attachable.VanillaRenderControllers;
+import org.geysermc.rainbow.pack.rendercontroller.VanillaRenderControllers;
 import org.geysermc.rainbow.pack.rendercontroller.BedrockRenderControllers;
 
 import java.util.ArrayList;
@@ -308,8 +308,8 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
                     sprites.put(material.getKey(), new SpriteInfo(sprite.getX(), sprite.getY(), sprite.contents().width(), sprite.contents().height()));
                 }
             }
-            return new StitchedTextures(Map.copyOf(sprites), TextureHolder.createCustom(stitchedTexturesIdentifier, () -> stitchTextureAtlas(preparations)),
-                    preparations.width(), preparations.height(), icon);
+            return new StitchedTextures(Collections.unmodifiableMap(sprites), TextureHolder.createCustom(stitchedTexturesIdentifier,
+                    () -> stitchTextureAtlas(preparations)), preparations.width(), preparations.height(), icon);
         }
 
         private static SpriteLoader.Preparations prepareStitching(Stream<Material> materials, PackContext context) {

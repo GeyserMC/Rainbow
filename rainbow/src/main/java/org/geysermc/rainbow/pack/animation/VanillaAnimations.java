@@ -1,4 +1,4 @@
-package org.geysermc.rainbow.pack.attachable;
+package org.geysermc.rainbow.pack.animation;
 
 public class VanillaAnimations {
     public static final String ELYTRA_CONTROLLER = "controller.animation.elytra.default";
