@@ -4,39 +4,46 @@ import net.minecraft.client.resources.model.cuboid.ItemTransform;
 import net.minecraft.client.resources.model.cuboid.ItemTransforms;
 import org.geysermc.rainbow.pack.animation.BedrockAnimation;
 import org.joml.Vector3f;
-import org.joml.Vector3fc;
 
-// TODO these offset values are still not entirely right, I think
 public class AnimationMapper {
-    private static final Vector3fc FIRST_PERSON_POSITION_OFFSET = new Vector3f(-7.0F, 22.5F, -7.0F);
-    private static final Vector3fc FIRST_PERSON_ROTATION_OFFSET = new Vector3f(-22.5F, 50.0F, -32.5F);
 
-    // These transformations aren't perfect... but I spent over 4 hours trying to get these. It's good enough for me.
+    // These transformations aren't perfect... but I think it's near perfect now. or at least, I hope.
+    // I think the only thing left is the X rotation of the third person view, which is weird on bedrock
     public static BedrockAnimationContext mapAnimation(String identifier, String bone, ItemTransforms transforms) {
-        // Note that translations are multiplied by 0.0625 after reading on Java, so we have to divide by that here
+        // Note that translations are multiplied by 0.0625 after reading on Java, so we have to divide by that here (ItemTransform.Deserializer)
 
         // I don't think it's possible to display separate animations for left- and right hands
         ItemTransform firstPerson = transforms.firstPersonRightHand();
-        Vector3f firstPersonPosition = firstPerson.translation().div(0.0625F, new Vector3f()).add(FIRST_PERSON_POSITION_OFFSET);
-        Vector3f firstPersonRotation = FIRST_PERSON_ROTATION_OFFSET.add(firstPerson.rotation(), new Vector3f());
+        // Coordinate space differences for first person:
+        // - Java: X right, Y up, Z inward
+        // - Bedrock: X up, Y inward, Z right
+        // Java to bedrock: X -> Z, Y -> X, Z -> Y
+        // A base rotation of -90 is applied on the X axis, a base translation of 12.5 on the Y axis
+        // Z (Java) rotation, Y (Java) translation is inverted
+        Vector3f firstPersonRotation = new Vector3f(-90.0F + firstPerson.rotation().y(), -firstPerson.rotation().z(), firstPerson.rotation().x());
+        Vector3f firstPersonTranslation = firstPerson.translation().div(0.0625F, new Vector3f());
+        Vector3f firstPersonPosition = new Vector3f(-firstPersonTranslation.y(), 12.5F + firstPersonTranslation.z(), firstPersonTranslation.x());
         Vector3f firstPersonScale = new Vector3f(firstPerson.scale());
 
         ItemTransform thirdPerson = transforms.thirdPersonRightHand();
-        // Translation Y/Z axes are swapped on bedrock, bedrock displays the model lower than Java does, and the X/Y axes (Java) is inverted on bedrock
-        // Also the model appears lower on bedrock so we need to add 10 on the Y axis here
+        // Coordinate space differences for third person:
+        // - Java: X left, Y forward, Z up
+        // - Bedrock: X left, Y up, Z backward
+        // Java to bedrock: X -> X, Y -> Z, Z -> Y
+        // A base rotation of 90 is applied on the X axis, a base translation of 12.5 on the Y axis
+        // Y, Z (Java) rotations, Y (Java) translation are inverted
+        // TODO fix X rotation
+        Vector3f thirdPersonRotation = new Vector3f(90.0F, -thirdPerson.rotation().z(), -thirdPerson.rotation().y());
         Vector3f thirdPersonTranslation = thirdPerson.translation().div(0.0625F, new Vector3f());
-        Vector3f thirdPersonPosition = new Vector3f(-thirdPersonTranslation.x(), 10.0F + thirdPersonTranslation.z(), -thirdPersonTranslation.y());
-        // Rotation X/Y axes are inverted on bedrock, bedrock needs a +90-degree rotation on the X axis, and I couldn't figure out how the Z axis works
-        Vector3f thirdPersonRotation = new Vector3f(-thirdPerson.rotation().x() + 90.0F, -thirdPerson.rotation().y(), 0.0F);
+        Vector3f thirdPersonPosition = new Vector3f(thirdPersonTranslation.x(), 12.5F + thirdPersonTranslation.z(), -thirdPersonTranslation.y());
         Vector3f thirdPersonScale = new Vector3f(thirdPerson.scale());
 
         // Head translation + scale is scaled by around 0.655 (not perfect but close enough)
+        // Coordinate space is the same
+        // Add a base translation of (-6, 29, 0)
         ItemTransform head = transforms.head();
-        // Add a base translation of 20 on the Y axis as bedrock displays the item at the player's feet
-        // Translation is inverted on the X axis
-        Vector3f headPosition = head.translation().div(0.0625F, new Vector3f()).mul(-0.655F, 0.655F, 0.655F).add(0.0F, 20.0F, 0.0F);
-        // Rotation is inverted on the X and Y axis
-        Vector3f headRotation = new Vector3f(-head.rotation().x(), -head.rotation().y(), head.rotation().z());
+        Vector3f headPosition = head.translation().div(0.0625F, new Vector3f()).mul(0.655F, 0.655F, 0.655F).add(-6.0F, 29.0F, 0.0F);
+        Vector3f headRotation = new Vector3f(head.rotation());
         Vector3f headScale = head.scale().mul(0.655F, new Vector3f());
 
         // Note that for items marked as equippable, the 3D model only shows up when having the item equipped on the head, and the icon is used when holding the item in hand
