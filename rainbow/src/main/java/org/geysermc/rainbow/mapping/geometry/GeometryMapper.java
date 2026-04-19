@@ -127,13 +127,14 @@ public class GeometryMapper {
     }
 
     private static Vector3fc getBedrockRotation(CuboidRotation.RotationValue rotation) {
-        // Same as in the method above, but for some reason the Z axis too: X and Z axes have to be inverted (thanks again, so much, Blockbench!!!)
+        // Same as in the method above: X axis has to be inverted (thanks again, so much, Blockbench!!!)
+        // Note that before build 39, the Z axis was inverted too, if you see model rotation issues, this is probably the place to start
         return switch (rotation) {
-            case CuboidRotation.EulerXYZRotation(float x, float y, float z) -> new Vector3f(-x, y, -z); // TODO check if these angle transformations are right, they should be
+            case CuboidRotation.EulerXYZRotation(float x, float y, float z) -> new Vector3f(-x, y, z); // TODO check if these angle transformations are right, they should be
             case CuboidRotation.SingleAxisRotation(Direction.Axis axis, float angle) -> switch (axis) {
                 case X -> new Vector3f(-angle, 0.0F, 0.0F);
                 case Y -> new Vector3f(0.0F, angle, 0.0F);
-                case Z -> new Vector3f(0.0F, 0.0F, -angle);
+                case Z -> new Vector3f(0.0F, 0.0F, angle);
             };
             default -> throw new IllegalArgumentException("Don't know how to transform rotation of type " + rotation.getClass() + " to bedrock rotation");
         };
