@@ -25,6 +25,7 @@ import org.jspecify.annotations.Nullable;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -83,23 +84,32 @@ public class BedrockPack implements PackSerializer.Serializable {
             }
         };
 
-        if (!stack.components().split().added().has(DataComponents.ITEM_MODEL)) {
+        Identifier customModel = stack.components().split().added().get(DataComponents.ITEM_MODEL);
+        if (customModel == null) {
+            // If no custom item_model patch exists, try custom model data
             CustomModelData customModelData = stack.components().split().added().get(DataComponents.CUSTOM_MODEL_DATA);
-            Float firstNumber;
-            if (customModelData == null || (firstNumber = customModelData.getFloat(0)) == null
-                    || !customModelDataMapped.add(Pair.of(stack.item(), firstNumber.intValue()))) {
+            if (customModelData == null) {
                 return MappingResult.NONE_MAPPED;
+            } else if (isLegacyCustomModelData(customModelData)) {
+                // Legacy custom model data - only one float, nothing else
+                int customModelInt = Objects.requireNonNull(customModelData.getFloat(0)).intValue();
+                if (!customModelDataMapped.add(Pair.of(stack.item(), customModelInt))) {
+                    return MappingResult.NONE_MAPPED;
+                }
+                BedrockItemMapper.tryMapStack(stack, customModelInt, mapReporter, context);
+            } else {
+                // Try to map the vanilla model, but ignore the first direct plain model if present - this is the vanilla case
+                Identifier vanillaModel = Objects.requireNonNull(stack.get(DataComponents.ITEM_MODEL));
+                if (!modelsMapped.add(vanillaModel)) {
+                    return MappingResult.NONE_MAPPED;
+                }
+                BedrockItemMapper.tryMapStack(stack, vanillaModel, mapReporter, context, true);
             }
-
-            BedrockItemMapper.tryMapStack(stack, firstNumber.intValue(), mapReporter, context);
         } else {
-            Identifier model = stack.components().split().added().get(DataComponents.ITEM_MODEL);
-            assert model != null;
-            if (!modelsMapped.add(model)) {
+            if (!modelsMapped.add(customModel)) {
                 return MappingResult.NONE_MAPPED;
             }
-
-            BedrockItemMapper.tryMapStack(stack, model, mapReporter, context);
+            BedrockItemMapper.tryMapStack(stack, customModel, mapReporter, context, false);
         }
 
         return problems.get() ? MappingResult.PROBLEMS_OCCURRED : MappingResult.MAPPED_SUCCESSFULLY;
@@ -155,6 +165,10 @@ public class BedrockPack implements PackSerializer.Serializable {
 
     private PackSerializingContext createSerializingContext() {
         return new PackSerializingContext(context.assetResolver(), serializer, paths, reporter);
+    }
+
+    private static boolean isLegacyCustomModelData(CustomModelData customModelData) {
+        return customModelData.floats().size() == 1 && customModelData.colors().isEmpty() && customModelData.flags().isEmpty() && customModelData.strings().isEmpty();
     }
 
     public static Builder builder(String name, Path mappingsPath, Path packRootPath, PackSerializer packSerializer, AssetResolver assetResolver) {
