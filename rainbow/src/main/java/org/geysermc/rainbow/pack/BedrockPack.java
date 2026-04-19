@@ -35,6 +35,9 @@ import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 public class BedrockPack implements PackSerializer.Serializable {
+    // Debug only
+    private static final boolean ALLOW_MAPPING_VANILLA_ITEMS = false;
+
     private final String name;
     private final Optional<PackManifest> manifest;
     private final PackPaths paths;
@@ -84,7 +87,7 @@ public class BedrockPack implements PackSerializer.Serializable {
             }
         };
 
-        Identifier customModel = stack.components().split().added().get(DataComponents.ITEM_MODEL);
+        Identifier customModel = ALLOW_MAPPING_VANILLA_ITEMS ? stack.get(DataComponents.ITEM_MODEL) : stack.components().split().added().get(DataComponents.ITEM_MODEL);
         if (customModel == null) {
             // If no custom item_model patch exists, try custom model data
             CustomModelData customModelData = stack.components().split().added().get(DataComponents.CUSTOM_MODEL_DATA);

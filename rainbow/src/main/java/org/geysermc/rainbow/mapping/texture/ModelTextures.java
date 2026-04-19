@@ -80,8 +80,7 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
                     .orElseGet(() -> new MissingTexture(modelIdentifier));
         }
 
-        Identifier stitchedTexturesIdentifier = modelIdentifier.withSuffix("_stitched");
-        return StitchedTextures.stitchModelTextures(stitchedTexturesIdentifier, materials, createIcon(modelIdentifier, stack, materials, context), context);
+        return StitchedTextures.stitchModelTextures(getStitchedIdentifier(modelIdentifier), materials, createIcon(modelIdentifier, stack, materials, context), context);
     }
 
     private static TextureHolder createIcon(Identifier identifier, ItemStackTemplate stack, Map<String, Material> materials, PackContext context) {
@@ -91,6 +90,10 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
                 .or(() -> Optional.ofNullable(materials.get("layer0"))
                         .map(material -> TextureHolder.createBuiltIn(identifier, material.sprite())))
                 .orElseGet(() -> TextureHolder.createNonExistent(identifier));
+    }
+
+    private static Identifier getStitchedIdentifier(Identifier identifier) {
+        return identifier.withSuffix("_stitched");
     }
 
     record CachedTexture(ModelTextures delegate) implements ModelTextures {
@@ -199,20 +202,25 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
                     builder.withTexture("frame_" + frame, getFrameIdentifier(frame).getPath());
                 }
                 return builder;
-            } else {
-                return ModelTextures.super.applyToAttachable(builder);
+            } else if (!flatBuiltinModel) {
+                // Not flat built-in, so modify attachable similar to StitchedTextures
+                return builder
+                        .withTexture(BedrockAttachable.DisplaySlot.DEFAULT, ModelTextures.getStitchedIdentifier(texture).getPath())
+                        .withRenderController(VanillaRenderControllers.ITEM_DEFAULT);
             }
+            return ModelTextures.super.applyToAttachable(builder);
         }
 
         @Override
         public CompletableFuture<?> save(PackSerializingContext context) {
+            // If no animation, just save the texture
             if (animation.references == 1) {
-                // If no animation, just save the texture
                 // Save just the texture (usually layer0) when flat builtin, else save texture and custom icon
                 if (flatBuiltinModel) {
                     return TextureHolder.createBuiltIn(texture).save(context);
                 }
-                return iconTexture.with(TextureHolder.createBuiltIn(texture)).save(context);
+                // Else, save icon and texture with _stitched suffix
+                return iconTexture.with(TextureHolder.createBuiltIn(ModelTextures.getStitchedIdentifier(texture), texture)).save(context);
             }
 
             // Texture must exist at this point, else a missing texture would've been returned by the load function

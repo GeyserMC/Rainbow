@@ -5,6 +5,8 @@ import net.minecraft.client.resources.model.cuboid.ItemTransforms;
 import org.geysermc.rainbow.pack.animation.BedrockAnimation;
 import org.joml.Vector3f;
 
+// Note to self: if rotation issues are reported, check the rotation values for each one to see if they're inverted
+// in blockbench or not
 public class AnimationMapper {
 
     // These transformations aren't perfect... but I think it's near perfect now. or at least, I hope.
@@ -31,18 +33,19 @@ public class AnimationMapper {
         // - Bedrock: X left, Y up, Z backward
         // Java to bedrock: X -> X, Y -> Z, Z -> Y
         // A base rotation of 90 is applied on the X axis, a base translation of 12.5 on the Y axis
-        // Y, Z (Java) rotations, Y (Java) translation are inverted
+        // Y, Z (Java) rotations, X, Y (Java) translations are inverted
         // TODO fix X rotation
         Vector3f thirdPersonRotation = new Vector3f(90.0F, -thirdPerson.rotation().z(), -thirdPerson.rotation().y());
         Vector3f thirdPersonTranslation = thirdPerson.translation().div(0.0625F, new Vector3f());
-        Vector3f thirdPersonPosition = new Vector3f(thirdPersonTranslation.x(), 12.5F + thirdPersonTranslation.z(), -thirdPersonTranslation.y());
+        Vector3f thirdPersonPosition = new Vector3f(-thirdPersonTranslation.x(), 12.5F + thirdPersonTranslation.z(), -thirdPersonTranslation.y());
         Vector3f thirdPersonScale = new Vector3f(thirdPerson.scale());
 
         // Head translation + scale is scaled by around 0.655 (not perfect but close enough)
         // Coordinate space is the same
-        // Add a base translation of (-6, 29, 0)
+        // Add a base translation of (6, 29, -1)
+        // X translation is inverted
         ItemTransform head = transforms.head();
-        Vector3f headPosition = head.translation().div(0.0625F, new Vector3f()).mul(0.655F, 0.655F, 0.655F).add(-6.0F, 29.0F, 0.0F);
+        Vector3f headPosition = head.translation().div(0.0625F, new Vector3f()).mul(-0.655F, 0.655F, 0.655F).add(6.0F, 29.0F, -1.0F);
         Vector3f headRotation = new Vector3f(head.rotation());
         Vector3f headScale = head.scale().mul(0.655F, new Vector3f());
 
