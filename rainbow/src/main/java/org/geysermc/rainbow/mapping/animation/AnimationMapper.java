@@ -43,10 +43,10 @@ public class AnimationMapper {
         // Head translation + scale is scaled by around 0.655 (not perfect but close enough)
         // Coordinate space is the same
         // Add a base translation of (6, 29, -1)
-        // X translation is inverted
+        // X translation, X, Y rotation is inverted
         ItemTransform head = transforms.head();
-        Vector3f headPosition = head.translation().div(0.0625F, new Vector3f()).mul(-0.655F, 0.655F, 0.655F).add(6.0F, 29.0F, -1.0F);
-        Vector3f headRotation = new Vector3f(head.rotation());
+        Vector3f headPosition = head.translation().div(0.0625F, new Vector3f()).mul(-0.655F, 0.655F, 0.655F).add(0.0F, 20.0F, 0.0F);
+        Vector3f headRotation = head.rotation().mul(-1.0F, -1.0F, 1.0F, new Vector3f());
         Vector3f headScale = head.scale().mul(0.655F, new Vector3f());
 
         // Note that for items marked as equippable, the 3D model only shows up when having the item equipped on the head, and the icon is used when holding the item in hand
