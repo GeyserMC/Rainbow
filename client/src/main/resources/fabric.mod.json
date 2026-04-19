@@ -23,6 +23,7 @@
   "mixins": [
     "rainbow-client.mixins.json"
   ],
+  "accessWidener": "rainbow-client.accesswidener",
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric-api": "*",
