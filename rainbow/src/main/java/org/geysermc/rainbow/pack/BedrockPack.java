@@ -12,6 +12,7 @@ import net.minecraft.world.item.component.CustomModelData;
 import org.geysermc.rainbow.CodecUtil;
 import org.geysermc.rainbow.PackConstants;
 import org.geysermc.rainbow.RainbowIO;
+import org.geysermc.rainbow.mapping.AssetCacheStats;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.BedrockItemMapper;
 import org.geysermc.rainbow.mapping.PackContext;
@@ -130,6 +131,10 @@ public class BedrockPack implements PackSerializer.Serializable {
                 .with(bedrockItems)
                 .with(paths.languageOutput().map(languageFolder -> context -> LanguageUtil.saveLanguages(context, languageFolder)))
                 .save(serializingContext);
+    }
+
+    public AssetCacheStats cacheStats() {
+        return context.cacheStats();
     }
 
     public int getMappings() {

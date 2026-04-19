@@ -31,9 +31,8 @@ public record BedrockGeometryContext(Optional<MappedGeometry> geometry,
     }
 
     public static BedrockGeometryContext create(Identifier bedrockIdentifier, ResolvedModel model, Transformation definitionTransformation, ModelTextures textures, PackContext context) {
-        boolean isFlatBuiltin = false;
-        if (!(model.getTopGeometry() instanceof UnbakedCuboidGeometry)) {
-            isFlatBuiltin = true;
+        boolean isFlatBuiltin = isFlatBuiltin(model);
+        if (isFlatBuiltin) {
             model = new FlatBuiltinItemModel(context.assetResolver(), model);
         }
 
@@ -51,5 +50,9 @@ public record BedrockGeometryContext(Optional<MappedGeometry> geometry,
         }
 
         return new BedrockGeometryContext(geometry, animation, handheld);
+    }
+
+    public static boolean isFlatBuiltin(ResolvedModel model) {
+        return !(model.getTopGeometry() instanceof UnbakedCuboidGeometry);
     }
 }

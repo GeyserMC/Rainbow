@@ -11,6 +11,7 @@ import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.client.mixin.SplashRendererAccessor;
 import org.geysermc.rainbow.client.render.MinecraftGeometryRenderer;
+import org.geysermc.rainbow.mapping.AssetCacheStats;
 import org.geysermc.rainbow.pack.BedrockItem;
 import org.geysermc.rainbow.pack.BedrockPack;
 
@@ -94,6 +95,7 @@ public final class PackManager {
         Set<BedrockItem> bedrockItems = pack.getBedrockItems();
         long geometries = bedrockItems.stream().filter(item -> item.geometryContext().geometry().isPresent()).count();
         long animations = bedrockItems.stream().filter(item -> item.geometryContext().animation().isPresent()).count();
+        AssetCacheStats cacheStats = pack.cacheStats();
 
         return """
 #### READ THIS FIRST ####
@@ -133,10 +135,17 @@ Animations exported: %d
 JSON-files written: %d
 Textures exported: %d
 
+-- ASSET CACHE STATS --
+
+Geometry cache: %d written, %d cache hits
+Texture cache: %d written, %d cache hits
+
 -- MAPPING TREE REPORT --
 %s
 """.formatted(randomSummaryComment(), pack.name(), pack.getMappings(), pack.getItemTextureAtlasSize(),
-                geometries, animations, packSerializer.jsonExported(), packSerializer.texturesExported(), problems);
+                geometries, animations, packSerializer.jsonExported(), packSerializer.texturesExported(),
+                cacheStats.geometry().size(), cacheStats.geometry().hits(),
+                cacheStats.texture().size(), cacheStats.texture().hits(), problems);
     }
 
     private static String randomSummaryComment() {

@@ -45,18 +45,23 @@ public record BedrockAttachableContext(Optional<BedrockAttachable> attachable, O
         Equippable equippable = stack.get(DataComponents.EQUIPPABLE);
         if (equippable != null) {
             EquipmentSlot slot = equippable.slot();
-            Optional<EquipmentClientInfo> equipmentInfo = equippable.assetId()
-                    .flatMap(asset -> context.assetResolver().getEquipmentInfo(asset))
-                    .filter(info -> info != EquipmentAssetManager.MISSING);
-            if (equipmentInfo.isPresent()) {
-                boolean glider = stack.get(DataComponents.GLIDER) != null;
-                EquipmentClientInfo.LayerType layer = getEquipmentLayer(slot, glider);
-                Identifier equipmentTexture = getEquipmentTexture(equipmentInfo.get().getLayers(layer), layer);
-                return new BedrockAttachableContext(BedrockAttachable.equipment(identifier, slot, equipmentTexture.getPath(), glider).build(),
-                        TextureHolder.createBuiltIn(equipmentTexture));
+            if (slot.getType() == EquipmentSlot.Type.HUMANOID_ARMOR) {
+                Optional<EquipmentClientInfo> equipmentInfo = equippable.assetId()
+                        .flatMap(asset -> context.assetResolver().getEquipmentInfo(asset))
+                        .filter(info -> info != EquipmentAssetManager.MISSING);
+                if (equipmentInfo.isPresent()) {
+                    boolean glider = stack.get(DataComponents.GLIDER) != null;
+                    EquipmentClientInfo.LayerType layerType = getEquipmentLayer(slot, glider);
+                    List<EquipmentClientInfo.Layer> layers = equipmentInfo.get().getLayers(layerType);
+                    if (!layers.isEmpty()) {
+                        Identifier equipmentTexture = getEquipmentTexture(layers, layerType);
+                        return new BedrockAttachableContext(BedrockAttachable.equipment(identifier, slot, equipmentTexture.getPath(), glider).build(),
+                                TextureHolder.createBuiltIn(equipmentTexture));
+                    }
+                }
             }
         }
-        // Fall-through if no equipment info
+        // Fall-through if no armour equipment, no equipment info, or no equipment layers
         if (textures.requiresAttachable() || geometryContext.geometry().isPresent()) {
             BedrockAttachable.Builder attachable = BedrockAttachable.geometry(identifier, geometryContext.geometry().map(MappedGeometry::identifier).orElse(VanillaGeometries.ITEM_SPRITE));
             textures.applyToAttachable(attachable);

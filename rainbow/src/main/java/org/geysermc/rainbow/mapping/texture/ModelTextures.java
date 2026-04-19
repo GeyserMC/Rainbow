@@ -17,6 +17,7 @@ import org.geysermc.rainbow.mapping.PackAssetCache;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
+import org.geysermc.rainbow.mapping.geometry.BedrockGeometryContext;
 import org.geysermc.rainbow.mixin.SpriteContentsAccessor;
 import org.geysermc.rainbow.mixin.SpriteLoaderAccessor;
 import org.geysermc.rainbow.mixin.TextureSlotsAccessor;
@@ -72,7 +73,8 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
             return context.assetResolver().getPossibleAtlasTextureSafely(singleMaterial.sprite())
                     .<ModelTextures>map(texture -> {
                         try (texture) {
-                            return new SingleTexture(singleMaterial.sprite(), texture, createIcon(modelIdentifier, stack, materials, context));
+                            return new SingleTexture(singleMaterial.sprite(), texture, createIcon(modelIdentifier, stack, materials, context),
+                                    BedrockGeometryContext.isFlatBuiltin(model));
                         }
                     })
                     .orElseGet(() -> new MissingTexture(modelIdentifier));
@@ -157,11 +159,11 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
         }
     }
 
-    record SingleTexture(SpriteInfo sprite, Identifier texture, ExtractedAnimationInfo animation, TextureHolder iconTexture) implements ModelTextures {
+    record SingleTexture(SpriteInfo sprite, Identifier texture, ExtractedAnimationInfo animation, TextureHolder iconTexture, boolean flatBuiltinModel) implements ModelTextures {
 
-        public SingleTexture(Identifier texture, TextureResource openedTexture, TextureHolder icon) {
+        public SingleTexture(Identifier texture, TextureResource openedTexture, TextureHolder icon, boolean flatBuiltinModel) {
             this(new SpriteInfo(0, 0, openedTexture.sizeOfFrame().width(), openedTexture.sizeOfFrame().height()), texture,
-                    new ExtractedAnimationInfo(openedTexture.totalFrameCount(), openedTexture.frameReferenceCount()), icon);
+                    new ExtractedAnimationInfo(openedTexture.totalFrameCount(), openedTexture.frameReferenceCount()), icon, flatBuiltinModel);
         }
 
         @Override
@@ -206,7 +208,11 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
         public CompletableFuture<?> save(PackSerializingContext context) {
             if (animation.references == 1) {
                 // If no animation, just save the texture
-                return TextureHolder.createBuiltIn(texture).save(context);
+                // Save just the texture (usually layer0) when flat builtin, else save texture and custom icon
+                if (flatBuiltinModel) {
+                    return TextureHolder.createBuiltIn(texture).save(context);
+                }
+                return iconTexture.with(TextureHolder.createBuiltIn(texture)).save(context);
             }
 
             // Texture must exist at this point, else a missing texture would've been returned by the load function

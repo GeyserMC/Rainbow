@@ -60,4 +60,8 @@ public final class PackContext {
     public MappedGeometryCache geometryCache() {
         return geometryCache;
     }
+
+    public AssetCacheStats cacheStats() {
+        return new AssetCacheStats(geometryCache.stats(), textureCache.stats());
+    }
 }
