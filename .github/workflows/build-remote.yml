@@ -1,0 +1,41 @@
+name: Build Remote
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        required: true
+        description: 'The repo of the remote'
+        type: string
+      ref:
+        required: true
+        description: 'The ref of the remote'
+        type: string
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Build Number
+        run: |
+          echo "BUILD_NUMBER=${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
+
+      - name: Setup Gradle
+        uses: GeyserMC/actions/setup-gradle-composite@master
+        with:
+          checkout_repository: ${{ inputs.repository }}
+          checkout_ref: ${{ inputs.ref }}
+          setup-java_java-version: 25
+          setup-gradle_cache-read-only: true
+
+      - name: Build Rainbow
+        run: ./gradlew build
+
+      - name: Archive Artifacts
+        uses: GeyserMC/actions/upload-multi-artifact@master
+        if: success()
+        with:
+          artifacts: |
+            rainbow:client/build/libs/Rainbow.jar
