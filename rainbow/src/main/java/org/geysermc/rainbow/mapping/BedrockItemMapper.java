@@ -88,13 +88,16 @@ public class BedrockItemMapper {
             // WHY, Mojang?
             if (property instanceof net.minecraft.client.renderer.item.properties.numeric.CustomModelDataProperty(int index)) {
                 if (index == 0) {
+                    List<RangeSelectItemModel.Entry> sortedEntries = entries.stream()
+                            .sorted(RangeSelectItemModel.Entry.BY_THRESHOLD)
+                            .toList();
                     float scaledCustomModelData = customModelData * scale;
 
-                    float[] thresholds = ArrayUtils.toPrimitive(entries.stream()
+                    float[] thresholds = ArrayUtils.toPrimitive(sortedEntries.stream()
                             .map(RangeSelectItemModel.Entry::threshold)
                             .toArray(Float[]::new));
                     int modelIndex = RangeSelectItemModelAccessor.invokeLastIndexLessOrEqual(thresholds, scaledCustomModelData);
-                    Optional<ItemModel.Unbaked> model = modelIndex == -1 ? fallback : Optional.of(entries.get(modelIndex).model());
+                    Optional<ItemModel.Unbaked> model = modelIndex == -1 ? fallback : Optional.of(sortedEntries.get(modelIndex).model());
                     model.ifPresentOrElse(present -> mapItem(present, stack, childReporter,
                                     base -> new GeyserLegacyDefinition(base, customModelData), context, false),
                             () -> childReporter.report(() -> "custom model data index lookup returned -1, and no fallback is present"));

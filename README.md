@@ -45,13 +45,13 @@ If you have any questions or run into any problems, please do feel free to ask f
 
 Rainbow is currently capable of the following:
 
-- Generating Geyser item mappings complete with data components and proper bedrock options, by detecting items with a custom `minecraft:item_model` component and analysing their components.
+- Generating Geyser item mappings complete with data components and proper bedrock options, by detecting items with custom `minecraft:item_model` or `minecraft:custom_model_data` components, and analysing their components.
   - Also includes generating mappings with predicates for more complicated Java item model definitions, such as checks for if an item is broken. The following definition types are currently supported by Rainbow:
     - Plain item model definitions.
     - Conditional item models, supported properties are:
       - `broken`,
       - `damaged`,
-      - `cutom_model_data`,
+      - `custom_model_data`,
       - `has_component`, and,
       - `fishing_rod/cast`.
     - Range dispatch item models, supported properties are:
