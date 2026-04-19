@@ -11,21 +11,20 @@ import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.CustomModelData;
 import org.geysermc.rainbow.CodecUtil;
 import org.geysermc.rainbow.PackConstants;
-import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
+import org.geysermc.rainbow.mapping.AssetCacheStats;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.BedrockItemMapper;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mapping.PackSerializer;
+import org.geysermc.rainbow.mapping.PackSerializingContext;
 import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
 import org.geysermc.rainbow.definition.GeyserMappings;
-import org.geysermc.rainbow.mapping.texture.TextureHolder;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -34,7 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
-public class BedrockPack {
+public class BedrockPack implements PackSerializer.Serializable {
     private final String name;
     private final Optional<PackManifest> manifest;
     private final PackPaths paths;
@@ -111,34 +110,31 @@ public class BedrockPack {
     }
 
     public CompletableFuture<?> save() {
-        List<CompletableFuture<?>> futures = new ArrayList<>();
-
-        futures.add(serializer.saveJson(GeyserMappings.CODEC, context.mappings(), paths.mappings()));
-        manifest.ifPresent(manifest -> futures.add(serializer.saveJson(PackManifest.CODEC, manifest, paths.manifest())));
-        futures.add(serializer.saveJson(BedrockTextureAtlas.ITEM_ATLAS_CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), paths.itemAtlas()));
-
-        Function<TextureHolder, CompletableFuture<?>> textureSaver = texture -> {
-            Identifier textureIdentifier = Rainbow.decorateTextureIdentifier(texture.location());
-            return texture.save(context.assetResolver(), serializer, paths.packRoot().resolve(textureIdentifier.getPath()), reporter);
-        };
-
-        for (BedrockItem item : bedrockItems) {
-            futures.add(item.save(serializer, paths.attachables(), paths.geometry(), paths.animation(), textureSaver));
-        }
-
-        paths.languageOutput().ifPresent(languageFolder -> futures.addAll(LanguageUtil.saveLanguages(context.assetResolver(), reporter, serializer, languageFolder)));
-
+        CompletableFuture<?> baseSerialization = save(createSerializingContext());
         if (reporter instanceof AutoCloseable closeable) {
             try {
                 closeable.close();
             } catch (Exception ignored) {}
         }
 
-        CompletableFuture<?> packSerializingFinished = CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
         if (paths.zipOutput().isPresent()) {
-            return packSerializingFinished.thenAcceptAsync(_ -> RainbowIO.safeIO(() -> CodecUtil.tryZipDirectory(paths.packRoot(), paths.zipOutput().get())));
+            return baseSerialization.thenAcceptAsync(_ -> RainbowIO.safeIO(() -> CodecUtil.tryZipDirectory(paths.packRoot(), paths.zipOutput().get())));
         }
-        return packSerializingFinished;
+        return baseSerialization;
+    }
+    
+    @Override
+    public CompletableFuture<?> save(PackSerializingContext serializingContext) {
+        return PackSerializer.Serializable.wrapCodec(GeyserMappings.CODEC, context.mappings(), PackPaths::mappings)
+                .with(PackSerializer.Serializable.wrapOptionalCodec(PackManifest.CODEC, manifest, PackPaths::manifest))
+                .with(PackSerializer.Serializable.wrapCodec(BedrockTextureAtlas.ITEM_ATLAS_CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), PackPaths::itemAtlas))
+                .with(bedrockItems)
+                .with(paths.languageOutput().map(languageFolder -> context -> LanguageUtil.saveLanguages(context, languageFolder)))
+                .save(serializingContext);
+    }
+
+    public AssetCacheStats cacheStats() {
+        return context.cacheStats();
     }
 
     public int getMappings() {
@@ -146,7 +142,7 @@ public class BedrockPack {
     }
 
     public Set<BedrockItem> getBedrockItems() {
-        return Set.copyOf(bedrockItems);
+        return Collections.unmodifiableSet(bedrockItems);
     }
 
     public int getItemTextureAtlasSize() {
@@ -157,6 +153,10 @@ public class BedrockPack {
         return reporter;
     }
 
+    private PackSerializingContext createSerializingContext() {
+        return new PackSerializingContext(context.assetResolver(), serializer, paths, reporter);
+    }
+
     public static Builder builder(String name, Path mappingsPath, Path packRootPath, PackSerializer packSerializer, AssetResolver assetResolver) {
         return new Builder(name, mappingsPath, packRootPath, packSerializer, assetResolver);
     }
@@ -165,6 +165,7 @@ public class BedrockPack {
         private static final Path ATTACHABLES_DIRECTORY = Path.of("attachables");
         private static final Path GEOMETRY_DIRECTORY = Path.of("models/entity");
         private static final Path ANIMATION_DIRECTORY = Path.of("animations");
+        private static final Path RENDER_CONTROLLERS_DIRECTORY = Path.of("render_controllers");
 
         private static final Path MANIFEST_FILE = Path.of("manifest.json");
         private static final Path ITEM_ATLAS_FILE = Path.of("textures/item_texture.json");
@@ -178,6 +179,7 @@ public class BedrockPack {
         private UnaryOperator<Path> attachablesPath = resolve(ATTACHABLES_DIRECTORY);
         private UnaryOperator<Path> geometryPath = resolve(GEOMETRY_DIRECTORY);
         private UnaryOperator<Path> animationPath = resolve(ANIMATION_DIRECTORY);
+        private UnaryOperator<Path> renderControllersPath = resolve(RENDER_CONTROLLERS_DIRECTORY);
         private UnaryOperator<Path> manifestPath = resolve(MANIFEST_FILE);
         private UnaryOperator<Path> itemAtlasPath = resolve(ITEM_ATLAS_FILE);
         private @Nullable Path packZipFile = null;
@@ -228,6 +230,15 @@ public class BedrockPack {
             return this;
         }
 
+        public Builder withRenderControllersPath(Path absolute) {
+            return withRenderControllersPath(_ -> absolute);
+        }
+
+        public Builder withRenderControllersPath(UnaryOperator<Path> path) {
+            renderControllersPath = path;
+            return this;
+        }
+
         public Builder withManifestPath(Path absolute) {
             return withManifestPath(_ -> absolute);
         }
@@ -273,8 +284,9 @@ public class BedrockPack {
 
         public BedrockPack build() {
             PackPaths paths = new PackPaths(mappingsPath, packRootPath, attachablesPath.apply(packRootPath),
-                    geometryPath.apply(packRootPath), animationPath.apply(packRootPath), manifestPath.apply(packRootPath),
-                    itemAtlasPath.apply(packRootPath), Optional.ofNullable(packZipFile), Optional.ofNullable(languageFolder));
+                    geometryPath.apply(packRootPath), animationPath.apply(packRootPath), renderControllersPath.apply(packRootPath),
+                    manifestPath.apply(packRootPath), itemAtlasPath.apply(packRootPath),
+                    Optional.ofNullable(packZipFile), Optional.ofNullable(languageFolder));
             return new BedrockPack(name, Optional.ofNullable(manifest), paths, packSerializer, assetResolver, Optional.ofNullable(geometryRenderer),
                     reporter.apply(() -> "Bedrock pack " + name + " "), reportSuccesses);
         }

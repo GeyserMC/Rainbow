@@ -41,7 +41,7 @@ import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.equipment.trim.TrimMaterial;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ArrayUtils;
-import org.geysermc.rainbow.mapping.attachable.AttachableMapper;
+import org.geysermc.rainbow.mapping.attachable.BedrockAttachableContext;
 import org.geysermc.rainbow.mapping.geometry.BedrockGeometryContext;
 import org.geysermc.rainbow.definition.GeyserBaseDefinition;
 import org.geysermc.rainbow.definition.GeyserItemDefinition;
@@ -51,6 +51,7 @@ import org.geysermc.rainbow.definition.predicate.GeyserConditionPredicate;
 import org.geysermc.rainbow.definition.predicate.GeyserMatchPredicate;
 import org.geysermc.rainbow.definition.predicate.GeyserPredicate;
 import org.geysermc.rainbow.definition.predicate.GeyserRangeDispatchPredicate;
+import org.geysermc.rainbow.mapping.texture.ModelTextures;
 import org.geysermc.rainbow.mixin.LateBoundIdMapperAccessor;
 import org.geysermc.rainbow.mixin.RangeSelectItemModelAccessor;
 import org.geysermc.rainbow.pack.BedrockItem;
@@ -120,24 +121,7 @@ public class BedrockItemMapper {
     }
 
     private static void mapBlockModelWrapper(CuboidItemModelWrapper.Unbaked model, MappingContext context) {
-        Identifier itemModelIdentifier = model.model();
-
-        context.packContext().assetResolver().getResolvedModel(itemModelIdentifier)
-                .ifPresentOrElse(itemModel -> {
-                    Identifier bedrockIdentifier;
-                    if (itemModelIdentifier.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
-                        bedrockIdentifier = Identifier.fromNamespaceAndPath("geyser_mc", itemModelIdentifier.getPath());
-                    } else {
-                        bedrockIdentifier = itemModelIdentifier;
-                    }
-
-                    BedrockGeometryContext geometry = BedrockGeometryContext.create(bedrockIdentifier, itemModel, context.finaliseTransformation(model.transformation()), context.itemStack, context.packContext);
-                    if (context.packContext.reportSuccesses()) {
-                        // Not a problem, but just report to get the model printed in the report file
-                        context.report("creating mapping for block model " + itemModelIdentifier);
-                    }
-                    context.create(bedrockIdentifier, geometry);
-                }, () -> context.report("missing block model " + itemModelIdentifier));
+        context.map(model);
     }
 
     private static void mapConditionalModel(ConditionalItemModel.Unbaked model, MappingContext context) {
@@ -246,7 +230,32 @@ public class BedrockItemMapper {
             return addTransformation(finalTransformation).orElse(Transformation.IDENTITY);
         }
 
-        public void create(Identifier bedrockIdentifier, BedrockGeometryContext geometry) {
+        public void map(CuboidItemModelWrapper.Unbaked model) {
+            Identifier modelIdentifier = model.model();
+
+            packContext.assetResolver().getResolvedModel(modelIdentifier)
+                    .ifPresentOrElse(itemModel -> {
+                        Identifier bedrockIdentifier;
+                        if (modelIdentifier.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
+                            bedrockIdentifier = Identifier.fromNamespaceAndPath("geyser_mc", modelIdentifier.getPath());
+                        } else {
+                            bedrockIdentifier = modelIdentifier;
+                        }
+
+                        ModelTextures textures = packContext.textureCache().load(itemStack, itemModel, packContext);
+
+                        BedrockGeometryContext geometry = BedrockGeometryContext.create(bedrockIdentifier, itemModel, finaliseTransformation(model.transformation()), textures, packContext);
+                        BedrockAttachableContext attachable = BedrockAttachableContext.create(bedrockIdentifier, itemStack, geometry, textures, packContext);
+
+                        if (packContext.reportSuccesses()) {
+                            // Not a problem, but just report to get the model printed in the report file
+                            report("creating mapping for block model " + modelIdentifier);
+                        }
+                        create(bedrockIdentifier, textures, geometry, attachable);
+                    }, () -> report("missing block model " + modelIdentifier));
+        }
+
+        private void create(Identifier bedrockIdentifier, ModelTextures textures, BedrockGeometryContext geometry, BedrockAttachableContext attachable) {
             List<Identifier> tags = itemStack.is(ItemTags.TRIMMABLE_ARMOR) ? TRIMMABLE_ARMOR_TAGS : List.of();
 
             GeyserBaseDefinition base = new GeyserBaseDefinition(bedrockIdentifier,
@@ -261,8 +270,7 @@ public class BedrockItemMapper {
                 return;
             }
 
-            packContext.itemConsumer().accept(new BedrockItem(bedrockIdentifier, base.textureName(), geometry,
-                    AttachableMapper.mapItem(packContext.assetResolver(), geometry, itemStack.components())));
+            packContext.itemConsumer().accept(new BedrockItem(bedrockIdentifier, base.textureName(), textures, geometry, attachable));
         }
 
         public void report(String problem) {
@@ -274,7 +282,7 @@ public class BedrockItemMapper {
         }
 
         private static int calculateProtectionValue(ItemStackTemplate stack) {
-            ItemAttributeModifiers modifiers = stack.components().split().added().get(DataComponents.ATTRIBUTE_MODIFIERS);
+            ItemAttributeModifiers modifiers = stack.get(DataComponents.ATTRIBUTE_MODIFIERS);
             if (modifiers != null) {
                 return modifiers.modifiers().stream()
                         .filter(modifier -> modifier.attribute() == Attributes.ARMOR && modifier.modifier().operation() == AttributeModifier.Operation.ADD_VALUE)

@@ -5,8 +5,10 @@ import com.mojang.blaze3d.platform.NativeImage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ClientItem;
+import net.minecraft.client.renderer.texture.SpriteContents;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.metadata.animation.FrameSize;
 import net.minecraft.client.resources.model.EquipmentAssetManager;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.client.resources.model.ModelManager;
@@ -21,6 +23,8 @@ import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.client.accessor.ResolvedModelAccessor;
 import org.geysermc.rainbow.client.mixin.EntityRenderDispatcherAccessor;
+import org.geysermc.rainbow.client.mixin.SpriteContentsAnimatedTextureAccessor;
+import org.geysermc.rainbow.client.mixin.SpriteContentsClientAccessor;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.texture.TextureResource;
 import org.geysermc.rainbow.mixin.SpriteContentsAccessor;
@@ -66,7 +70,7 @@ public class ClientAssetResolver implements AssetResolver {
             // Not in an atlas - so not animated, probably?
             return RainbowIO.safeIO(() -> {
                 try (InputStream textureStream = resourceManager.open(Rainbow.decorateTextureIdentifier(identifier))) {
-                    return new TextureResource(NativeImage.read(textureStream));
+                    return TextureResource.createNonAnimated(NativeImage.read(textureStream));
                 }
             });
         }
@@ -79,7 +83,17 @@ public class ClientAssetResolver implements AssetResolver {
         NativeImage original = ((SpriteContentsAccessor) sprite.contents()).getOriginalImage();
         NativeImage textureCopy = new NativeImage(original.getWidth(), original.getHeight(), false);
         textureCopy.copyFrom(original);
-        return Optional.of(new TextureResource(textureCopy, sprite.contents().width(), sprite.contents().height()));
+
+        SpriteContents.AnimatedTexture animated = ((SpriteContentsClientAccessor) sprite.contents()).getAnimatedTexture();
+        if (animated == null) {
+            return Optional.of(TextureResource.createNonAnimated(textureCopy));
+        }
+        SpriteContentsAnimatedTextureAccessor accessor = (SpriteContentsAnimatedTextureAccessor) animated;
+        return Optional.of(TextureResource.createAnimated(textureCopy, new FrameSize(sprite.contents().width(), sprite.contents().height()),
+                accessor.getFrames().stream()
+                        .map(frame -> new TextureResource.FrameInfo(frame.index(), frame.time()))
+                        .toList(),
+                accessor.getFrameRowSize()));
     }
 
     @Override

@@ -11,6 +11,10 @@ dependencies {
     include(project(":rainbow"))
 }
 
+loom {
+    accessWidenerPath = file("src/main/resources/rainbow-client.accesswidener")
+}
+
 tasks {
     val copyJarTask = register<Copy>("copyRainbowClientJar") {
         group = "build"

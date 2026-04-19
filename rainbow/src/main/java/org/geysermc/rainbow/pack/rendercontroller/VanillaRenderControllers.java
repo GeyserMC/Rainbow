@@ -1,4 +1,4 @@
-package org.geysermc.rainbow.pack.attachable;
+package org.geysermc.rainbow.pack.rendercontroller;
 
 public class VanillaRenderControllers {
     public static final String ARMOR = "controller.render.armor";

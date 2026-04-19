@@ -7,8 +7,7 @@ Rainbow is a client-side Minecraft mod for the Fabric modloader to generate Geys
 for use with Geyser's [custom item API (v2)](https://geysermc.org/wiki/geyser/custom-items). Rainbow is available for Minecraft 26.1.
 
 Rainbow is currently experimental, and only capable of generating Geyser item mappings and bedrock resourcepacks for
-somewhat simple 2D and 3D items. Features like animated textures are not yet supported. For a more descriptive list
-of Rainbow's capabilities, see further below.
+somewhat simple 2D and 3D items. For a moderately complete list of Rainbow's capabilities, see further below.
 
 Rainbow works by detecting custom items in your inventory, or a container/inventory menu you have opened. It analyses
 the components of detected items, and uses assets from loaded Java resourcepacks to gather information about item models, textures,
@@ -70,7 +69,9 @@ Rainbow is currently capable of the following:
   - Also is able to detect and map items using the "legacy" `custom_model_data` range-dispatch style, and map them to Geyser's `legacy` item mappings.
 - Generating a simple bedrock resourcepack for simple 2D items, as well as:
   - Simple custom armour items, by analysing an item's `minecraft:equippable` component and loaded equipment assets.
+    - Custom elytra items also work, but only visually, due to bedrock limitations.
   - 3D items, by converting the Java model to a bedrock one, and generating an attachable and animations for it, as well as rendering a custom GUI icon.
     - Is able to translate display transformations for the head, first-person and third-person item slots.
-- Exporting merged language files from loaded resourcepacks to a folder, for easy copying to Geyser's locales/overrides folder.
+- Generating working animated (flipbook) textures for 2D items and 3D items that make use of a single texture only.
+- Exporting merged language files from loaded resourcepacks to a folder, for easy copying to Geyser's `locales/overrides` folder.
   - Files from different resourcepacks for the same language are merged together.

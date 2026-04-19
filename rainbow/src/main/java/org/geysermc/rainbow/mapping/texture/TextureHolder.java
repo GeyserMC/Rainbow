@@ -5,13 +5,13 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.PackSerializer;
+import org.geysermc.rainbow.mapping.PackSerializingContext;
 
-import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
-public abstract class TextureHolder {
+public abstract class TextureHolder implements PackSerializer.Serializable {
     protected final Identifier identifier;
 
     public TextureHolder(Identifier identifier) {
@@ -20,10 +20,11 @@ public abstract class TextureHolder {
 
     public abstract Optional<byte[]> load(AssetResolver assetResolver, ProblemReporter reporter);
 
-    public CompletableFuture<?> save(AssetResolver assetResolver, PackSerializer serializer, Path path, ProblemReporter reporter) {
-        return load(assetResolver, reporter)
-                .map(bytes -> serializer.saveTexture(bytes, path))
-                .orElse(CompletableFuture.completedFuture(null));
+    @Override
+    public CompletableFuture<?> save(PackSerializingContext context) {
+        return load(context.assetResolver(), context.reporter())
+                .map(bytes -> context.serializer().saveTexture(bytes, context.paths().texturePath(this)))
+                .orElse(PackSerializer.noop());
     }
 
     public static TextureHolder createCustom(Identifier identifier, Supplier<NativeImage> supplier) {

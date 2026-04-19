@@ -30,7 +30,7 @@ public final class CodecUtil {
                 return DataResult.error(() -> field + " must equal " + value + ", was " + read);
             }
             return DataResult.success(read);
-        }).fieldOf(field).forGetter(object -> value);
+        }).fieldOf(field).forGetter(_ -> value);
     }
 
     public static <T> T readOrCompute(Codec<T> codec, Path path, Supplier<T> supplier) throws IOException {

@@ -9,7 +9,9 @@
     "ModelManagerMixin",
     "PictureInPictureRendererAccessor",
     "PictureInPictureRendererMixin",
-    "SplashRendererAccessor"
+    "SplashRendererAccessor",
+    "SpriteContentsAnimatedTextureAccessor",
+    "SpriteContentsClientAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

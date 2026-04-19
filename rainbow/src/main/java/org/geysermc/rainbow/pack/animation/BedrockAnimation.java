@@ -5,15 +5,12 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.ExtraCodecs;
-import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.pack.BedrockVersion;
 import org.joml.Vector3fc;
 
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 public record BedrockAnimation(BedrockVersion formatVersion, Map<String, AnimationDefinition> definitions) {
     public static final BedrockVersion FORMAT_VERSION = BedrockVersion.of(1, 8, 0);
@@ -24,10 +21,6 @@ public record BedrockAnimation(BedrockVersion formatVersion, Map<String, Animati
                     Codec.unboundedMap(Codec.STRING, AnimationDefinition.CODEC).fieldOf("animations").forGetter(BedrockAnimation::definitions)
             ).apply(instance, BedrockAnimation::new)
     );
-
-    public CompletableFuture<?> save(PackSerializer serializer, Path animationDirectory, String identifier) {
-        return serializer.saveJson(CODEC, this, animationDirectory.resolve(identifier + ".animation.json"));
-    }
 
     public static Builder builder() {
         return new Builder();
