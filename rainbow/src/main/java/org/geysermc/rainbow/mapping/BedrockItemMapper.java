@@ -72,9 +72,10 @@ public class BedrockItemMapper {
         return ((LateBoundIdMapperAccessor<Identifier, ?>) mapper).getIdToValue().inverse().get(type);
     }
 
-    public static void tryMapStack(ItemStackTemplate stack, Identifier modelIdentifier, ProblemReporter reporter, PackContext context) {
+    public static void tryMapStack(ItemStackTemplate stack, Identifier modelIdentifier, ProblemReporter reporter, PackContext context, boolean ignoreTopPlainModel) {
         context.assetResolver().getClientItem(modelIdentifier).map(ClientItem::model)
-                .ifPresentOrElse(model -> mapItem(model, stack, reporter.forChild(() -> "client item definition " + modelIdentifier + " "), base -> new GeyserSingleDefinition(base, Optional.of(modelIdentifier)), context),
+                .ifPresentOrElse(model -> mapItem(model, stack, reporter.forChild(() -> "client item definition " + modelIdentifier + " "),
+                                base -> new GeyserSingleDefinition(base, Optional.of(modelIdentifier)), context, ignoreTopPlainModel),
                         () -> reporter.report(() -> "missing client item definition " + modelIdentifier));
     }
 
@@ -87,14 +88,18 @@ public class BedrockItemMapper {
             // WHY, Mojang?
             if (property instanceof net.minecraft.client.renderer.item.properties.numeric.CustomModelDataProperty(int index)) {
                 if (index == 0) {
+                    List<RangeSelectItemModel.Entry> sortedEntries = entries.stream()
+                            .sorted(RangeSelectItemModel.Entry.BY_THRESHOLD)
+                            .toList();
                     float scaledCustomModelData = customModelData * scale;
 
-                    float[] thresholds = ArrayUtils.toPrimitive(entries.stream()
+                    float[] thresholds = ArrayUtils.toPrimitive(sortedEntries.stream()
                             .map(RangeSelectItemModel.Entry::threshold)
                             .toArray(Float[]::new));
                     int modelIndex = RangeSelectItemModelAccessor.invokeLastIndexLessOrEqual(thresholds, scaledCustomModelData);
-                    Optional<ItemModel.Unbaked> model = modelIndex == -1 ? fallback : Optional.of(entries.get(modelIndex).model());
-                    model.ifPresentOrElse(present -> mapItem(present, stack, childReporter, base -> new GeyserLegacyDefinition(base, customModelData), context),
+                    Optional<ItemModel.Unbaked> model = modelIndex == -1 ? fallback : Optional.of(sortedEntries.get(modelIndex).model());
+                    model.ifPresentOrElse(present -> mapItem(present, stack, childReporter,
+                                    base -> new GeyserLegacyDefinition(base, customModelData), context, false),
                             () -> childReporter.report(() -> "custom model data index lookup returned -1, and no fallback is present"));
                 } else {
                     childReporter.report(() -> "range_dispatch custom model data property index is not zero, unable to apply custom model data");
@@ -106,13 +111,20 @@ public class BedrockItemMapper {
     }
 
     public static void mapItem(ItemModel.Unbaked model, ItemStackTemplate stack, ProblemReporter reporter,
-                               Function<GeyserBaseDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext) {
-        mapItem(model, new MappingContext(stack, reporter, definitionCreator, packContext));
+                               Function<GeyserBaseDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext,
+                               boolean ignoreTopPlainModel) {
+        mapItem(model, new MappingContext(stack, reporter, definitionCreator, packContext, ignoreTopPlainModel));
     }
 
     private static void mapItem(ItemModel.Unbaked model, MappingContext context) {
         switch (model) {
-            case CuboidItemModelWrapper.Unbaked modelWrapper -> mapBlockModelWrapper(modelWrapper, context.child("plain model " + modelWrapper.model()));
+            case CuboidItemModelWrapper.Unbaked modelWrapper -> {
+                if (context.ignorePlainModel) {
+                    context.report("ignoring plain model as requested by context");
+                } else {
+                    mapBlockModelWrapper(modelWrapper, context.child("plain model " + modelWrapper.model()));
+                }
+            }
             case ConditionalItemModel.Unbaked conditional -> mapConditionalModel(conditional, context.child("condition model "));
             case RangeSelectItemModel.Unbaked rangeSelect -> mapRangeSelectModel(rangeSelect, context.child("range select model "));
             case SelectItemModel.Unbaked select -> mapSelectModel(select, context.child("select model "));
@@ -208,22 +220,28 @@ public class BedrockItemMapper {
 
     private record MappingContext(List<GeyserPredicate> predicateStack, Optional<Transformation> transformationStack,
                                   ItemStackTemplate itemStack, ProblemReporter reporter,
-                                  Function<GeyserBaseDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext) {
+                                  Function<GeyserBaseDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext,
+                                  boolean ignorePlainModel) {
 
-        public MappingContext(ItemStackTemplate stack, ProblemReporter reporter, Function<GeyserBaseDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext) {
-            this(List.of(), Optional.empty(), stack, reporter, definitionCreator, packContext);
+        public MappingContext(ItemStackTemplate stack, ProblemReporter reporter, Function<GeyserBaseDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext,
+                              boolean ignorePlainModel) {
+            this(List.of(), Optional.empty(), stack, reporter, definitionCreator, packContext, ignorePlainModel);
         }
 
+        // Only copy ignorePlainModel when there is not a predicate
         public MappingContext with(GeyserPredicate predicate, Optional<Transformation> transformation, String childName) {
-            return new MappingContext(Stream.concat(predicateStack.stream(), Stream.of(predicate)).toList(), addTransformation(transformation), itemStack, reporter.forChild(() -> childName), definitionCreator, packContext);
+            return new MappingContext(Stream.concat(predicateStack.stream(), Stream.of(predicate)).toList(), addTransformation(transformation), itemStack,
+                    reporter.forChild(() -> childName), definitionCreator, packContext, false);
         }
 
         public MappingContext with(Optional<Transformation> transformation, String childName) {
-            return new MappingContext(predicateStack, addTransformation(transformation), itemStack, reporter.forChild(() -> childName), definitionCreator, packContext);
+            return new MappingContext(predicateStack, addTransformation(transformation), itemStack,
+                    reporter.forChild(() -> childName), definitionCreator, packContext, ignorePlainModel);
         }
 
         public MappingContext child(String childName)  {
-            return new MappingContext(predicateStack, transformationStack, itemStack, reporter.forChild(() -> childName), definitionCreator, packContext);
+            return new MappingContext(predicateStack, transformationStack, itemStack,
+                    reporter.forChild(() -> childName), definitionCreator, packContext, ignorePlainModel);
         }
 
         public Transformation finaliseTransformation(Optional<Transformation> finalTransformation) {
