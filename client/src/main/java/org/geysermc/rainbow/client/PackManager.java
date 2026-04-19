@@ -125,6 +125,8 @@ which will list any models converted, and any problems that occurred during mapp
 -- PACK GENERATION REPORT --
 // %s
 
+Version of Rainbow: %s
+
 Generated pack: %s
 Mappings written: %d
 
@@ -142,7 +144,7 @@ Texture cache: %d written, %d cache hits
 
 -- MAPPING TREE REPORT --
 %s
-""".formatted(randomSummaryComment(), pack.name(), pack.getMappings(), pack.getItemTextureAtlasSize(),
+""".formatted(randomSummaryComment(), RainbowClient.getVersion(), pack.name(), pack.getMappings(), pack.getItemTextureAtlasSize(),
                 geometries, animations, packSerializer.jsonExported(), packSerializer.texturesExported(),
                 cacheStats.geometry().size(), cacheStats.geometry().hits(),
                 cacheStats.texture().size(), cacheStats.texture().hits(), problems);

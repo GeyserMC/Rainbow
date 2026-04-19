@@ -108,7 +108,8 @@ public class ClientAssetResolver implements AssetResolver {
         for (Map.Entry<Identifier, Resource> languageFile : languageFiles.entrySet()) {
             String packId = languageFile.getValue().sourcePackId();
             // Exclude fabric packs, which have their own translation keys for conventional tags and stuff, which the user likely does not want to include
-            if (packId.equals("vanilla") || packId.startsWith("fabric-")) {
+            // Also exclude vanilla's and our own translations
+            if (packId.equals("vanilla") || packId.startsWith("fabric-") || packId.equals(RainbowClient.MOD_ID)) {
                 continue;
             }
 
