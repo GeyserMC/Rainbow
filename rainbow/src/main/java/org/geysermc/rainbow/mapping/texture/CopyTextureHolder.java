@@ -11,17 +11,22 @@ import java.util.concurrent.CompletableFuture;
 
 public class CopyTextureHolder extends TextureHolder {
 
-    public CopyTextureHolder(Identifier identifier) {
-        super(identifier);
+    public CopyTextureHolder(Identifier destination) {
+        super(destination);
     }
 
     @Override
-    public Optional<byte[]> load(AssetResolver assetResolver, ProblemReporter reporter) {
+    public Optional<TextureResource> load(AssetResolver assetResolver, ProblemReporter reporter) {
         return Optional.empty();
     }
 
     @Override
     public CompletableFuture<?> save(PackSerializingContext context) {
         return PackSerializer.noop();
+    }
+
+    @Override
+    protected boolean shouldReportMissingWhenAbsent() {
+        return false;
     }
 }

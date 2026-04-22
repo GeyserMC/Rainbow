@@ -8,13 +8,12 @@ import java.util.Optional;
 
 public class MissingTextureHolder extends TextureHolder {
 
-    public MissingTextureHolder(Identifier identifier) {
-        super(identifier);
+    public MissingTextureHolder(Identifier destination) {
+        super(destination);
     }
 
     @Override
-    public Optional<byte[]> load(AssetResolver assetResolver, ProblemReporter reporter) {
-        reportMissing(reporter);
+    public Optional<TextureResource> load(AssetResolver assetResolver, ProblemReporter reporter) {
         return Optional.empty();
     }
 }

@@ -186,7 +186,7 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
 
         @Override
         public Identifier icon() {
-            return iconTexture.location();
+            return iconTexture.destination();
         }
 
         @Override
@@ -253,7 +253,7 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
         }
 
         private String getRenderControllerIdentifier() {
-            return BedrockRenderControllers.formatRenderControllerName(Rainbow.bedrockSafeIdentifier(iconTexture.location()));
+            return BedrockRenderControllers.formatRenderControllerName(Rainbow.bedrockSafeIdentifier(iconTexture.destination()));
         }
 
         private static List<String> createTextureReferenceArray(TextureResource texture) {
@@ -291,7 +291,7 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
 
         @Override
         public Identifier icon() {
-            return iconTexture.location();
+            return iconTexture.destination();
         }
 
         @Override
@@ -302,7 +302,7 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
         @Override
         public BedrockAttachable.Builder applyToAttachable(BedrockAttachable.Builder builder) {
             return builder
-                    .withTexture(BedrockAttachable.DisplaySlot.DEFAULT, stitched.location().getPath())
+                    .withTexture(BedrockAttachable.DisplaySlot.DEFAULT, stitched.destination().getPath())
                     .withRenderController(VanillaRenderControllers.ITEM_DEFAULT);
         }
 

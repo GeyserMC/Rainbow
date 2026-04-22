@@ -13,22 +13,25 @@ import java.util.function.Supplier;
 public class CustomTextureHolder extends TextureHolder {
     private final Supplier<NativeImage> supplier;
 
-    public CustomTextureHolder(Identifier identifier, Supplier<NativeImage> supplier) {
-        super(identifier);
+    public CustomTextureHolder(Identifier destination, Supplier<NativeImage> supplier) {
+        super(destination);
         this.supplier = supplier;
     }
 
     @Override
-    public Optional<byte[]> load(AssetResolver assetResolver, ProblemReporter reporter) {
-        return RainbowIO.safeIO(() -> {
-            NativeImage texture;
-            try {
-                texture = supplier.get();
-            } catch (Exception exception) {
-                reporter.report(() -> "unable to get texture for " + identifier + "; please provide it manually");
-                return null;
-            }
-            return NativeImageUtil.writeToByteArray(texture);
-        });
+    public Optional<TextureResource> load(AssetResolver assetResolver, ProblemReporter reporter) {
+        NativeImage texture;
+        try {
+            texture = supplier.get();
+        } catch (Exception exception) {
+            reporter.report(() -> "unable to get texture for " + destination + "; please provide it manually");
+            return Optional.empty();
+        }
+        return Optional.of(TextureResource.createNonAnimated(texture));
+    }
+
+    @Override
+    protected boolean shouldReportMissingWhenAbsent() {
+        return false;
     }
 }

@@ -23,6 +23,7 @@ import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
 import org.geysermc.rainbow.mapping.texture.TextureHolder;
+import org.geysermc.rainbow.mapping.texture.TextureResource;
 import org.joml.Matrix3x2f;
 
 import java.nio.file.Path;
@@ -42,7 +43,7 @@ public class RenderedTextureHolder extends TextureHolder {
     }
 
     @Override
-    public Optional<byte[]> load(AssetResolver assetResolver, ProblemReporter reporter) {
+    public Optional<TextureResource> load(AssetResolver assetResolver, ProblemReporter reporter) {
         throw new UnsupportedOperationException("Rendered texture does not support loading");
     }
 

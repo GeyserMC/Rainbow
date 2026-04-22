@@ -3,6 +3,8 @@ package org.geysermc.rainbow.mapping.texture;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
+import org.geysermc.rainbow.RainbowIO;
+import org.geysermc.rainbow.image.NativeImageUtil;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
@@ -12,46 +14,61 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 public abstract class TextureHolder implements PackSerializer.Serializable {
-    protected final Identifier identifier;
+    protected final Identifier destination;
 
-    public TextureHolder(Identifier identifier) {
-        this.identifier = identifier;
+    public TextureHolder(Identifier destination) {
+        this.destination = destination;
     }
 
-    public abstract Optional<byte[]> load(AssetResolver assetResolver, ProblemReporter reporter);
+    public abstract Optional<TextureResource> load(AssetResolver assetResolver, ProblemReporter reporter);
 
     @Override
     public CompletableFuture<?> save(PackSerializingContext context) {
         return load(context.assetResolver(), context.reporter())
-                .map(bytes -> context.serializer().saveTexture(bytes, context.paths().texturePath(this)))
-                .orElse(PackSerializer.noop());
+                .flatMap(texture -> {
+                    try (texture) {
+                        try (NativeImage firstFrame = texture.getFirstFrame()) {
+                            return RainbowIO.safeIO(() -> context.serializer().saveTexture(NativeImageUtil.writeToByteArray(firstFrame), context.paths().texturePath(this)));
+                        }
+                    }
+                })
+                .orElseGet(() -> {
+                    if (shouldReportMissingWhenAbsent()) {
+                        reportMissing(context.reporter());
+                    }
+                    return PackSerializer.noop();
+                });
     }
 
-    public static TextureHolder createCustom(Identifier identifier, Supplier<NativeImage> supplier) {
-        return new CustomTextureHolder(identifier, supplier);
+    protected boolean shouldReportMissingWhenAbsent() {
+        return true;
     }
 
-    public static TextureHolder createBuiltIn(Identifier identifier, Identifier source) {
-        return new BuiltInTextureHolder(identifier, source);
+    public static TextureHolder createCustom(Identifier destination, Supplier<NativeImage> supplier) {
+        return new CustomTextureHolder(destination, supplier);
     }
 
-    public static TextureHolder createBuiltIn(Identifier identifier) {
-        return createBuiltIn(identifier, identifier);
+    public static TextureHolder createBuiltIn(Identifier destination, Identifier source) {
+        return new BuiltInTextureHolder(destination, source);
     }
 
-    public static TextureHolder createNonExistent(Identifier identifier) {
-        return new MissingTextureHolder(identifier);
+    public static TextureHolder createBuiltIn(Identifier source) {
+        return createBuiltIn(source, source);
+    }
+
+    public static TextureHolder createNonExistent(Identifier destination) {
+        return new MissingTextureHolder(destination);
     }
 
     public static TextureHolder createCopy(TextureHolder original) {
-        return new CopyTextureHolder(original.identifier);
+        return new CopyTextureHolder(original.destination);
     }
 
-    public Identifier location() {
-        return identifier;
+    public Identifier destination() {
+        return destination;
     }
 
     protected void reportMissing(ProblemReporter reporter) {
-        reporter.report(() -> "missing texture for " + identifier + "; please provide it manually");
+        reporter.report(() -> "missing texture for " + destination + "; please provide it manually");
     }
 }

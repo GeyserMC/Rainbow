@@ -28,7 +28,7 @@ public record PackPaths(Path mappings, Path packRoot, Path attachables, Path geo
     }
 
     public Path texturePath(TextureHolder texture) {
-        Identifier textureIdentifier = Rainbow.decorateTextureIdentifier(texture.location());
+        Identifier textureIdentifier = Rainbow.decorateTextureIdentifier(texture.destination());
         // TODO proper texture folder field
         return packRoot.resolve(textureIdentifier.getPath());
     }

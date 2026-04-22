@@ -42,7 +42,7 @@ public class AnimationMapper {
 
         // Head translation + scale is scaled by around 0.655 (not perfect but close enough)
         // Coordinate space is the same
-        // Add a base translation of (6, 29, -1)
+        // Add a base translation of (0, 20, 0)
         // X translation, X, Y rotation is inverted
         ItemTransform head = transforms.head();
         Vector3f headPosition = head.translation().div(0.0625F, new Vector3f()).mul(-0.655F, 0.655F, 0.655F).add(0.0F, 20.0F, 0.0F);
