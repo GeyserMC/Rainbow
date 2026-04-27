@@ -15,7 +15,7 @@ and more.
 
 ## Usage
 
-You can download the latest version of Rainbow [here](https://download.geysermc.org/v2/projects/rainbow/versions/latest/builds/latest/downloads/rainbow). Using Rainbow requires the [Fabric API](https://modrinth.com/mod/fabric-api) to be installed. 
+You can download the latest version of Rainbow [here on our website](https://download.geysermc.org/v2/projects/rainbow/versions/latest/builds/latest/downloads/rainbow) or [here on Modrinth](https://modrinth.com/mod/rainbow-mod). Using Rainbow requires the [Fabric API](https://modrinth.com/mod/fabric-api) to be installed. 
 
 To use Rainbow, you must install it on your Minecraft client. Rainbow adds a few commands to the client. Generally,
 you use them as follows:

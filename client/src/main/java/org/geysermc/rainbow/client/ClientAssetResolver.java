@@ -1,5 +1,6 @@
 package org.geysermc.rainbow.client;
 
+import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.mojang.blaze3d.platform.NativeImage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -121,6 +122,8 @@ public class ClientAssetResolver implements AssetResolver {
                     return JsonParser.parseReader(reader).getAsJsonObject().asMap().entrySet().stream()
                             .map(translationKey -> Map.entry(translationKey.getKey(), translationKey.getValue().getAsString()))
                             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                } catch (JsonParseException exception) {
+                    return null;
                 }
             }, Map.of());
 
