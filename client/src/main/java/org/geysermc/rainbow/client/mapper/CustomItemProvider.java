@@ -4,11 +4,11 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.item.ItemStackTemplate;
 
-import java.util.stream.Stream;
+import java.util.Collection;
 
 public interface CustomItemProvider {
 
-    Stream<ItemStackTemplate> nextItems(LocalPlayer player, ClientPacketListener connection);
+    Collection<ItemStackTemplate> nextItems(LocalPlayer player, ClientPacketListener connection);
 
     boolean isDone();
 }

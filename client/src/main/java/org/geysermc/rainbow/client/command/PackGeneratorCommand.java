@@ -3,25 +3,21 @@ package org.geysermc.rainbow.client.command;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.suggestion.Suggestions;
-import com.mojang.datafixers.util.Pair;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 import org.geysermc.rainbow.client.PackManager;
 import org.geysermc.rainbow.client.mapper.InventoryMapper;
-import org.geysermc.rainbow.client.mapper.ItemSuggestionProvider;
 import org.geysermc.rainbow.client.mapper.PackMapper;
-import org.geysermc.rainbow.pack.BedrockPack;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
 public class PackGeneratorCommand {
@@ -53,7 +49,7 @@ public class PackGeneratorCommand {
                             if (heldItem.isEmpty()) {
                                 source.sendError(Component.literal("Must hold an item to map"));
                             } else {
-                                switch (pack.map(ItemStackTemplate.fromNonEmptyStack(heldItem))) {
+                                switch (packMapper.mapItems(pack, List.of(ItemStackTemplate.fromNonEmptyStack(heldItem))).toSingleResult()) {
                                     case NONE_MAPPED -> source.sendError(Component.translatable("commands.rainbow.no_item_mapped"));
                                     case PROBLEMS_OCCURRED -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item_problems"));
                                     case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item"));
@@ -63,26 +59,23 @@ public class PackGeneratorCommand {
                 )
                 .then(ClientCommands.literal("mapinventory")
                         .executes(runWithPack(packManager, (source, pack) -> {
-                            int mapped = 0;
-                            boolean errors = false;
-                            Inventory inventory = source.getPlayer().getInventory();
-
-                            for (ItemStack stack : inventory) {
+                            List<ItemStackTemplate> inventoryStacks = new ArrayList<>();
+                            source.getPlayer().getInventory().forEach(stack -> {
                                 if (!stack.isEmpty()) {
-                                    BedrockPack.MappingResult result = pack.map(ItemStackTemplate.fromNonEmptyStack(stack));
-                                    if (result != BedrockPack.MappingResult.NONE_MAPPED) {
-                                        mapped++;
-                                        if (result == BedrockPack.MappingResult.PROBLEMS_OCCURRED) {
-                                            errors = true;
-                                        }
+                                    inventoryStacks.add(ItemStackTemplate.fromNonEmptyStack(stack));
+                                }
+                            });
+                            PackMapper.MappingResults results = packMapper.mapItems(pack, inventoryStacks);
+
+                            if (results.itemsMapped() > 0 || results.skullsMapped() > 0) {
+                                if (results.itemsMapped() > 0) {
+                                    source.sendFeedback(Component.translatable("commands.rainbow.mapped_items_from_inventory", results.itemsMapped()));
+                                    if (results.problems() > 0) {
+                                        source.sendFeedback(Component.translatable("commands.rainbow.mapped_items_problems"));
                                     }
                                 }
-                            }
-
-                            if (mapped > 0) {
-                                source.sendFeedback(Component.translatable("commands.rainbow.mapped_items_from_inventory", mapped));
-                                if (errors) {
-                                    source.sendFeedback(Component.translatable("commands.rainbow.mapped_items_problems"));
+                                if (results.skullsMapped() > 0) {
+                                    source.sendFeedback(Component.translatable("commands.rainbow.mapped_skulls_from_inventory", results.skullsMapped()));
                                 }
                             } else {
                                 source.sendError(Component.translatable("commands.rainbow.no_items_mapped"));
@@ -109,13 +102,13 @@ public class PackGeneratorCommand {
                         )
                          */
                         .then(ClientCommands.literal("inventory")
-                                .executes(runWithPack(packManager, (source, pack) -> {
+                                .executes(runWithPack(packManager, (source, _) -> {
                                     packMapper.setItemProvider(InventoryMapper.INSTANCE);
                                     source.sendFeedback(Component.translatable("commands.rainbow.automatic_inventory_mapping"));
                                 }))
                         )
                         .then(ClientCommands.literal("stop")
-                                .executes(runWithPack(packManager, (source, pack) -> {
+                                .executes(runWithPack(packManager, (source, _) -> {
                                     packMapper.setItemProvider(null);
                                     source.sendFeedback(Component.translatable("commands.rainbow.stopped_automatic_mapping"));
                                 }))
@@ -136,7 +129,7 @@ public class PackGeneratorCommand {
         );
     }
 
-    private static Command<FabricClientCommandSource> runWithPack(PackManager manager, BiConsumer<FabricClientCommandSource, BedrockPack> executor) {
+    private static Command<FabricClientCommandSource> runWithPack(PackManager manager, BiConsumer<FabricClientCommandSource, PackManager.RainbowPack> executor) {
         return context -> {
             manager.runOrElse(pack -> executor.accept(context.getSource(), pack),
                     () -> context.getSource().sendError(NO_PACK_CREATED));

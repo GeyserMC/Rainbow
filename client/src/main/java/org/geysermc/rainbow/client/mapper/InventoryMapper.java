@@ -4,7 +4,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.item.ItemStackTemplate;
 
-import java.util.stream.Stream;
+import java.util.Collection;
 
 public class InventoryMapper implements CustomItemProvider {
     public static final InventoryMapper INSTANCE = new InventoryMapper();
@@ -12,10 +12,11 @@ public class InventoryMapper implements CustomItemProvider {
     private InventoryMapper() {}
 
     @Override
-    public Stream<ItemStackTemplate> nextItems(LocalPlayer player, ClientPacketListener connection) {
+    public Collection<ItemStackTemplate> nextItems(LocalPlayer player, ClientPacketListener connection) {
         return player.containerMenu.getItems().stream()
                 .filter(stack -> !stack.isEmpty())
-                .map(ItemStackTemplate::fromNonEmptyStack);
+                .map(ItemStackTemplate::fromNonEmptyStack)
+                .toList();
     }
 
     @Override

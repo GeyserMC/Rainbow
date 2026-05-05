@@ -6,8 +6,8 @@ import net.minecraft.network.protocol.game.ServerboundChatCommandPacket;
 import net.minecraft.world.item.ItemStackTemplate;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-import java.util.stream.Stream;
 
 // TODO safety
 public class ItemSuggestionProvider implements CustomItemProvider {
@@ -19,7 +19,7 @@ public class ItemSuggestionProvider implements CustomItemProvider {
         remainingCommands = new ArrayList<>(commands);
     }
 
-    public Stream<ItemStackTemplate> nextItems(LocalPlayer player, ClientPacketListener connection) {
+    public Collection<ItemStackTemplate> nextItems(LocalPlayer player, ClientPacketListener connection) {
         if (!remainingCommands.isEmpty() || waitingOnItem) {
             if (waitingOnClear && player.getInventory().isEmpty()) {
                 waitingOnClear = false;
@@ -28,9 +28,10 @@ public class ItemSuggestionProvider implements CustomItemProvider {
                 waitingOnItem = true;
             } else {
                 if (!player.getInventory().isEmpty()) {
-                    Stream<ItemStackTemplate> items = player.getInventory().getNonEquipmentItems().stream()
+                    Collection<ItemStackTemplate> items = player.getInventory().getNonEquipmentItems().stream()
                             .filter(stack -> !stack.isEmpty())
-                            .map(ItemStackTemplate::fromNonEmptyStack);
+                            .map(ItemStackTemplate::fromNonEmptyStack)
+                            .toList();
                     connection.send(new ServerboundChatCommandPacket("clear"));
 
                     waitingOnItem = false;
@@ -41,7 +42,7 @@ public class ItemSuggestionProvider implements CustomItemProvider {
                 }
             }
         }
-        return Stream.empty();
+        return List.of();
     }
 
     public int queueSize() {

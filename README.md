@@ -28,8 +28,9 @@ you use them as follows:
 3. Once you have mapped all of your custom items, use `/rainbow finish` to finish the pack. Rainbow will then export the resourcepack and item mappings it has created.
 
 When you've finished your pack, navigate to the `.minecraft/rainbow/<name>` folder. You can also click on the `Wrote pack to disk` in chat to open this folder.
-In this folder, you'll find 4 important files/folders:
+In this folder, you'll find 5 important files/folders:
 
+- `custom-skulls.yml`: put this in Geyser's config folder. These are the exported player skulls. The file may already exist in Geyser's config folder, be careful with overwriting it!
 - `geyser_mappings.json`: you need to put this file in the `custom_mappings` folder in Geyser's config folder.
 - `pack.zip`: you need to put this file in the `packs` folder in Geyser's config folder.
 - `lang`: you need to put all files in this folder in the `locales/overrides` folder in Geyser's config folder.
