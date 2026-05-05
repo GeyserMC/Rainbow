@@ -186,7 +186,7 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
 
         @Override
         public Identifier icon() {
-            return iconTexture.destination();
+            return animation.references == 1 && flatBuiltinModel ? texture : iconTexture.destination();
         }
 
         @Override
