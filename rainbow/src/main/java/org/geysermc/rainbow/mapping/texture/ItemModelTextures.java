@@ -148,10 +148,10 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
         }
     }
 
-    record SingleTexture(SpriteInfo sprite, Identifier texture, ExtractedAnimationInfo animation, TextureHolder iconTexture, boolean flatBuiltinModel) implements ItemModelTextures {
+    record SingleTexture(SpriteInfo sprite, Identifier texture, Optional<TextureResource.AnimationInfo> animation, TextureHolder iconTexture, boolean flatBuiltinModel) implements ItemModelTextures {
 
         public SingleTexture(Identifier texture, TextureResource openedTexture, TextureHolder icon, boolean flatBuiltinModel) {
-            this(new SpriteInfo(openedTexture), texture, new ExtractedAnimationInfo(openedTexture.totalFrameCount(), openedTexture.frameReferenceCount()), icon, flatBuiltinModel);
+            this(new SpriteInfo(0, 0, openedTexture.sizeOfFrame().width(), openedTexture.sizeOfFrame().height()), texture, openedTexture.animation(), icon, flatBuiltinModel);
         }
 
         @Override
@@ -171,19 +171,19 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
 
         @Override
         public Identifier icon() {
-            return animation.references == 1 && flatBuiltinModel ? texture : iconTexture.destination();
+            return animation.isEmpty() && flatBuiltinModel ? texture : iconTexture.destination();
         }
 
         @Override
         public boolean requiresAttachable() {
-            return animation.references > 1;
+            return animation.isPresent();
         }
 
         @Override
         public BedrockAttachable.Builder applyToAttachable(BedrockAttachable.Builder builder) {
-            if (animation.references > 1) {
+            if (animation.isPresent()) {
                 builder.withRenderController(getRenderControllerIdentifier());
-                for (int frame = 0; frame < animation.frames; frame++) {
+                for (int frame = 0; frame < animation.get().totalFrameCount(); frame++) {
                     builder.withTexture("frame_" + frame, getFrameIdentifier(frame).getPath());
                 }
                 return builder;
@@ -199,7 +199,7 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
         @Override
         public CompletableFuture<?> save(PackSerializingContext context) {
             // If no animation, just save the texture
-            if (animation.references == 1) {
+            if (animation.isEmpty()) {
                 // Save just the texture (usually layer0) when flat builtin, else save texture and custom icon
                 if (flatBuiltinModel) {
                     return TextureHolder.createBuiltIn(texture).save(context);
@@ -213,12 +213,12 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
             try (TextureResource openedTexture = context.assetResolver().getPossibleAtlasTextureSafely(texture).orElseThrow()) {
                 PackSerializer.Serializable serializableStack = iconTexture;
 
-                for (int frame = 0; frame < animation.frames; frame++) {
+                for (int frame = 0; frame < animation.get().totalFrameCount(); frame++) {
                     int i = frame;
                     serializableStack = serializableStack.with(TextureHolder.createCustom(getFrameIdentifier(frame), () -> openedTexture.getFrame(i)));
                 }
 
-                serializableStack = serializableStack.with(BedrockRenderControllers.CODEC, createRenderController(openedTexture), paths -> paths.renderControllers(getRenderControllerIdentifier()));
+                serializableStack = serializableStack.with(BedrockRenderControllers.CODEC, createRenderController(animation.get()), paths -> paths.renderControllers(getRenderControllerIdentifier()));
                 return serializableStack.save(context);
             }
         }
@@ -227,8 +227,8 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
             return texture.withSuffix("_" + index);
         }
 
-        private BedrockRenderControllers createRenderController(TextureResource texture) {
-            List<String> textureReferences = createTextureReferenceArray(texture);
+        private BedrockRenderControllers createRenderController(TextureResource.AnimationInfo animation) {
+            List<String> textureReferences = createTextureReferenceArray(animation);
             return BedrockRenderControllers.builder()
                     .withRenderController(getRenderControllerIdentifier(), BedrockRenderControllers.renderController("Geometry.default")
                             .withArray(BedrockRenderControllers.RenderProperty.TEXTURES, "Array.frames", textureReferences)
@@ -241,13 +241,12 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
             return BedrockRenderControllers.formatRenderControllerName(Rainbow.bedrockSafeIdentifier(iconTexture.destination()));
         }
 
-        private static List<String> createTextureReferenceArray(TextureResource texture) {
+        private static List<String> createTextureReferenceArray(TextureResource.AnimationInfo animation) {
             List<String> textures = new ArrayList<>();
-            for (int frame = 0; frame < texture.frameReferenceCount(); frame++) {
-                TextureResource.FrameInfo frameInfo = texture.getFrameInfo(frame);
+            for (TextureResource.FrameInfo frame : animation.frames()) {
                 // Very poor implementation of the time component, just repeat the frame for however many ticks
-                for (int i = 0; i < frameInfo.time(); i++) {
-                    textures.add("Texture.frame_" + frameInfo.index());
+                for (int i = 0; i < frame.time(); i++) {
+                    textures.add("Texture.frame_" + frame.index());
                 }
             }
             return Collections.unmodifiableList(textures);
