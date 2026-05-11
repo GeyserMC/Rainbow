@@ -5,7 +5,7 @@ import com.google.common.collect.MultimapBuilder;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import org.geysermc.rainbow.CodecUtil;
 
@@ -41,7 +41,7 @@ public class GeyserMappings {
     }
 
     public void map(Holder<Item> item, GeyserItemDefinition mapping) {
-        Optional<ResourceLocation> model = mapping instanceof GeyserSingleDefinition single ? Optional.of(single.model().orElseThrow()) : Optional.empty();
+        Optional<Identifier> model = mapping instanceof GeyserSingleDefinition single ? Optional.of(single.model().orElseThrow()) : Optional.empty();
         Optional<GeyserGroupDefinition> modelGroup = Optional.empty();
 
         Collection<GeyserMapping> existingMappings = new ArrayList<>(mappings.get(item));

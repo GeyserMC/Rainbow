@@ -2,7 +2,7 @@
     "required": true,
     "minVersion": "0.8",
     "package": "org.geysermc.rainbow.client.mixin",
-    "compatibilityLevel": "JAVA_21",
+    "compatibilityLevel": "JAVA_25",
     "client": [
         "AbstractContainerScreenMixin",
         "EntityRenderDispatcherAccessor",
@@ -10,9 +10,14 @@
         "ModelManagerMixin",
         "PictureInPictureRendererAccessor",
         "PictureInPictureRendererMixin",
-        "SplashRendererAccessor"
+        "SplashRendererAccessor",
+        "SpriteContentsAnimatedTextureAccessor",
+        "SpriteContentsClientAccessor"
     ],
     "injectors": {
         "defaultRequire": 1
-  }
+  },
+  "mixins": [
+    "ResolvableProfileAccessor"
+  ]
 }

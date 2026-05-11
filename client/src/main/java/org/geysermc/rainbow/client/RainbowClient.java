@@ -9,6 +9,7 @@ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.command.v2.ArgumentTypeRegistry;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.synchronization.SingletonArgumentInfo;
 import net.minecraft.network.chat.ClickEvent;
 import org.geysermc.rainbow.Rainbow;
@@ -23,6 +24,8 @@ import org.slf4j.Logger;
 public class RainbowClient implements ClientModInitializer {
     public static final Logger LOGGER = LogUtils.getLogger();
     public static final ClickEvent LOG_CLICK_EVENT = new ClickEvent.OpenFile(Minecraft.getInstance().gameDirectory.toPath().resolve("logs/latest.log"));
+
+    public static final String MOD_ID = Rainbow.MOD_ID + "-client";
 
     private static final PackManager packManager = new PackManager();
     private static final PackMapper packMapper = new PackMapper(packManager);
@@ -39,7 +42,7 @@ public class RainbowClient implements ClientModInitializer {
     public void onInitializeClient() {
         KeyMapping openPackScreenKeyBind = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.rainbow.open_pack_screen", InputConstants.KEY_O, KeyMapping.Category.MISC));
 
-        ClientCommandRegistrationCallback.EVENT.register((dispatcher, buildContext) -> PackGeneratorCommand.register(dispatcher, packManager, packMapper));
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, _) -> PackGeneratorCommand.register(dispatcher, packManager, packMapper));
         ClientTickEvents.START_CLIENT_TICK.register(packMapper::tick);
         ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {
             if (minecraft.player == null) return;
@@ -51,9 +54,15 @@ public class RainbowClient implements ClientModInitializer {
             }
         });
 
-        ArgumentTypeRegistry.registerArgumentType(Rainbow.getModdedLocation("command_suggestions"),
+        ArgumentTypeRegistry.registerArgumentType(Rainbow.getModdedIdentifier("command_suggestions"),
                 CommandSuggestionsArgumentType.class, SingletonArgumentInfo.contextFree(CommandSuggestionsArgumentType::new));
 
         RainbowIO.registerExceptionListener(new RainbowClientIOHandler());
+    }
+
+    public static String getVersion() {
+        return FabricLoader.getInstance().getModContainer(MOD_ID)
+                .map(container -> container.getMetadata().getVersion().getFriendlyString())
+                .orElse("unknown_sadface");
     }
 }

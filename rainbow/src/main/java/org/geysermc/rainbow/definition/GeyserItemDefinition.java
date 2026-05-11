@@ -1,7 +1,6 @@
 package org.geysermc.rainbow.definition;
 
-import net.minecraft.resources.ResourceLocation;
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.resources.Identifier;
 
 import java.util.Optional;
 
@@ -9,10 +8,10 @@ public interface GeyserItemDefinition extends GeyserMapping {
 
     GeyserBaseDefinition base();
 
-    boolean conflictsWith(Optional<ResourceLocation> parentModel, GeyserItemDefinition other);
+    boolean conflictsWith(Optional<Identifier> parentModel, GeyserItemDefinition other);
 
     @Override
-    default int compareTo(@NotNull GeyserMapping other) {
+    default int compareTo(GeyserMapping other) {
         if (other instanceof GeyserItemDefinition itemDefinition) {
             return base().bedrockIdentifier().compareTo(itemDefinition.base().bedrockIdentifier());
         }

@@ -7,7 +7,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Supplier;
 
@@ -57,7 +56,7 @@ public record GeyserConditionPredicate(Property property, boolean expected) impl
             }
 
             @Override
-            public @NotNull String getSerializedName() {
+            public String getSerializedName() {
                 return name;
             }
         }

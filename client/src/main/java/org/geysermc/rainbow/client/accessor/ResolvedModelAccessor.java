@@ -2,7 +2,7 @@ package org.geysermc.rainbow.client.accessor;
 
 import net.minecraft.client.renderer.item.ClientItem;
 import net.minecraft.client.resources.model.ResolvedModel;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.Optional;
 
@@ -10,7 +10,7 @@ import java.util.Optional;
 // This comes with some extra memory usage, but Rainbow should only be used to convert packs, so it should be fine
 public interface ResolvedModelAccessor {
 
-    Optional<ResolvedModel> rainbow$getResolvedModel(ResourceLocation location);
+    Optional<ResolvedModel> rainbow$getResolvedModel(Identifier identifier);
 
-    Optional<ClientItem> rainbow$getClientItem(ResourceLocation location);
+    Optional<ClientItem> rainbow$getClientItem(Identifier identifier);
 }

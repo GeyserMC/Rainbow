@@ -1,31 +1,37 @@
-import net.fabricmc.loom.task.RemapJarTask
-
 plugins {
     id("rainbow.base-conventions")
     id("rainbow.publish-conventions")
+    id("rainbow.modrinth-publish-conventions")
 }
 
+val rainbowJarName = "Rainbow.jar"
+
 dependencies {
-    // Implement namedElements so IDEs can use it correctly, but include the remapped build
-    implementation(project(path = ":rainbow", configuration = "namedElements"))
+    implementation(project(":rainbow"))
     include(project(":rainbow"))
+}
+
+loom {
+    accessWidenerPath = file("src/main/resources/rainbow-client.accesswidener")
 }
 
 tasks {
     val copyJarTask = register<Copy>("copyRainbowClientJar") {
         group = "build"
 
-        val remapJarTask = getByName<RemapJarTask>("remapJar")
-        dependsOn(remapJarTask)
+        val jarTask = getByName<Jar>("jar")
+        dependsOn(jarTask)
 
-        from(remapJarTask.archiveFile)
-        rename {
-            "Rainbow.jar"
-        }
+        from(jarTask.archiveFile)
+        rename {rainbowJarName}
         into(project.layout.buildDirectory.file("libs"))
     }
 
     named("build") {
         dependsOn(copyJarTask)
     }
+}
+
+modrinth {
+    uploadFile.set(project.layout.buildDirectory.file("libs/$rainbowJarName"))
 }

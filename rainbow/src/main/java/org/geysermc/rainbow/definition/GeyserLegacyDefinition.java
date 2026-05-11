@@ -3,7 +3,7 @@ package org.geysermc.rainbow.definition;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.Optional;
 
@@ -17,9 +17,9 @@ public record GeyserLegacyDefinition(GeyserBaseDefinition base, int customModelD
     );
 
     @Override
-    public boolean conflictsWith(Optional<ResourceLocation> parentModel, GeyserItemDefinition other) {
-        if (other instanceof GeyserLegacyDefinition otherLegacy) {
-            return customModelData == otherLegacy.customModelData && base.conflictsWith(otherLegacy.base);
+    public boolean conflictsWith(Optional<Identifier> parentModel, GeyserItemDefinition other) {
+        if (other instanceof GeyserLegacyDefinition(GeyserBaseDefinition otherBase, int otherModelData)) {
+            return customModelData == otherModelData && base.conflictsWith(otherBase);
         }
         return false;
     }

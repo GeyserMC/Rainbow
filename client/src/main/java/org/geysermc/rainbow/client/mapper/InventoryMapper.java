@@ -3,9 +3,9 @@ package org.geysermc.rainbow.client.mapper;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 
-import java.util.stream.Stream;
+import java.util.Collection;
 
 public class InventoryMapper implements CustomItemProvider {
     public static final InventoryMapper INSTANCE = new InventoryMapper();
@@ -13,8 +13,11 @@ public class InventoryMapper implements CustomItemProvider {
     private InventoryMapper() {}
 
     @Override
-    public Stream<ItemStack> nextItems(LocalPlayer player, ClientPacketListener connection) {
-        return player.containerMenu.getItems().stream();
+    public Collection<ItemStackTemplate> nextItems(LocalPlayer player, ClientPacketListener connection) {
+        return player.containerMenu.getItems().stream()
+                .filter(stack -> !stack.isEmpty())
+                .map(ItemStackTemplate::fromNonEmptyStack)
+                .toList();
     }
 
     @Override

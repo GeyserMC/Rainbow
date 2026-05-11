@@ -11,6 +11,8 @@ import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.client.mixin.SplashRendererAccessor;
 import org.geysermc.rainbow.client.render.MinecraftGeometryRenderer;
+import org.geysermc.rainbow.client.skull.CustomSkulls;
+import org.geysermc.rainbow.mapping.AssetCacheStats;
 import org.geysermc.rainbow.pack.BedrockItem;
 import org.geysermc.rainbow.pack.BedrockPack;
 
@@ -18,6 +20,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -36,30 +39,35 @@ public final class PackManager {
     private static final Path PACK_DIRECTORY = Path.of("pack");
     private static final Path MAPPINGS_FILE = Path.of("geyser_mappings.json");
     private static final Path PACK_ZIP_FILE = Path.of("pack.zip");
+    private static final Path PACK_LANG_FOLDER = Path.of("lang");
+    private static final Path SKULLS_FILE = Path.of("custom-skulls.yml");
     private static final Path REPORT_FILE = Path.of("report.txt");
 
-    private Optional<BedrockPack> currentPack = Optional.empty();
+    private final ClientPackSerializer packSerializer = new ClientPackSerializer();
+    private Optional<RainbowPack> currentPack = Optional.empty();
 
     public void startPack(String name) throws IOException {
         if (currentPack.isPresent()) {
-            throw new IllegalStateException("Already started a pack (" + currentPack.get().name() + ")");
+            throw new IllegalStateException("Already started a pack (" + currentPack.get().resources.name() + ")");
         }
+        packSerializer.prepare(Objects.requireNonNull(Minecraft.getInstance().level).registryAccess());
 
         Path packDirectory = createPackDirectory(name);
-        BedrockPack pack = BedrockPack.builder(name, packDirectory.resolve(MAPPINGS_FILE), packDirectory.resolve(PACK_DIRECTORY),
-                        new MinecraftPackSerializer(Minecraft.getInstance()), new MinecraftAssetResolver(Minecraft.getInstance()))
+        BedrockPack pack = BedrockPack.builder(name, packDirectory.resolve(MAPPINGS_FILE), packDirectory.resolve(PACK_DIRECTORY), packSerializer,
+                        new ClientAssetResolver(Minecraft.getInstance()))
                 .withPackZipFile(packDirectory.resolve(PACK_ZIP_FILE))
+                .withLanguageFolder(packDirectory.resolve(PACK_LANG_FOLDER))
                 .withGeometryRenderer(MinecraftGeometryRenderer.INSTANCE)
                 .reportSuccesses()
                 .build();
-        currentPack = Optional.of(pack);
+        currentPack = Optional.of(new RainbowPack(pack, new CustomSkulls()));
     }
 
-    public void run(Consumer<BedrockPack> consumer) {
+    public void run(Consumer<RainbowPack> consumer) {
         currentPack.ifPresent(consumer);
     }
 
-    public void runOrElse(Consumer<BedrockPack> consumer, Runnable runnable) {
+    public void runOrElse(Consumer<RainbowPack> consumer, Runnable runnable) {
         currentPack.ifPresentOrElse(consumer, runnable);
     }
 
@@ -68,46 +76,94 @@ public final class PackManager {
     }
 
     public Optional<Path> getExportPath() {
-        return currentPack.map(pack -> EXPORT_DIRECTORY.resolve(pack.name()));
+        return currentPack.map(pack -> EXPORT_DIRECTORY.resolve(pack.resources.name()));
     }
 
     public boolean finish(Runnable onFinish) {
-        currentPack.map(pack -> {
-            RainbowIO.safeIO(() -> Files.writeString(getExportPath().orElseThrow().resolve(REPORT_FILE), createPackSummary(pack)));
-            return pack.save();
-        }).ifPresent(future -> future.thenRun(onFinish));
+        currentPack.ifPresent(pack -> {
+            Path skullsPath = EXPORT_DIRECTORY.resolve(pack.resources.name()).resolve(SKULLS_FILE);
+            Path reportPath = EXPORT_DIRECTORY.resolve(pack.resources.name()).resolve(REPORT_FILE);
+            pack.resources.save().thenRun(() -> {
+                RainbowIO.safeIO(() -> Files.writeString(skullsPath, pack.skulls.createConfig()));
+                RainbowIO.safeIO(() -> Files.writeString(reportPath, createPackSummary(pack, packSerializer)));
+                onFinish.run();
+            });
+        });
         boolean wasPresent = currentPack.isPresent();
         currentPack = Optional.empty();
         return wasPresent;
     }
 
-    private static String createPackSummary(BedrockPack pack) {
-        String problems = ((ProblemReporter.Collector) pack.getReporter()).getTreeReport();
+    public record RainbowPack(BedrockPack resources, CustomSkulls skulls) {}
+
+    private static String createPackSummary(RainbowPack pack, ClientPackSerializer packSerializer) {
+        String problems = ((ProblemReporter.Collector) pack.resources.getReporter()).getTreeReport();
         if (StringUtil.isBlank(problems)) {
             problems = "Well that's odd... there's nothing here!";
         }
 
-        Set<BedrockItem> bedrockItems = pack.getBedrockItems();
-        //long attachables = bedrockItems.stream().filter(item -> item.attachableCreator().isPresent()).count();
+        Set<BedrockItem> bedrockItems = pack.resources.getBedrockItems();
         long geometries = bedrockItems.stream().filter(item -> item.geometryContext().geometry().isPresent()).count();
         long animations = bedrockItems.stream().filter(item -> item.geometryContext().animation().isPresent()).count();
+        AssetCacheStats cacheStats = pack.resources.cacheStats();
 
         return """
+#### READ THIS FIRST ####
+What do I do now?
+
+In this folder, you'll find 4 important files/folders along with this one:
+
+- custom-skulls.yml: put this in Geyser's config folder. These are the exported player skulls. The file may already exist in Geyser's config folder, be careful with overwriting it!
+- geyser_mappings.json: put this in the "custom_mappings" folder in Geyser's config folder. These are the generated item mappings.
+- pack.zip: put this in the "packs" folder in Geyser's config folder. This is the generated bedrock resourcepack.
+- lang: put all files in this folder in the "locales/overrides" folder in Geyser's config folder. These are the exported custom translation strings.
+  - The folder can be empty or non-existent if no language files are found. This is usually not an issue!
+
+Once you have taken those steps, restart your server. If everything went right, bedrock players should download
+the generated pack and see your custom items.
+
+IF YOU EXPERIENCE ANY ISSUES, please go to our Discord (https://discord.gg/geysermc) for support.
+Use the #custom-resource-packs channel, and make sure to include this report file.
+
+You can also open an issue report over at our issue tracker (https://github.com/GeyserMC/Rainbow/issues).
+Again, be sure to include this report file, and please make sure your issue is not already reported!
+If it is, you can help out by adding details to the existing report.
+
+Below, you'll find some statistics about the generated pack, and a mapping report,
+which will list any models converted, and any problems that occurred during mapping.
+#########################
+
 -- PACK GENERATION REPORT --
 // %s
 
+Version of Rainbow: %s
+
 Generated pack: %s
 Mappings written: %d
+
 Item texture atlas size: %d
-Attachables tried to export: FIXME
-Geometry files tried to export: %d
-Animations tried to export: %d
-Textures tried to export: FIXME
+Geometries exported: %d
+Animations exported: %d
+
+JSON-files written: %d
+Textures exported: %d
+
+Username skulls exported: %d
+UUID skulls exported: %d
+Static texture skulls exported: %d
+
+-- ASSET CACHE STATS --
+
+Geometry cache: %d written, %d cache hits
+Texture cache: %d written, %d cache hits
 
 -- MAPPING TREE REPORT --
 %s
-""".formatted(randomSummaryComment(), pack.name(), pack.getMappings(), pack.getItemTextureAtlasSize(),
-                geometries, animations, problems);
+""".formatted(randomSummaryComment(), RainbowClient.getVersion(), pack.resources.name(), pack.resources.getMappings(), pack.resources.getItemTextureAtlasSize(),
+                geometries, animations, packSerializer.jsonExported(), packSerializer.texturesExported(),
+                pack.skulls.usernames(), pack.skulls.uuids(), pack.skulls.textures(),
+                cacheStats.geometry().size(), cacheStats.geometry().hits(),
+                cacheStats.texture().size(), cacheStats.texture().hits(), problems);
     }
 
     private static String randomSummaryComment() {
@@ -116,7 +172,7 @@ Textures tried to export: FIXME
             if (splash == null) {
                 return "Undefined Undefined :(";
             }
-            return ((SplashRendererAccessor) splash).getSplash();
+            return ((SplashRendererAccessor) splash).getSplash().getString();
         }
         return randomBuiltinSummaryComment();
     }

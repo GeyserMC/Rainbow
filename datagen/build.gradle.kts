@@ -4,9 +4,10 @@ plugins {
 }
 
 dependencies {
-    implementation(project(path = ":rainbow", configuration = "namedElements"))
+    implementation(project(":rainbow"))
 }
 
 loom {
     accessWidenerPath = file("src/main/resources/rainbow-datagen.accesswidener")
+    runs.clear()
 }

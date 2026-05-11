@@ -4,16 +4,13 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import org.geysermc.rainbow.CodecUtil;
-import org.geysermc.rainbow.mapping.PackSerializer;
+import net.minecraft.util.ExtraCodecs;
 import org.geysermc.rainbow.pack.BedrockVersion;
 import org.joml.Vector3fc;
 
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 public record BedrockAnimation(BedrockVersion formatVersion, Map<String, AnimationDefinition> definitions) {
     public static final BedrockVersion FORMAT_VERSION = BedrockVersion.of(1, 8, 0);
@@ -24,10 +21,6 @@ public record BedrockAnimation(BedrockVersion formatVersion, Map<String, Animati
                     Codec.unboundedMap(Codec.STRING, AnimationDefinition.CODEC).fieldOf("animations").forGetter(BedrockAnimation::definitions)
             ).apply(instance, BedrockAnimation::new)
     );
-
-    public CompletableFuture<?> save(PackSerializer serializer, Path animationDirectory, String identifier) {
-        return serializer.saveJson(CODEC, this, animationDirectory.resolve(identifier + ".animation.json"));
-    }
 
     public static Builder builder() {
         return new Builder();
@@ -141,9 +134,9 @@ public record BedrockAnimation(BedrockVersion formatVersion, Map<String, Animati
     public record SimpleAnimation(Vector3fc position, Vector3fc rotation, Vector3fc scale) {
         public static final Codec<SimpleAnimation> CODEC = RecordCodecBuilder.create(instance ->
                 instance.group(
-                        CodecUtil.VECTOR3F_CODEC.fieldOf("position").forGetter(SimpleAnimation::position),
-                        CodecUtil.VECTOR3F_CODEC.fieldOf("rotation").forGetter(SimpleAnimation::rotation),
-                        CodecUtil.VECTOR3F_CODEC.fieldOf("scale").forGetter(SimpleAnimation::scale)
+                        ExtraCodecs.VECTOR3F.fieldOf("position").forGetter(SimpleAnimation::position),
+                        ExtraCodecs.VECTOR3F.fieldOf("rotation").forGetter(SimpleAnimation::rotation),
+                        ExtraCodecs.VECTOR3F.fieldOf("scale").forGetter(SimpleAnimation::scale)
                 ).apply(instance, SimpleAnimation::new)
         );
     }

@@ -1,57 +1,40 @@
 plugins {
-    id("fabric-loom")
+    id("net.fabricmc.fabric-loom")
 }
 
 version = properties["mod_version"]!! as String
 group = properties["maven_group"]!! as String
 
 val archivesBaseName = properties["archives_base_name"]!! as String
-val targetJavaVersion = 21
+val targetJavaVersion = 25
+
+val fmjVersion = projectVersion(project)
 
 base {
     archivesName = archivesBaseName
 }
 
-repositories {
-    maven {
-        name = "ParchmentMC"
-        url = uri("https://maven.parchmentmc.org")
-    }
-
-    maven {
-        name = "Jitpack"
-        url = uri("https://jitpack.io")
-    }
-
-    maven {
-        name = "Open Collaboration"
-        url = uri("https://repo.opencollab.dev/main")
-    }
-}
+repositories {}
 
 dependencies {
     minecraft(libs.minecraft)
-    mappings(loom.layered {
-        officialMojangMappings()
-        parchment(libs.parchment)
-    })
 
-    modImplementation(libs.fabric.loader)
-    modImplementation(libs.fabric.api)
+    implementation(libs.fabric.loader)
+    implementation(libs.fabric.api)
 }
 
 tasks {
     processResources {
-        inputs.property("version", version)
-        inputs.property("supported_versions", libs.versions.minecraft.supported.get())
+        inputs.property("version", fmjVersion)
+        inputs.property("minecraft_version", libs.versions.minecraft.supported.base.get())
         inputs.property("loader_version", libs.versions.fabric.loader.get())
         filteringCharset = "UTF-8"
 
         filesMatching("fabric.mod.json") {
             expand(
                 mapOf(
-                    "version" to version,
-                    "supported_versions" to libs.versions.minecraft.supported.get(),
+                    "version" to fmjVersion,
+                    "minecraft_version" to libs.versions.minecraft.supported.base.get(),
                     "loader_version" to libs.versions.fabric.loader.get()
                 )
             )

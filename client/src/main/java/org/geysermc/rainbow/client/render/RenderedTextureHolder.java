@@ -8,21 +8,23 @@ import com.mojang.blaze3d.textures.GpuTexture;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.pip.OversizedItemRenderer;
-import net.minecraft.client.gui.render.state.GuiItemRenderState;
-import net.minecraft.client.gui.render.state.GuiRenderState;
-import net.minecraft.client.gui.render.state.pip.OversizedItemRenderState;
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.state.gui.GuiItemRenderState;
+import net.minecraft.client.renderer.state.gui.GuiRenderState;
+import net.minecraft.client.renderer.state.gui.pip.OversizedItemRenderState;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.client.mixin.PictureInPictureRendererAccessor;
 import org.geysermc.rainbow.image.NativeImageUtil;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.PackSerializer;
+import org.geysermc.rainbow.mapping.PackSerializingContext;
 import org.geysermc.rainbow.mapping.texture.TextureHolder;
-import org.joml.Matrix3x2fStack;
+import org.geysermc.rainbow.mapping.texture.TextureResource;
+import org.joml.Matrix3x2f;
 
 import java.nio.file.Path;
 import java.util.Objects;
@@ -33,25 +35,25 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class RenderedTextureHolder extends TextureHolder {
-    private final ItemStack stackToRender;
+    private final ItemStackTemplate stackToRender;
 
-    public RenderedTextureHolder(ResourceLocation location, ItemStack stackToRender) {
-        super(location);
+    public RenderedTextureHolder(Identifier identifier, ItemStackTemplate stackToRender) {
+        super(identifier);
         this.stackToRender = stackToRender;
     }
 
     @Override
-    public Optional<byte[]> load(AssetResolver assetResolver, ProblemReporter reporter) {
+    public Optional<TextureResource> load(AssetResolver assetResolver, ProblemReporter reporter) {
         throw new UnsupportedOperationException("Rendered texture does not support loading");
     }
 
     @Override
-    public CompletableFuture<?> save(AssetResolver assetResolver, PackSerializer serializer, Path path, ProblemReporter reporter) {
+    public CompletableFuture<?> save(PackSerializingContext context) {
         TrackingItemStackRenderState itemRenderState = new TrackingItemStackRenderState();
-        Minecraft.getInstance().getItemModelResolver().updateForTopItem(itemRenderState, stackToRender, ItemDisplayContext.GUI, null, null, 0);
+        Minecraft.getInstance().getItemModelResolver().updateForTopItem(itemRenderState, stackToRender.create(), ItemDisplayContext.GUI, null, null, 0);
         itemRenderState.setOversizedInGui(true);
 
-        GuiItemRenderState guiItemRenderState = new GuiItemRenderState("geometry_render", new Matrix3x2fStack(16), itemRenderState, 0, 0, null);
+        GuiItemRenderState guiItemRenderState = new GuiItemRenderState(new Matrix3x2f(), itemRenderState, 0, 0, null);
         ScreenRectangle sizeBounds = guiItemRenderState.oversizedItemBounds();
         Objects.requireNonNull(sizeBounds);
         OversizedItemRenderState oversizedRenderState = new OversizedItemRenderState(guiItemRenderState, sizeBounds.left(), sizeBounds.top(), sizeBounds.right() + 4, sizeBounds.bottom() + 4);
@@ -63,7 +65,7 @@ public class RenderedTextureHolder extends TextureHolder {
             //noinspection DataFlowIssue
             ((PictureInPictureCopyRenderer) itemRenderer).rainbow$allowTextureCopy();
             itemRenderer.prepare(oversizedRenderState, new GuiRenderState(), 4);
-            writeAsPNG(serializer, path, ((PictureInPictureRendererAccessor) itemRenderer).getTexture(), lock, condition);
+            writeAsPNG(context.serializer(), context.paths().texturePath(this), ((PictureInPictureRendererAccessor) itemRenderer).getTexture(), lock, condition);
         }
 
         return CompletableFuture.runAsync(() -> {

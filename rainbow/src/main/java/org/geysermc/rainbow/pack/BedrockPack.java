@@ -4,28 +4,28 @@ import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.CustomModelData;
 import org.geysermc.rainbow.CodecUtil;
 import org.geysermc.rainbow.PackConstants;
-import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
+import org.geysermc.rainbow.mapping.AssetCacheStats;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.BedrockItemMapper;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mapping.PackSerializer;
+import org.geysermc.rainbow.mapping.PackSerializingContext;
 import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
 import org.geysermc.rainbow.definition.GeyserMappings;
-import org.geysermc.rainbow.mapping.texture.TextureHolder;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -34,7 +34,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
-public class BedrockPack {
+public class BedrockPack implements PackSerializer.Serializable {
+    // Debug only
+    private static final boolean ALLOW_MAPPING_VANILLA_ITEMS = false;
+
     private final String name;
     private final Optional<PackManifest> manifest;
     private final PackPaths paths;
@@ -42,8 +45,8 @@ public class BedrockPack {
 
     private final BedrockTextures.Builder itemTextures = BedrockTextures.builder();
     private final Set<BedrockItem> bedrockItems = new HashSet<>();
-    private final Set<ResourceLocation> modelsMapped = new HashSet<>();
-    private final Set<Pair<Item, Integer>> customModelDataMapped = new HashSet<>();
+    private final Set<Identifier> modelsMapped = new HashSet<>();
+    private final Set<Pair<Holder<Item>, Integer>> customModelDataMapped = new HashSet<>();
 
     private final PackContext context;
     private final ProblemReporter reporter;
@@ -68,16 +71,12 @@ public class BedrockPack {
         return name;
     }
 
-    public MappingResult map(ItemStack stack) {
-        if (stack.isEmpty()) {
-            return MappingResult.NONE_MAPPED;
-        }
-
+    public MappingResult map(ItemStackTemplate stack) {
         AtomicBoolean problems = new AtomicBoolean();
         ProblemReporter mapReporter = new ProblemReporter() {
 
             @Override
-            public @NotNull ProblemReporter forChild(PathElement child) {
+            public ProblemReporter forChild(PathElement child) {
                 return reporter.forChild(child);
             }
 
@@ -88,62 +87,67 @@ public class BedrockPack {
             }
         };
 
-        Optional<? extends ResourceLocation> patchedModel = stack.getComponentsPatch().get(DataComponents.ITEM_MODEL);
-        //noinspection OptionalAssignedToNull - annoying Mojang
-        if (patchedModel == null || patchedModel.isEmpty()) {
-            CustomModelData customModelData = stack.get(DataComponents.CUSTOM_MODEL_DATA);
-            Float firstNumber;
-            if (customModelData == null || (firstNumber = customModelData.getFloat(0)) == null
-                    || !customModelDataMapped.add(Pair.of(stack.getItem(), firstNumber.intValue()))) {
+        Identifier customModel = ALLOW_MAPPING_VANILLA_ITEMS ? stack.get(DataComponents.ITEM_MODEL) : stack.components().split().added().get(DataComponents.ITEM_MODEL);
+        if (customModel == null) {
+            // If no custom item_model patch exists, try custom model data
+            CustomModelData customModelData = stack.components().split().added().get(DataComponents.CUSTOM_MODEL_DATA);
+            if (customModelData == null) {
                 return MappingResult.NONE_MAPPED;
+            } else if (isLegacyCustomModelData(customModelData)) {
+                // Legacy custom model data - only one float, nothing else
+                int customModelInt = Objects.requireNonNull(customModelData.getFloat(0)).intValue();
+                if (!customModelDataMapped.add(Pair.of(stack.item(), customModelInt))) {
+                    return MappingResult.NONE_MAPPED;
+                }
+                BedrockItemMapper.tryMapStack(stack, customModelInt, mapReporter, context);
+            } else {
+                // Try to map the vanilla model, but ignore the first direct plain model if present - this is the vanilla case
+                Identifier vanillaModel = Objects.requireNonNull(stack.get(DataComponents.ITEM_MODEL));
+                if (!modelsMapped.add(vanillaModel)) {
+                    return MappingResult.NONE_MAPPED;
+                }
+                BedrockItemMapper.tryMapStack(stack, vanillaModel, mapReporter, context, true);
             }
-
-            BedrockItemMapper.tryMapStack(stack, firstNumber.intValue(), mapReporter, context);
         } else {
-            ResourceLocation model = patchedModel.get();
-            if (!modelsMapped.add(model)) {
+            if (!modelsMapped.add(customModel)) {
                 return MappingResult.NONE_MAPPED;
             }
-
-            BedrockItemMapper.tryMapStack(stack, model, mapReporter, context);
+            BedrockItemMapper.tryMapStack(stack, customModel, mapReporter, context, false);
         }
 
         return problems.get() ? MappingResult.PROBLEMS_OCCURRED : MappingResult.MAPPED_SUCCESSFULLY;
     }
 
     public MappingResult map(Holder<Item> item, DataComponentPatch patch) {
-        ItemStack stack = new ItemStack(item);
-        stack.applyComponents(patch);
-        return map(stack);
+        return map(new ItemStackTemplate(item, 1, patch));
     }
 
     public CompletableFuture<?> save() {
-        List<CompletableFuture<?>> futures = new ArrayList<>();
-
-        futures.add(serializer.saveJson(GeyserMappings.CODEC, context.mappings(), paths.mappings()));
-        manifest.ifPresent(manifest -> futures.add(serializer.saveJson(PackManifest.CODEC, manifest, paths.manifest())));
-        futures.add(serializer.saveJson(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), paths.itemAtlas()));
-
-        Function<TextureHolder, CompletableFuture<?>> textureSaver = texture -> {
-            ResourceLocation textureLocation = Rainbow.decorateTextureLocation(texture.location());
-            return texture.save(context.assetResolver(), serializer, paths.packRoot().resolve(textureLocation.getPath()), reporter);
-        };
-
-        for (BedrockItem item : bedrockItems) {
-            futures.add(item.save(serializer, paths.attachables(), paths.geometry(), paths.animation(), textureSaver));
-        }
-
+        CompletableFuture<?> baseSerialization = save(createSerializingContext());
         if (reporter instanceof AutoCloseable closeable) {
             try {
                 closeable.close();
             } catch (Exception ignored) {}
         }
 
-        CompletableFuture<?> packSerializingFinished = CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
         if (paths.zipOutput().isPresent()) {
-            return packSerializingFinished.thenAcceptAsync(object -> RainbowIO.safeIO(() -> CodecUtil.tryZipDirectory(paths.packRoot(), paths.zipOutput().get())));
+            return baseSerialization.thenAcceptAsync(_ -> RainbowIO.safeIO(() -> CodecUtil.tryZipDirectory(paths.packRoot(), paths.zipOutput().get())));
         }
-        return packSerializingFinished;
+        return baseSerialization;
+    }
+    
+    @Override
+    public CompletableFuture<?> save(PackSerializingContext serializingContext) {
+        return PackSerializer.Serializable.wrapCodec(GeyserMappings.CODEC, context.mappings(), PackPaths::mappings)
+                .with(PackSerializer.Serializable.wrapOptionalCodec(PackManifest.CODEC, manifest, PackPaths::manifest))
+                .with(PackSerializer.Serializable.wrapCodec(BedrockTextureAtlas.ITEM_ATLAS_CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), PackPaths::itemAtlas))
+                .with(bedrockItems)
+                .with(paths.languageOutput().map(languageFolder -> context -> LanguageUtil.saveLanguages(context, languageFolder)))
+                .save(serializingContext);
+    }
+
+    public AssetCacheStats cacheStats() {
+        return context.cacheStats();
     }
 
     public int getMappings() {
@@ -151,7 +155,7 @@ public class BedrockPack {
     }
 
     public Set<BedrockItem> getBedrockItems() {
-        return Set.copyOf(bedrockItems);
+        return Collections.unmodifiableSet(bedrockItems);
     }
 
     public int getItemTextureAtlasSize() {
@@ -162,6 +166,14 @@ public class BedrockPack {
         return reporter;
     }
 
+    private PackSerializingContext createSerializingContext() {
+        return new PackSerializingContext(context.assetResolver(), serializer, paths, reporter);
+    }
+
+    private static boolean isLegacyCustomModelData(CustomModelData customModelData) {
+        return customModelData.floats().size() == 1 && customModelData.colors().isEmpty() && customModelData.flags().isEmpty() && customModelData.strings().isEmpty();
+    }
+
     public static Builder builder(String name, Path mappingsPath, Path packRootPath, PackSerializer packSerializer, AssetResolver assetResolver) {
         return new Builder(name, mappingsPath, packRootPath, packSerializer, assetResolver);
     }
@@ -170,6 +182,7 @@ public class BedrockPack {
         private static final Path ATTACHABLES_DIRECTORY = Path.of("attachables");
         private static final Path GEOMETRY_DIRECTORY = Path.of("models/entity");
         private static final Path ANIMATION_DIRECTORY = Path.of("animations");
+        private static final Path RENDER_CONTROLLERS_DIRECTORY = Path.of("render_controllers");
 
         private static final Path MANIFEST_FILE = Path.of("manifest.json");
         private static final Path ITEM_ATLAS_FILE = Path.of("textures/item_texture.json");
@@ -179,14 +192,16 @@ public class BedrockPack {
         private final Path packRootPath;
         private final PackSerializer packSerializer;
         private final AssetResolver assetResolver;
-        private PackManifest manifest;
+        private @Nullable PackManifest manifest;
         private UnaryOperator<Path> attachablesPath = resolve(ATTACHABLES_DIRECTORY);
         private UnaryOperator<Path> geometryPath = resolve(GEOMETRY_DIRECTORY);
         private UnaryOperator<Path> animationPath = resolve(ANIMATION_DIRECTORY);
+        private UnaryOperator<Path> renderControllersPath = resolve(RENDER_CONTROLLERS_DIRECTORY);
         private UnaryOperator<Path> manifestPath = resolve(MANIFEST_FILE);
         private UnaryOperator<Path> itemAtlasPath = resolve(ITEM_ATLAS_FILE);
-        private Path packZipFile = null;
-        private GeometryRenderer geometryRenderer = null;
+        private @Nullable Path packZipFile = null;
+        private @Nullable Path languageFolder = null;
+        private @Nullable GeometryRenderer geometryRenderer = null;
         private Function<ProblemReporter.PathElement, ProblemReporter> reporter;
         private boolean reportSuccesses = false;
 
@@ -200,13 +215,13 @@ public class BedrockPack {
             manifest = defaultManifest(name);
         }
 
-        public Builder withManifest(PackManifest manifest) {
+        public Builder withManifest(@Nullable PackManifest manifest) {
             this.manifest = manifest;
             return this;
         }
 
         public Builder withAttachablesPath(Path absolute) {
-            return withAttachablesPath(path -> absolute);
+            return withAttachablesPath(_ -> absolute);
         }
 
         public Builder withAttachablesPath(UnaryOperator<Path> path) {
@@ -215,7 +230,7 @@ public class BedrockPack {
         }
 
         public Builder withGeometryPath(Path absolute) {
-            return withGeometryPath(path -> absolute);
+            return withGeometryPath(_ -> absolute);
         }
 
         public Builder withGeometryPath(UnaryOperator<Path> path) {
@@ -224,7 +239,7 @@ public class BedrockPack {
         }
 
         public Builder withAnimationPath(Path absolute) {
-            return withAnimationPath(path -> absolute);
+            return withAnimationPath(_ -> absolute);
         }
 
         public Builder withAnimationPath(UnaryOperator<Path> path) {
@@ -232,8 +247,17 @@ public class BedrockPack {
             return this;
         }
 
+        public Builder withRenderControllersPath(Path absolute) {
+            return withRenderControllersPath(_ -> absolute);
+        }
+
+        public Builder withRenderControllersPath(UnaryOperator<Path> path) {
+            renderControllersPath = path;
+            return this;
+        }
+
         public Builder withManifestPath(Path absolute) {
-            return withManifestPath(path -> absolute);
+            return withManifestPath(_ -> absolute);
         }
 
         public Builder withManifestPath(UnaryOperator<Path> path) {
@@ -242,7 +266,7 @@ public class BedrockPack {
         }
 
         public Builder withItemAtlasPath(Path absolute) {
-            return withItemAtlasPath(path -> absolute);
+            return withItemAtlasPath(_ -> absolute);
         }
 
         public Builder withItemAtlasPath(UnaryOperator<Path> path) {
@@ -252,6 +276,11 @@ public class BedrockPack {
 
         public Builder withPackZipFile(Path absolute) {
             packZipFile = absolute;
+            return this;
+        }
+
+        public Builder withLanguageFolder(Path absolute) {
+            languageFolder = absolute;
             return this;
         }
 
@@ -272,8 +301,9 @@ public class BedrockPack {
 
         public BedrockPack build() {
             PackPaths paths = new PackPaths(mappingsPath, packRootPath, attachablesPath.apply(packRootPath),
-                    geometryPath.apply(packRootPath), animationPath.apply(packRootPath), manifestPath.apply(packRootPath),
-                    itemAtlasPath.apply(packRootPath), Optional.ofNullable(packZipFile));
+                    geometryPath.apply(packRootPath), animationPath.apply(packRootPath), renderControllersPath.apply(packRootPath),
+                    manifestPath.apply(packRootPath), itemAtlasPath.apply(packRootPath),
+                    Optional.ofNullable(packZipFile), Optional.ofNullable(languageFolder));
             return new BedrockPack(name, Optional.ofNullable(manifest), paths, packSerializer, assetResolver, Optional.ofNullable(geometryRenderer),
                     reporter.apply(() -> "Bedrock pack " + name + " "), reportSuccesses);
         }

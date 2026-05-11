@@ -1,0 +1,3 @@
+[submodule "client/src/main/resources/assets/languages"]
+	path = client/src/main/resources/assets/rainbow_lang
+	url = https://github.com/GeyserMC/languages.git

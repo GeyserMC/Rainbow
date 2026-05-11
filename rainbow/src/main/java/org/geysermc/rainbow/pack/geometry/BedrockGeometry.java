@@ -5,7 +5,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Direction;
-import org.geysermc.rainbow.CodecUtil;
+import net.minecraft.util.ExtraCodecs;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.pack.BedrockVersion;
 import org.joml.Vector2fc;
@@ -33,7 +33,7 @@ public record BedrockGeometry(BedrockVersion formatVersion, List<GeometryDefinit
             ).apply(instance, BedrockGeometry::new)
     );
 
-    public static BedrockGeometry EMPTY = new BedrockGeometry(FORMAT_VERSION, List.of());
+    public static final BedrockGeometry EMPTY = new BedrockGeometry(FORMAT_VERSION, List.of());
 
     public CompletableFuture<?> save(PackSerializer serializer, Path geometryDirectory) {
         return serializer.saveJson(CODEC, this, geometryDirectory.resolve(definitions.getFirst().info.identifier + ".geo.json"));
@@ -128,7 +128,7 @@ public record BedrockGeometry(BedrockVersion formatVersion, List<GeometryDefinit
                         Codec.STRING.fieldOf("identifier").forGetter(GeometryInfo::identifier),
                         Codec.FLOAT.optionalFieldOf("visible_bounds_width").forGetter(GeometryInfo::visibleBoundsWidth),
                         Codec.FLOAT.optionalFieldOf("visible_bounds_height").forGetter(GeometryInfo::visibleBoundsHeight),
-                        CodecUtil.VECTOR3F_CODEC.optionalFieldOf("visible_bounds_offset").forGetter(GeometryInfo::visibleBoundsOffset),
+                        ExtraCodecs.VECTOR3F.optionalFieldOf("visible_bounds_offset").forGetter(GeometryInfo::visibleBoundsOffset),
                         Codec.INT.optionalFieldOf("texture_width").forGetter(GeometryInfo::textureWidth),
                         Codec.INT.optionalFieldOf("texture_height").forGetter(GeometryInfo::textureHeight)
                 ).apply(instance, GeometryInfo::new)
@@ -215,8 +215,8 @@ public record BedrockGeometry(BedrockVersion formatVersion, List<GeometryDefinit
         private static final Codec<Map<Direction, Face>> FACE_MAP_CODEC = Codec.unboundedMap(Direction.CODEC, Face.CODEC);
         public static final Codec<Cube> CODEC = RecordCodecBuilder.create(instance ->
                 instance.group(
-                        CodecUtil.VECTOR3F_CODEC.fieldOf("origin").forGetter(Cube::origin),
-                        CodecUtil.VECTOR3F_CODEC.fieldOf("size").forGetter(Cube::size),
+                        ExtraCodecs.VECTOR3F.fieldOf("origin").forGetter(Cube::origin),
+                        ExtraCodecs.VECTOR3F.fieldOf("size").forGetter(Cube::size),
                         defaultToZeroCodec("rotation").forGetter(Cube::rotation),
                         defaultToZeroCodec("pivot").forGetter(Cube::pivot),
                         Codec.FLOAT.optionalFieldOf("inflate", 0.0F).forGetter(Cube::inflate),
@@ -281,15 +281,15 @@ public record BedrockGeometry(BedrockVersion formatVersion, List<GeometryDefinit
     public record Face(Vector2fc uvOrigin, Vector2fc uvSize, Quadrant uvRotation) {
         public static final Codec<Face> CODEC = RecordCodecBuilder.create(instance ->
                 instance.group(
-                        CodecUtil.VECTOR2F_CODEC.fieldOf("uv").forGetter(Face::uvOrigin),
-                        CodecUtil.VECTOR2F_CODEC.fieldOf("uv_size").forGetter(Face::uvSize),
+                        ExtraCodecs.VECTOR2F.fieldOf("uv").forGetter(Face::uvOrigin),
+                        ExtraCodecs.VECTOR2F.fieldOf("uv_size").forGetter(Face::uvSize),
                         Quadrant.CODEC.optionalFieldOf("uv_rotation", Quadrant.R0).forGetter(Face::uvRotation)
                 ).apply(instance, Face::new)
         );
     }
 
     private static MapCodec<Vector3fc> defaultToZeroCodec(String name) {
-        return CodecUtil.VECTOR3F_CODEC.optionalFieldOf(name).xmap(optional -> optional.orElse(VECTOR3F_ZERO),
+        return ExtraCodecs.VECTOR3F.optionalFieldOf(name).xmap(optional -> optional.orElse(VECTOR3F_ZERO),
                 vector -> vector.length() == 0.0F ? Optional.empty() : Optional.of(vector));
     }
 }

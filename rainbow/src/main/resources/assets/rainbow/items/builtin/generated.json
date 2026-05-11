@@ -1,0 +1,7 @@
+{
+  "_comment": "Unused, but required to hold the model in ModelManager",
+  "model": {
+    "type": "minecraft:model",
+    "model": "rainbow:item/builtin/generated"
+  }
+}

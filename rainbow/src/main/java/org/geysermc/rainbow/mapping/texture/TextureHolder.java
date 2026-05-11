@@ -1,56 +1,74 @@
 package org.geysermc.rainbow.mapping.texture;
 
 import com.mojang.blaze3d.platform.NativeImage;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
+import org.geysermc.rainbow.RainbowIO;
+import org.geysermc.rainbow.image.NativeImageUtil;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.PackSerializer;
+import org.geysermc.rainbow.mapping.PackSerializingContext;
 
-import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
-public abstract class TextureHolder {
-    protected final ResourceLocation location;
+public abstract class TextureHolder implements PackSerializer.Serializable {
+    protected final Identifier destination;
 
-    public TextureHolder(ResourceLocation location) {
-        this.location = location;
+    public TextureHolder(Identifier destination) {
+        this.destination = destination;
     }
 
-    public abstract Optional<byte[]> load(AssetResolver assetResolver, ProblemReporter reporter);
+    public abstract Optional<TextureResource> load(AssetResolver assetResolver, ProblemReporter reporter);
 
-    public CompletableFuture<?> save(AssetResolver assetResolver, PackSerializer serializer, Path path, ProblemReporter reporter) {
-        return load(assetResolver, reporter)
-                .map(bytes -> serializer.saveTexture(bytes, path))
-                .orElse(CompletableFuture.completedFuture(null));
+    @Override
+    public CompletableFuture<?> save(PackSerializingContext context) {
+        return load(context.assetResolver(), context.reporter())
+                .flatMap(texture -> {
+                    try (texture) {
+                        try (NativeImage firstFrame = texture.getFirstFrame()) {
+                            return RainbowIO.safeIO(() -> context.serializer().saveTexture(NativeImageUtil.writeToByteArray(firstFrame), context.paths().texturePath(this)));
+                        }
+                    }
+                })
+                .orElseGet(() -> {
+                    if (shouldReportMissingWhenAbsent()) {
+                        reportMissing(context.reporter());
+                    }
+                    return PackSerializer.noop();
+                });
     }
 
-    public static TextureHolder createCustom(ResourceLocation location, Supplier<NativeImage> supplier) {
-        return new CustomTextureHolder(location, supplier);
+    protected boolean shouldReportMissingWhenAbsent() {
+        return true;
     }
 
-    public static TextureHolder createBuiltIn(ResourceLocation location, ResourceLocation atlas, ResourceLocation source) {
-        return new BuiltInTextureHolder(location, atlas, source);
+    public static TextureHolder createCustom(Identifier destination, Supplier<NativeImage> supplier) {
+        return new CustomTextureHolder(destination, supplier);
     }
 
-    public static TextureHolder createBuiltIn(ResourceLocation atlas, ResourceLocation location) {
-        return createBuiltIn(location, atlas, location);
+    public static TextureHolder createBuiltIn(Identifier destination, Identifier source) {
+        return new BuiltInTextureHolder(destination, source);
     }
 
-    public static TextureHolder createNonExistent(ResourceLocation location) {
-        return new MissingTextureHolder(location);
+    public static TextureHolder createBuiltIn(Identifier source) {
+        return createBuiltIn(source, source);
+    }
+
+    public static TextureHolder createNonExistent(Identifier destination) {
+        return new MissingTextureHolder(destination);
     }
 
     public static TextureHolder createCopy(TextureHolder original) {
-        return new CopyTextureHolder(original.location);
+        return new CopyTextureHolder(original.destination);
     }
 
-    public ResourceLocation location() {
-        return location;
+    public Identifier destination() {
+        return destination;
     }
 
     protected void reportMissing(ProblemReporter reporter) {
-        reporter.report(() -> "missing texture for " + location + "; please provide it manually");
+        reporter.report(() -> "missing texture for " + destination + "; please provide it manually");
     }
 }

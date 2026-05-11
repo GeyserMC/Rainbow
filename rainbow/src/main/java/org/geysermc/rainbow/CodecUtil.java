@@ -8,11 +8,6 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.util.ExtraCodecs;
-import org.joml.Vector2f;
-import org.joml.Vector2fc;
-import org.joml.Vector3f;
-import org.joml.Vector3fc;
 
 import java.io.IOException;
 import java.nio.file.FileSystem;
@@ -24,12 +19,10 @@ import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-public class CodecUtil {
-    // It's fine to cast to mutable here since codecs won't change the data
-    public static final Codec<Vector2fc> VECTOR2F_CODEC = ExtraCodecs.VECTOR2F.xmap(vector -> vector, vector -> (Vector2f) vector);
-    public static final Codec<Vector3fc> VECTOR3F_CODEC = ExtraCodecs.VECTOR3F.xmap(vector -> vector, vector -> (Vector3f) vector);
-
+public final class CodecUtil {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+
+    private CodecUtil() {}
 
     public static <O, T> RecordCodecBuilder<O, T> unitVerifyCodec(Codec<T> codec, String field, T value) {
         return codec.validate(read -> {
@@ -37,7 +30,7 @@ public class CodecUtil {
                 return DataResult.error(() -> field + " must equal " + value + ", was " + read);
             }
             return DataResult.success(read);
-        }).fieldOf(field).forGetter(object -> value);
+        }).fieldOf(field).forGetter(_ -> value);
     }
 
     public static <T> T readOrCompute(Codec<T> codec, Path path, Supplier<T> supplier) throws IOException {
