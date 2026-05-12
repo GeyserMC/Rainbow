@@ -43,42 +43,11 @@ public class PackGeneratorCommand {
                 )
                 .then(ClientCommands.literal("map")
                         .executes(runWithPack(packManager, (source, pack) -> {
-                            ItemStack heldItem = source.getPlayer().getMainHandItem();
-                            if (heldItem.isEmpty()) {
-                                source.sendError(Component.literal("Must hold an item to map"));
-                            } else {
-                                switch (packMapper.mapItems(pack, List.of(ItemStackTemplate.fromNonEmptyStack(heldItem))).toSingleResult()) {
-                                    case NONE_MAPPED -> source.sendError(Component.translatable("commands.rainbow.no_item_mapped"));
-                                    case PROBLEMS_OCCURRED -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item_problems"));
-                                    case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item"));
-                                }
-                            }
                             PackManagerUtils.mapItemInHand(packManager, source.getClient());
                         }))
                 )
                 .then(ClientCommands.literal("mapinventory")
                         .executes(runWithPack(packManager, (source, pack) -> {
-                            List<ItemStackTemplate> inventoryStacks = new ArrayList<>();
-                            source.getPlayer().getInventory().forEach(stack -> {
-                                if (!stack.isEmpty()) {
-                                    inventoryStacks.add(ItemStackTemplate.fromNonEmptyStack(stack));
-                                }
-                            });
-                            PackMapper.MappingResults results = packMapper.mapItems(pack, inventoryStacks);
-
-                            if (results.itemsMapped() > 0 || results.skullsMapped() > 0) {
-                                if (results.itemsMapped() > 0) {
-                                    source.sendFeedback(Component.translatable("commands.rainbow.mapped_items_from_inventory", results.itemsMapped()));
-                                    if (results.problems() > 0) {
-                                        source.sendFeedback(Component.translatable("commands.rainbow.mapped_items_problems"));
-                                    }
-                                }
-                                if (results.skullsMapped() > 0) {
-                                    source.sendFeedback(Component.translatable("commands.rainbow.mapped_skulls_from_inventory", results.skullsMapped()));
-                                }
-                            } else {
-                                source.sendError(Component.translatable("commands.rainbow.no_items_mapped"));
-                            }
                             PackManagerUtils.mapItemsInInventory(packManager, source.getClient());
                         }))
                 )
@@ -122,13 +91,6 @@ public class PackGeneratorCommand {
                 )
                 .then(ClientCommands.literal("finish")
                         .executes(context -> {
-                            context.getSource().sendFeedback(Component.translatable("commands.rainbow.pack_finishing"));
-                            Optional<Path> exportPath = packManager.getExportPath();
-                            Runnable onFinish = () -> context.getSource().sendFeedback(Component.translatable("commands.rainbow.pack_finished_successfully").withStyle(style
-                                    -> style.withUnderlined(true).withClickEvent(new ClickEvent.OpenFile(exportPath.orElseThrow()))));
-                            if (!packManager.finish(onFinish)) {
-                                context.getSource().sendError(NO_PACK_CREATED);
-                            }
                             PackManagerUtils.finishPack(packManager, context.getSource().getClient());
                             return 0;
                         })

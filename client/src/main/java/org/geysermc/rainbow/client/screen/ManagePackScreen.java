@@ -1,6 +1,5 @@
 package org.geysermc.rainbow.client.screen;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.layouts.FrameLayout;
@@ -9,7 +8,7 @@ import net.minecraft.network.chat.Component;
 import org.geysermc.rainbow.client.PackManager;
 import org.geysermc.rainbow.client.PackManagerUtils;
 import org.geysermc.rainbow.client.mapper.*;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public class ManagePackScreen extends BaseScreen {
     private static final Component MAP_ITEM_HAND = Component.translatable("menu.rainbow.manage_pack.map_item_hand");
@@ -30,9 +29,8 @@ public class ManagePackScreen extends BaseScreen {
         super(Component.translatable("menu.rainbow.manage_pack"), onClose);
         this.manager = manager;
         this.mapper = mapper;
-        this.minecraft = Minecraft.getInstance();
         manager.runOrElse(pack -> {
-            this.packName = pack.name();
+            this.packName = pack.resources().name();
         }, this::showCreatePackScreen);
         this.renderTitle = Component.literal(this.packName);
     }
@@ -56,16 +54,11 @@ public class ManagePackScreen extends BaseScreen {
             else this.showCreatePackScreen();
         }).width(204).build(), 2);
 
-        rowHelper.addChild(CycleButton.builder((provider) -> {
-                    CustomItemProvider itemProvider = ((CustomItemProvider) provider);
-                    return itemProvider.name();
-                })
-                .withInitialValue(mapper.getItemProvider())
+        rowHelper.addChild(CycleButton.builder(CustomItemProvider::name, mapper.getItemProvider())
                 .displayOnlyValue()
                 // TODO make this list dyanmic, another mod may add a method of mapping
                 .withValues(NoItemProvider.INSTANCE, InventoryMapper.INSTANCE).create(0, 0, 204, 20, Component.empty(), (button, value) -> {
-                    CustomItemProvider provider = (CustomItemProvider) value;
-                    mapper.setItemProvider(provider);
+                    mapper.setItemProvider(value);
                 }), 2);
 
         rowHelper.addChild(Button.builder(FINISH_PACK, (button) -> {

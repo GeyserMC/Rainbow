@@ -30,7 +30,6 @@ public class CreatePackScreen extends BaseScreen {
         super(Component.translatable("menu.rainbow.create_pack"), onClose);
         this.manager = manager;
         this.mapper = mapper;
-        this.minecraft = Minecraft.getInstance();
         if (manager.isInProgress()) this.minecraft.setScreen(new ManagePackScreen(manager, mapper));
     }
 
