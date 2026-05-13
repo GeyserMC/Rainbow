@@ -16,6 +16,7 @@ import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.client.resources.model.cuboid.CuboidModel;
 import net.minecraft.client.resources.model.cuboid.ItemModelGenerator;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentInitializers;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -31,7 +32,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.equipment.EquipmentAsset;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
-import org.geysermc.rainbow.datagen.mixin.DataComponentInitializersAccessor;
 import org.geysermc.rainbow.datagen.mixin.FabricLanguageProviderAccessor;
 import org.geysermc.rainbow.datagen.accessor.LanguageProviderDataAccessor;
 import org.geysermc.rainbow.datagen.accessor.ModelProviderDataAccessor;
@@ -108,7 +108,7 @@ public abstract class RainbowDataProvider implements DataProvider {
         CompletableFuture<BedrockPack> bedrockPack = ClientPackLoader.openClientResources()
                 .thenCompose(resourceManager -> registries.thenApply(registries -> {
                     // You're not really supposed to do this, but Rainbow *needs* the initialised components to function properly
-                    initializedItemComponents = ((DataComponentInitializersAccessor) BuiltInRegistries.DATA_COMPONENT_INITIALIZERS).invokeRunInitializers(registries);
+                    BuiltInRegistries.DATA_COMPONENT_INITIALIZERS.build(registries).forEach(DataComponentInitializers.PendingComponents::apply);
 
                     try (resourceManager) {
                         BedrockPack pack = createBedrockPack(new Serializer(output, registries), new DatagenResolver(resourceManager, providers)).build();
@@ -134,11 +134,8 @@ public abstract class RainbowDataProvider implements DataProvider {
     protected abstract Item getVanillaItem(Item modded);
 
     protected DataComponentPatch getVanillaDataComponentPatch(Item modded) {
-        if (initializedItemComponents == null) {
-            throw new IllegalStateException("initializedItemComponents may not be null");
-        }
         DataComponentPatch.Builder builder = DataComponentPatch.builder();
-        initializedItemComponents.get(modded.builtInRegistryHolder().key()).build().forEach(builder::set);
+        modded.components().forEach(builder::set);
         return builder.build();
     }
 
