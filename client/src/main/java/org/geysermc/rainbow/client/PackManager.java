@@ -32,7 +32,7 @@ public final class PackManager {
             "you are now blinking manually", "you're eligible for a free hug token! <3", "don't mind me!", "hissss", "Gayser and Floodgayte, my favourite plugins.",
             "meow", "we'll be done here soon™", "got anything else to say?", "we're done now!", "this will be fixed by v6053", "expect it to be done within 180 business days!",
             "any colour you like", "someone tell Mojang about this", "you can't unbake baked models, so we'll store the unbaked models", "soon fully datagen ready",
-            "packconverter when", "codecs ftw");
+            "packconverter when", "codecs ftw", "we <3 barrels.", "Nothing beats a Jet2 Holiday!");
     private static final RandomSource RANDOM = RandomSource.create();
 
     private static final Path EXPORT_DIRECTORY = FabricLoader.getInstance().getGameDir().resolve(Rainbow.MOD_ID);
@@ -69,6 +69,10 @@ public final class PackManager {
 
     public void runOrElse(Consumer<RainbowPack> consumer, Runnable runnable) {
         currentPack.ifPresentOrElse(consumer, runnable);
+    }
+
+    public boolean isInProgress() {
+        return currentPack.isPresent();
     }
 
     public Optional<Path> getExportPath() {

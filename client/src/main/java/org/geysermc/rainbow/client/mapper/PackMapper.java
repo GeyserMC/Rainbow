@@ -8,6 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.ResolvableProfile;
 import org.geysermc.rainbow.client.PackManager;
+import org.geysermc.rainbow.client.screen.ManagePackScreen;
 import org.geysermc.rainbow.pack.BedrockPack;
 import org.jspecify.annotations.Nullable;
 
@@ -22,11 +23,20 @@ public class PackMapper {
         this.packManager = packManager;
     }
 
+    public CustomItemProvider getItemProvider() {
+        if (this.itemProvider == null) return NoItemProvider.INSTANCE;
+        return this.itemProvider;
+    }
+
     public void setItemProvider(@Nullable CustomItemProvider itemProvider) {
-        this.itemProvider = itemProvider;
+        if (itemProvider == NoItemProvider.INSTANCE) this.itemProvider = null;
+        else this.itemProvider = itemProvider;
     }
 
     public void tick(Minecraft minecraft) {
+        // Don't tick when this screen is open, the user might be toggling settings
+        if (minecraft.screen instanceof ManagePackScreen) return;
+
         if (itemProvider != null) {
             LocalPlayer player = Objects.requireNonNull(minecraft.player);
             ClientPacketListener connection = Objects.requireNonNull(minecraft.getConnection());
@@ -37,13 +47,13 @@ public class PackMapper {
                     player.sendSystemMessage(Component.translatable("chat.rainbow.mapped_items", results.itemsMapped));
                 }
                 if (results.skullsMapped > 0) {
-                    player.sendSystemMessage(Component.translatable("chat.rainbow.mapped_skulls", results.skullsMapped));
+                    player.sendSystemMessage(Component.translatable("feedback.rainbow.mapped_skulls", results.skullsMapped));
                 }
                 if (results.problems > 0) {
                     player.sendSystemMessage(Component.translatable("commands.rainbow.mapped_items_problems"));
                 }
                 if (itemProvider.isDone()) {
-                    player.sendSystemMessage(Component.translatable("chat.rainbow.automatic_mapping_finished"));
+                    player.sendSystemMessage(Component.translatable("feedback.rainbow.automatic_mapping_finished"));
                     itemProvider = null;
                 }
             }, () -> itemProvider = null);

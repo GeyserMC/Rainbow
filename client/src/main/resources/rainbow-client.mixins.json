@@ -1,20 +1,21 @@
 {
-  "required": true,
-  "minVersion": "0.8",
-  "package": "org.geysermc.rainbow.client.mixin",
-  "compatibilityLevel": "JAVA_25",
-  "client": [
-    "EntityRenderDispatcherAccessor",
-    "GuiItemRenderStateMixin",
-    "ModelManagerMixin",
-    "PictureInPictureRendererAccessor",
-    "PictureInPictureRendererMixin",
-    "SplashRendererAccessor",
-    "SpriteContentsAnimatedTextureAccessor",
-    "SpriteContentsClientAccessor"
-  ],
-  "injectors": {
-    "defaultRequire": 1
+    "required": true,
+    "minVersion": "0.8",
+    "package": "org.geysermc.rainbow.client.mixin",
+    "compatibilityLevel": "JAVA_25",
+    "client": [
+        "AbstractContainerScreenMixin",
+        "EntityRenderDispatcherAccessor",
+        "GuiItemRenderStateMixin",
+        "ModelManagerMixin",
+        "PictureInPictureRendererAccessor",
+        "PictureInPictureRendererMixin",
+        "SplashRendererAccessor",
+        "SpriteContentsAnimatedTextureAccessor",
+        "SpriteContentsClientAccessor"
+    ],
+    "injectors": {
+        "defaultRequire": 1
   },
   "mixins": [
     "ResolvableProfileAccessor"
