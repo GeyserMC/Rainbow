@@ -10,6 +10,6 @@ public record BedrockAnimationContext(String identifier, BedrockAnimation animat
 
     @Override
     public CompletableFuture<?> save(PackSerializingContext context) {
-        return context.serializer().saveJson(BedrockAnimation.CODEC, animation, context.paths().animationPath(identifier));
+        return context.serializer().saveJson(BedrockAnimation.CODEC, animation, context.paths().animation(identifier));
     }
 }

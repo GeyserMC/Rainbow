@@ -186,36 +186,22 @@ public class BedrockPack implements PackSerializer.Serializable {
     }
 
     public static class Builder {
-        private static final Path ATTACHABLES_DIRECTORY = Path.of("attachables");
-        private static final Path GEOMETRY_DIRECTORY = Path.of("models/entity");
-        private static final Path ANIMATION_DIRECTORY = Path.of("animations");
-        private static final Path RENDER_CONTROLLERS_DIRECTORY = Path.of("render_controllers");
-
-        private static final Path MANIFEST_FILE = Path.of("manifest.json");
-        private static final Path ITEM_ATLAS_FILE = Path.of("textures/item_texture.json");
-
         private final String name;
-        private final Path mappingsPath;
-        private final Path packRootPath;
+        private final Path mappingsRoot;
+        private final Path packRoot;
         private final PackSerializer packSerializer;
         private final AssetResolver assetResolver;
         private @Nullable PackManifest manifest;
-        private UnaryOperator<Path> attachablesPath = resolve(ATTACHABLES_DIRECTORY);
-        private UnaryOperator<Path> geometryPath = resolve(GEOMETRY_DIRECTORY);
-        private UnaryOperator<Path> animationPath = resolve(ANIMATION_DIRECTORY);
-        private UnaryOperator<Path> renderControllersPath = resolve(RENDER_CONTROLLERS_DIRECTORY);
-        private UnaryOperator<Path> manifestPath = resolve(MANIFEST_FILE);
-        private UnaryOperator<Path> itemAtlasPath = resolve(ITEM_ATLAS_FILE);
         private @Nullable Path packZipFile = null;
         private @Nullable Path languageFolder = null;
         private @Nullable GeometryRenderer geometryRenderer = null;
         private Function<ProblemReporter.PathElement, ProblemReporter> reporter;
         private boolean reportSuccesses = false;
 
-        public Builder(String name, Path mappingsPath, Path packRootPath, PackSerializer packSerializer, AssetResolver assetResolver) {
+        public Builder(String name, Path mappingsRoot, Path packRoot, PackSerializer packSerializer, AssetResolver assetResolver) {
             this.name = name;
-            this.mappingsPath = mappingsPath;
-            this.packRootPath = packRootPath;
+            this.mappingsRoot = mappingsRoot;
+            this.packRoot = packRoot;
             this.reporter = ProblemReporter.Collector::new;
             this.packSerializer = packSerializer;
             this.assetResolver = assetResolver;
@@ -224,60 +210,6 @@ public class BedrockPack implements PackSerializer.Serializable {
 
         public Builder withManifest(@Nullable PackManifest manifest) {
             this.manifest = manifest;
-            return this;
-        }
-
-        public Builder withAttachablesPath(Path absolute) {
-            return withAttachablesPath(_ -> absolute);
-        }
-
-        public Builder withAttachablesPath(UnaryOperator<Path> path) {
-            attachablesPath = path;
-            return this;
-        }
-
-        public Builder withGeometryPath(Path absolute) {
-            return withGeometryPath(_ -> absolute);
-        }
-
-        public Builder withGeometryPath(UnaryOperator<Path> path) {
-            geometryPath = path;
-            return this;
-        }
-
-        public Builder withAnimationPath(Path absolute) {
-            return withAnimationPath(_ -> absolute);
-        }
-
-        public Builder withAnimationPath(UnaryOperator<Path> path) {
-            animationPath = path;
-            return this;
-        }
-
-        public Builder withRenderControllersPath(Path absolute) {
-            return withRenderControllersPath(_ -> absolute);
-        }
-
-        public Builder withRenderControllersPath(UnaryOperator<Path> path) {
-            renderControllersPath = path;
-            return this;
-        }
-
-        public Builder withManifestPath(Path absolute) {
-            return withManifestPath(_ -> absolute);
-        }
-
-        public Builder withManifestPath(UnaryOperator<Path> path) {
-            manifestPath = path;
-            return this;
-        }
-
-        public Builder withItemAtlasPath(Path absolute) {
-            return withItemAtlasPath(_ -> absolute);
-        }
-
-        public Builder withItemAtlasPath(UnaryOperator<Path> path) {
-            itemAtlasPath = path;
             return this;
         }
 
@@ -307,10 +239,7 @@ public class BedrockPack implements PackSerializer.Serializable {
         }
 
         public BedrockPack build() {
-            PackPaths paths = new PackPaths(null, mappingsPath, packRootPath, attachablesPath.apply(packRootPath),
-                    geometryPath.apply(packRootPath), animationPath.apply(packRootPath), renderControllersPath.apply(packRootPath),
-                    manifestPath.apply(packRootPath), itemAtlasPath.apply(packRootPath),
-                    Optional.ofNullable(packZipFile), Optional.ofNullable(languageFolder));
+            PackPaths paths = new PackPaths(mappingsRoot, packRoot, Optional.ofNullable(packZipFile), Optional.ofNullable(languageFolder));
             return new BedrockPack(name, Optional.ofNullable(manifest), paths, packSerializer, assetResolver, Optional.ofNullable(geometryRenderer),
                     reporter.apply(() -> "Bedrock pack " + name + " "), reportSuccesses);
         }

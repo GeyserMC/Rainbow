@@ -35,7 +35,7 @@ public record BedrockAttachableContext(Optional<BedrockAttachable> attachable, O
 
     @Override
     public CompletableFuture<?> save(PackSerializingContext context) {
-        return PackSerializer.Serializable.wrapOptionalCodec(BedrockAttachable.CODEC, attachable, PackPaths::attachablePath)
+        return PackSerializer.Serializable.wrapOptionalCodec(BedrockAttachable.CODEC, attachable, PackPaths::attachable)
                 .with(equipmentTexture)
                 .save(context);
     }

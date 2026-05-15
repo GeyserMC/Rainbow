@@ -167,7 +167,7 @@ public abstract class RainbowDataProvider implements DataProvider {
 
     public record Paths(Path geyserMappingsPath, Path packPath, Path langPath) {
         // TODO reduce default duplication with PackManager in client
-        public static final Paths DEFAULT = new Paths(Path.of("geyser_mappings.json"), Path.of("pack"), Path.of("lang"));
+        public static final Paths DEFAULT = new Paths(Path.of("custom_mappings"), Path.of("pack"), Path.of("lang"));
 
         public Paths resolveFrom(Path root) {
             return new Paths(root.resolve(geyserMappingsPath), root.resolve(packPath), root.resolve(langPath));

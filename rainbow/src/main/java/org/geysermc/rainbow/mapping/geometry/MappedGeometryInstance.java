@@ -14,6 +14,6 @@ public record MappedGeometryInstance(BedrockGeometry geometry) implements Mapped
 
     @Override
     public CompletableFuture<?> save(PackSerializingContext context) {
-        return context.serializer().saveJson(BedrockGeometry.CODEC, geometry, context.paths().geometryPath(identifier()));
+        return context.serializer().saveJson(BedrockGeometry.CODEC, geometry, context.paths().geometry(identifier()));
     }
 }

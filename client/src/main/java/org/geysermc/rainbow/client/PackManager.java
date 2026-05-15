@@ -37,7 +37,7 @@ public final class PackManager {
 
     private static final Path EXPORT_DIRECTORY = FabricLoader.getInstance().getGameDir().resolve(Rainbow.MOD_ID);
     private static final Path PACK_DIRECTORY = Path.of("pack");
-    private static final Path MAPPINGS_FILE = Path.of("geyser_mappings.json");
+    private static final Path MAPPINGS_DIRECTORY = Path.of("custom_mappings");
     private static final Path PACK_ZIP_FILE = Path.of("pack.zip");
     private static final Path PACK_LANG_FOLDER = Path.of("lang");
     private static final Path SKULLS_FILE = Path.of("custom-skulls.yml");
@@ -53,7 +53,7 @@ public final class PackManager {
         packSerializer.prepare(Objects.requireNonNull(Minecraft.getInstance().level).registryAccess());
 
         Path packDirectory = createPackDirectory(name);
-        BedrockPack pack = BedrockPack.builder(name, packDirectory.resolve(MAPPINGS_FILE), packDirectory.resolve(PACK_DIRECTORY), packSerializer,
+        BedrockPack pack = BedrockPack.builder(name, packDirectory.resolve(MAPPINGS_DIRECTORY), packDirectory.resolve(PACK_DIRECTORY), packSerializer,
                         new ClientAssetResolver(Minecraft.getInstance()))
                 .withPackZipFile(packDirectory.resolve(PACK_ZIP_FILE))
                 .withLanguageFolder(packDirectory.resolve(PACK_LANG_FOLDER))
