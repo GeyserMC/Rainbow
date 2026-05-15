@@ -19,7 +19,7 @@ import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
 import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
-import org.geysermc.rainbow.definition.GeyserMappings;
+import org.geysermc.rainbow.definition.item.GeyserItemMappings;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
@@ -60,7 +60,7 @@ public class BedrockPack implements PackSerializer.Serializable {
         this.serializer = serializer;
 
         // Not reading existing item mappings/texture atlas for now since that doesn't work all that well yet
-        this.context = new PackContext(new GeyserMappings(), paths, item -> {
+        this.context = new PackContext(new GeyserItemMappings(), paths, item -> {
             itemTextures.withItemTexture(item);
             bedrockItems.add(item);
         }, assetResolver, geometryRenderer, reportSuccesses);
@@ -138,7 +138,7 @@ public class BedrockPack implements PackSerializer.Serializable {
     
     @Override
     public CompletableFuture<?> save(PackSerializingContext serializingContext) {
-        return PackSerializer.Serializable.wrapCodec(GeyserMappings.CODEC, context.mappings(), PackPaths::mappings)
+        return PackSerializer.Serializable.wrapCodec(GeyserItemMappings.CODEC, context.mappings(), PackPaths::mappings)
                 .with(PackSerializer.Serializable.wrapOptionalCodec(PackManifest.CODEC, manifest, PackPaths::manifest))
                 .with(PackSerializer.Serializable.wrapCodec(BedrockTextureAtlas.ITEM_ATLAS_CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), PackPaths::itemAtlas))
                 .with(bedrockItems)

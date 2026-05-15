@@ -1,4 +1,4 @@
-package org.geysermc.rainbow.definition;
+package org.geysermc.rainbow.definition.item;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -10,17 +10,17 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-public record GeyserGroupDefinition(Optional<Identifier> model, List<GeyserMapping> definitions) implements GeyserMapping {
+public record GeyserGroupItemDefinition(Optional<Identifier> model, List<GeyserItemMapping> definitions) implements GeyserItemMapping {
 
-    public static final MapCodec<GeyserGroupDefinition> CODEC = RecordCodecBuilder.mapCodec(instance ->
+    public static final MapCodec<GeyserGroupItemDefinition> CODEC = RecordCodecBuilder.mapCodec(instance ->
             instance.group(
-                    Identifier.CODEC.optionalFieldOf("model").forGetter(GeyserGroupDefinition::model),
-                    GeyserMapping.CODEC.listOf().fieldOf("definitions").forGetter(GeyserGroupDefinition::definitions)
-            ).apply(instance, GeyserGroupDefinition::new)
+                    Identifier.CODEC.optionalFieldOf("model").forGetter(GeyserGroupItemDefinition::model),
+                    GeyserItemMapping.CODEC.listOf().fieldOf("definitions").forGetter(GeyserGroupItemDefinition::definitions)
+            ).apply(instance, GeyserGroupItemDefinition::new)
     );
 
-    public GeyserGroupDefinition with(GeyserMapping mapping) {
-        return new GeyserGroupDefinition(model, Stream.concat(definitions.stream(), Stream.of(mapping))
+    public GeyserGroupItemDefinition with(GeyserItemMapping mapping) {
+        return new GeyserGroupItemDefinition(model, Stream.concat(definitions.stream(), Stream.of(mapping))
                 .sorted(Comparator.comparing(Function.identity()))
                 .toList());
     }
@@ -31,8 +31,8 @@ public record GeyserGroupDefinition(Optional<Identifier> model, List<GeyserMappi
 
     public boolean conflictsWith(Optional<Identifier> parentModel, GeyserItemDefinition other) {
         Optional<Identifier> thisModel = model.or(() -> parentModel);
-        for (GeyserMapping definition : definitions) {
-            if (definition instanceof GeyserGroupDefinition group && group.conflictsWith(thisModel, other)) {
+        for (GeyserItemMapping definition : definitions) {
+            if (definition instanceof GeyserGroupItemDefinition group && group.conflictsWith(thisModel, other)) {
                 return true;
             } else if (definition instanceof GeyserItemDefinition item && item.conflictsWith(thisModel, other)) {
                 return true;
@@ -43,8 +43,8 @@ public record GeyserGroupDefinition(Optional<Identifier> model, List<GeyserMappi
 
     public int size() {
         int totalSize = 0;
-        for (GeyserMapping definition : definitions) {
-            if (definition instanceof GeyserGroupDefinition group) {
+        for (GeyserItemMapping definition : definitions) {
+            if (definition instanceof GeyserGroupItemDefinition group) {
                 totalSize += group.size();
             } else {
                 totalSize++;
@@ -59,8 +59,8 @@ public record GeyserGroupDefinition(Optional<Identifier> model, List<GeyserMappi
     }
 
     @Override
-    public int compareTo(GeyserMapping other) {
-        if (other instanceof GeyserGroupDefinition(Optional<Identifier> otherModel, List<GeyserMapping> otherDefinitions)) {
+    public int compareTo(GeyserItemMapping other) {
+        if (other instanceof GeyserGroupItemDefinition(Optional<Identifier> otherModel, List<GeyserItemMapping> otherDefinitions)) {
             if (model.isPresent() && otherModel.isPresent()) {
                 return model.get().compareTo(otherModel.get());
             } else if (model.isPresent()) {

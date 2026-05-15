@@ -1,4 +1,4 @@
-package org.geysermc.rainbow.definition;
+package org.geysermc.rainbow.definition.item;
 
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
@@ -17,36 +17,36 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
-public class GeyserMappings {
-    private static final Codec<Map<Holder<Item>, Collection<GeyserMapping>>> MAPPINGS_CODEC = Codec.unboundedMap(Item.CODEC, GeyserMapping.MODEL_SAFE_CODEC.listOf().xmap(Function.identity(), ArrayList::new));
+public class GeyserItemMappings {
+    private static final Codec<Map<Holder<Item>, Collection<GeyserItemMapping>>> MAPPINGS_CODEC = Codec.unboundedMap(Item.CODEC, GeyserItemMapping.MODEL_SAFE_CODEC.listOf().xmap(Function.identity(), ArrayList::new));
 
-    public static final Codec<GeyserMappings> CODEC = RecordCodecBuilder.create(instance ->
+    public static final Codec<GeyserItemMappings> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
                     CodecUtil.unitVerifyCodec(Codec.INT, "format_version", 2),
-                    MAPPINGS_CODEC.fieldOf("items").forGetter(GeyserMappings::mappings)
-            ).apply(instance, (format, mappings) -> new GeyserMappings(mappings))
+                    MAPPINGS_CODEC.fieldOf("items").forGetter(GeyserItemMappings::mappings)
+            ).apply(instance, (_, mappings) -> new GeyserItemMappings(mappings))
     );
 
-    private final Multimap<Holder<Item>, GeyserMapping> mappings = MultimapBuilder
+    private final Multimap<Holder<Item>, GeyserItemMapping> mappings = MultimapBuilder
             .hashKeys()
-            .<GeyserMapping>treeSetValues(Comparator.comparing(mapping -> mapping))
+            .<GeyserItemMapping>treeSetValues(Comparator.comparing(mapping -> mapping))
             .build();
 
-    public GeyserMappings() {}
+    public GeyserItemMappings() {}
 
-    private GeyserMappings(Map<Holder<Item>, Collection<GeyserMapping>> mappings) {
+    private GeyserItemMappings(Map<Holder<Item>, Collection<GeyserItemMapping>> mappings) {
         for (Holder<Item> item : mappings.keySet()) {
             this.mappings.putAll(item, mappings.get(item));
         }
     }
 
     public void map(Holder<Item> item, GeyserItemDefinition mapping) {
-        Optional<Identifier> model = mapping instanceof GeyserSingleDefinition single ? Optional.of(single.model().orElseThrow()) : Optional.empty();
-        Optional<GeyserGroupDefinition> modelGroup = Optional.empty();
+        Optional<Identifier> model = mapping instanceof GeyserSingleItemDefinition single ? Optional.of(single.model().orElseThrow()) : Optional.empty();
+        Optional<GeyserGroupItemDefinition> modelGroup = Optional.empty();
 
-        Collection<GeyserMapping> existingMappings = new ArrayList<>(mappings.get(item));
-        for (GeyserMapping existing : existingMappings) {
-            if (existing instanceof GeyserGroupDefinition existingGroup && existingGroup.isFor(model)) {
+        Collection<GeyserItemMapping> existingMappings = new ArrayList<>(mappings.get(item));
+        for (GeyserItemMapping existing : existingMappings) {
+            if (existing instanceof GeyserGroupItemDefinition existingGroup && existingGroup.isFor(model)) {
                 if (existingGroup.conflictsWith(Optional.empty(), mapping)) {
                     throw new IllegalArgumentException("Mapping conflicts with existing group mapping");
                 }
@@ -55,9 +55,9 @@ public class GeyserMappings {
             } else if (existing instanceof GeyserItemDefinition itemDefinition) {
                 if (itemDefinition.conflictsWith(Optional.empty(), mapping)) {
                     throw new IllegalArgumentException("Mapping conflicts with existing item mapping");
-                } else if (model.isPresent() && itemDefinition instanceof GeyserSingleDefinition single && model.get().equals(single.model().orElseThrow())) {
+                } else if (model.isPresent() && itemDefinition instanceof GeyserSingleItemDefinition single && model.get().equals(single.model().orElseThrow())) {
                     mappings.remove(item, itemDefinition);
-                    modelGroup = Optional.of(new GeyserGroupDefinition(model, List.of(single.withoutModel())));
+                    modelGroup = Optional.of(new GeyserGroupItemDefinition(model, List.of(single.withoutModel())));
                 }
             }
         }
@@ -66,8 +66,8 @@ public class GeyserMappings {
             mappings.remove(item, modelGroup.get());
 
             // We're only putting mappings in groups when they're single definitions - legacy mappings always go ungrouped
-            assert mapping instanceof GeyserSingleDefinition;
-            mappings.put(item, modelGroup.get().with(((GeyserSingleDefinition) mapping).withoutModel()));
+            assert mapping instanceof GeyserSingleItemDefinition;
+            mappings.put(item, modelGroup.get().with(((GeyserSingleItemDefinition) mapping).withoutModel()));
         } else {
             mappings.put(item, mapping);
         }
@@ -75,8 +75,8 @@ public class GeyserMappings {
 
     public int size() {
         int totalSize = 0;
-        for (GeyserMapping mapping : mappings.values()) {
-            if (mapping instanceof GeyserGroupDefinition group) {
+        for (GeyserItemMapping mapping : mappings.values()) {
+            if (mapping instanceof GeyserGroupItemDefinition group) {
                 totalSize += group.size();
             } else {
                 totalSize++;
@@ -85,7 +85,7 @@ public class GeyserMappings {
         return totalSize;
     }
 
-    public Map<Holder<Item>, Collection<GeyserMapping>> mappings() {
+    public Map<Holder<Item>, Collection<GeyserItemMapping>> mappings() {
         return mappings.asMap();
     }
 }

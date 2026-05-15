@@ -1,4 +1,4 @@
-package org.geysermc.rainbow.definition;
+package org.geysermc.rainbow.definition.item;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -8,15 +8,15 @@ import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
 import org.geysermc.rainbow.Rainbow;
-import org.geysermc.rainbow.definition.predicate.GeyserPredicate;
+import org.geysermc.rainbow.definition.item.predicate.GeyserPredicate;
 
 import java.util.List;
 import java.util.Optional;
 
 // TODO other keys, etc.
 // TODO display name can be a literal text component
-public record GeyserBaseDefinition(Identifier bedrockIdentifier, Optional<String> displayName,
-                                   List<GeyserPredicate> predicates, BedrockOptions bedrockOptions, DataComponentPatch components) {
+public record GeyserBaseItemDefinition(Identifier bedrockIdentifier, Optional<String> displayName,
+                                       List<GeyserPredicate> predicates, BedrockOptions bedrockOptions, DataComponentPatch components) {
     private static final List<DataComponentType<?>> SUPPORTED_COMPONENTS = List.of(DataComponents.CONSUMABLE, DataComponents.EQUIPPABLE, DataComponents.FOOD,
             DataComponents.MAX_DAMAGE, DataComponents.MAX_STACK_SIZE, DataComponents.USE_COOLDOWN, DataComponents.ENCHANTABLE, DataComponents.ENCHANTMENT_GLINT_OVERRIDE,
             DataComponents.ATTACK_RANGE, DataComponents.KINETIC_WEAPON, DataComponents.PIERCING_WEAPON, DataComponents.SWING_ANIMATION, DataComponents.USE_EFFECTS);
@@ -38,17 +38,17 @@ public record GeyserBaseDefinition(Identifier bedrockIdentifier, Optional<String
                 return built.isEmpty() ? Optional.empty() : Optional.of(built);
             });
 
-    public static final MapCodec<GeyserBaseDefinition> MAP_CODEC = RecordCodecBuilder.mapCodec(instance ->
+    public static final MapCodec<GeyserBaseItemDefinition> MAP_CODEC = RecordCodecBuilder.mapCodec(instance ->
             instance.group(
-                    Identifier.CODEC.fieldOf("bedrock_identifier").forGetter(GeyserBaseDefinition::bedrockIdentifier),
-                    Codec.STRING.optionalFieldOf("display_name").forGetter(GeyserBaseDefinition::displayName),
-                    GeyserPredicate.LIST_CODEC.optionalFieldOf("predicate", List.of()).forGetter(GeyserBaseDefinition::predicates),
-                    BedrockOptions.CODEC.optionalFieldOf("bedrock_options", BedrockOptions.DEFAULT).forGetter(GeyserBaseDefinition::bedrockOptions),
-                    FILTERED_COMPONENT_MAP_CODEC.forGetter(GeyserBaseDefinition::components)
-            ).apply(instance, GeyserBaseDefinition::new)
+                    Identifier.CODEC.fieldOf("bedrock_identifier").forGetter(GeyserBaseItemDefinition::bedrockIdentifier),
+                    Codec.STRING.optionalFieldOf("display_name").forGetter(GeyserBaseItemDefinition::displayName),
+                    GeyserPredicate.LIST_CODEC.optionalFieldOf("predicate", List.of()).forGetter(GeyserBaseItemDefinition::predicates),
+                    BedrockOptions.CODEC.optionalFieldOf("bedrock_options", BedrockOptions.DEFAULT).forGetter(GeyserBaseItemDefinition::bedrockOptions),
+                    FILTERED_COMPONENT_MAP_CODEC.forGetter(GeyserBaseItemDefinition::components)
+            ).apply(instance, GeyserBaseItemDefinition::new)
     );
 
-    public boolean conflictsWith(GeyserBaseDefinition other) {
+    public boolean conflictsWith(GeyserBaseItemDefinition other) {
         if (predicates.size() == other.predicates.size()) {
             boolean predicatesAreEqual = true;
             for (GeyserPredicate predicate : predicates) {

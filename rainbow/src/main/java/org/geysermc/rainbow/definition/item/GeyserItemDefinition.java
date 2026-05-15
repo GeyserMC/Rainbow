@@ -1,17 +1,17 @@
-package org.geysermc.rainbow.definition;
+package org.geysermc.rainbow.definition.item;
 
 import net.minecraft.resources.Identifier;
 
 import java.util.Optional;
 
-public interface GeyserItemDefinition extends GeyserMapping {
+public interface GeyserItemDefinition extends GeyserItemMapping {
 
-    GeyserBaseDefinition base();
+    GeyserBaseItemDefinition base();
 
     boolean conflictsWith(Optional<Identifier> parentModel, GeyserItemDefinition other);
 
     @Override
-    default int compareTo(GeyserMapping other) {
+    default int compareTo(GeyserItemMapping other) {
         if (other instanceof GeyserItemDefinition itemDefinition) {
             return base().bedrockIdentifier().compareTo(itemDefinition.base().bedrockIdentifier());
         }

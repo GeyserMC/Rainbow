@@ -1,16 +1,16 @@
-package org.geysermc.rainbow.definition;
+package org.geysermc.rainbow.definition.item;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.util.StringRepresentable;
 
-public interface GeyserMapping extends Comparable<GeyserMapping> {
+public interface GeyserItemMapping extends Comparable<GeyserItemMapping> {
 
-    Codec<GeyserMapping> CODEC = Codec.lazyInitialized(() -> Type.CODEC.dispatch(GeyserMapping::type, Type::codec));
+    Codec<GeyserItemMapping> CODEC = Codec.lazyInitialized(() -> Type.CODEC.dispatch(GeyserItemMapping::type, Type::codec));
     // Not perfect since we're not checking single definitions in groups without a model... but good enough
-    Codec<GeyserMapping> MODEL_SAFE_CODEC = CODEC.validate(mapping -> {
-        if (mapping instanceof GeyserSingleDefinition single && single.model().isEmpty()) {
+    Codec<GeyserItemMapping> MODEL_SAFE_CODEC = CODEC.validate(mapping -> {
+        if (mapping instanceof GeyserSingleItemDefinition single && single.model().isEmpty()) {
             return DataResult.error(() -> "Top level single definition must have a model");
         }
         return DataResult.success(mapping);
@@ -19,21 +19,21 @@ public interface GeyserMapping extends Comparable<GeyserMapping> {
     Type type();
 
     enum Type implements StringRepresentable {
-        SINGLE("definition", GeyserSingleDefinition.CODEC),
-        LEGACY("legacy", GeyserLegacyDefinition.CODEC),
-        GROUP("group", GeyserGroupDefinition.CODEC);
+        SINGLE("definition", GeyserSingleItemDefinition.CODEC),
+        LEGACY("legacy", GeyserLegacyItemDefinition.CODEC),
+        GROUP("group", GeyserGroupItemDefinition.CODEC);
 
         public static final Codec<Type> CODEC = StringRepresentable.fromEnum(Type::values);
 
         private final String name;
-        private final MapCodec<? extends GeyserMapping> codec;
+        private final MapCodec<? extends GeyserItemMapping> codec;
 
-        Type(String name, MapCodec<? extends GeyserMapping> codec) {
+        Type(String name, MapCodec<? extends GeyserItemMapping> codec) {
             this.name = name;
             this.codec = codec;
         }
 
-        public MapCodec<? extends GeyserMapping> codec() {
+        public MapCodec<? extends GeyserItemMapping> codec() {
             return codec;
         }
 

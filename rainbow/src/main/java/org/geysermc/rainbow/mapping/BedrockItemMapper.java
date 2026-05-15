@@ -43,14 +43,14 @@ import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ArrayUtils;
 import org.geysermc.rainbow.mapping.attachable.BedrockAttachableContext;
 import org.geysermc.rainbow.mapping.geometry.BedrockGeometryContext;
-import org.geysermc.rainbow.definition.GeyserBaseDefinition;
-import org.geysermc.rainbow.definition.GeyserItemDefinition;
-import org.geysermc.rainbow.definition.GeyserLegacyDefinition;
-import org.geysermc.rainbow.definition.GeyserSingleDefinition;
-import org.geysermc.rainbow.definition.predicate.GeyserConditionPredicate;
-import org.geysermc.rainbow.definition.predicate.GeyserMatchPredicate;
-import org.geysermc.rainbow.definition.predicate.GeyserPredicate;
-import org.geysermc.rainbow.definition.predicate.GeyserRangeDispatchPredicate;
+import org.geysermc.rainbow.definition.item.GeyserBaseItemDefinition;
+import org.geysermc.rainbow.definition.item.GeyserItemDefinition;
+import org.geysermc.rainbow.definition.item.GeyserLegacyItemDefinition;
+import org.geysermc.rainbow.definition.item.GeyserSingleItemDefinition;
+import org.geysermc.rainbow.definition.item.predicate.GeyserConditionPredicate;
+import org.geysermc.rainbow.definition.item.predicate.GeyserMatchPredicate;
+import org.geysermc.rainbow.definition.item.predicate.GeyserPredicate;
+import org.geysermc.rainbow.definition.item.predicate.GeyserRangeDispatchPredicate;
 import org.geysermc.rainbow.mapping.texture.ModelTextures;
 import org.geysermc.rainbow.mixin.LateBoundIdMapperAccessor;
 import org.geysermc.rainbow.mixin.RangeSelectItemModelAccessor;
@@ -75,7 +75,7 @@ public class BedrockItemMapper {
     public static void tryMapStack(ItemStackTemplate stack, Identifier modelIdentifier, ProblemReporter reporter, PackContext context, boolean ignoreTopPlainModel) {
         context.assetResolver().getClientItem(modelIdentifier).map(ClientItem::model)
                 .ifPresentOrElse(model -> mapItem(model, stack, reporter.forChild(() -> "client item definition " + modelIdentifier + " "),
-                                base -> new GeyserSingleDefinition(base, Optional.of(modelIdentifier)), context, ignoreTopPlainModel),
+                                base -> new GeyserSingleItemDefinition(base, Optional.of(modelIdentifier)), context, ignoreTopPlainModel),
                         () -> reporter.report(() -> "missing client item definition " + modelIdentifier));
     }
 
@@ -99,7 +99,7 @@ public class BedrockItemMapper {
                     int modelIndex = RangeSelectItemModelAccessor.invokeLastIndexLessOrEqual(thresholds, scaledCustomModelData);
                     Optional<ItemModel.Unbaked> model = modelIndex == -1 ? fallback : Optional.of(sortedEntries.get(modelIndex).model());
                     model.ifPresentOrElse(present -> mapItem(present, stack, childReporter,
-                                    base -> new GeyserLegacyDefinition(base, customModelData), context, false),
+                                    base -> new GeyserLegacyItemDefinition(base, customModelData), context, false),
                             () -> childReporter.report(() -> "custom model data index lookup returned -1, and no fallback is present"));
                 } else {
                     childReporter.report(() -> "range_dispatch custom model data property index is not zero, unable to apply custom model data");
@@ -111,7 +111,7 @@ public class BedrockItemMapper {
     }
 
     public static void mapItem(ItemModel.Unbaked model, ItemStackTemplate stack, ProblemReporter reporter,
-                               Function<GeyserBaseDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext,
+                               Function<GeyserBaseItemDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext,
                                boolean ignoreTopPlainModel) {
         mapItem(model, new MappingContext(stack, reporter, definitionCreator, packContext, ignoreTopPlainModel));
     }
@@ -220,10 +220,10 @@ public class BedrockItemMapper {
 
     private record MappingContext(List<GeyserPredicate> predicateStack, Optional<Transformation> transformationStack,
                                   ItemStackTemplate itemStack, ProblemReporter reporter,
-                                  Function<GeyserBaseDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext,
+                                  Function<GeyserBaseItemDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext,
                                   boolean ignorePlainModel) {
 
-        public MappingContext(ItemStackTemplate stack, ProblemReporter reporter, Function<GeyserBaseDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext,
+        public MappingContext(ItemStackTemplate stack, ProblemReporter reporter, Function<GeyserBaseItemDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext,
                               boolean ignorePlainModel) {
             this(List.of(), Optional.empty(), stack, reporter, definitionCreator, packContext, ignorePlainModel);
         }
@@ -276,10 +276,10 @@ public class BedrockItemMapper {
         private void create(Identifier bedrockIdentifier, ModelTextures textures, BedrockGeometryContext geometry, BedrockAttachableContext attachable) {
             List<Identifier> tags = itemStack.is(ItemTags.TRIMMABLE_ARMOR) ? TRIMMABLE_ARMOR_TAGS : List.of();
 
-            GeyserBaseDefinition base = new GeyserBaseDefinition(bedrockIdentifier,
+            GeyserBaseItemDefinition base = new GeyserBaseItemDefinition(bedrockIdentifier,
                     Optional.ofNullable(itemStack.components().split().added().get(DataComponents.ITEM_NAME)).map(Component::tryCollapseToString),
                     predicateStack,
-                    new GeyserBaseDefinition.BedrockOptions(Optional.empty(), true, geometry.handheld(), calculateProtectionValue(itemStack), tags),
+                    new GeyserBaseItemDefinition.BedrockOptions(Optional.empty(), true, geometry.handheld(), calculateProtectionValue(itemStack), tags),
                     itemStack.components());
             try {
                 packContext.mappings().map(itemStack.item(), definitionCreator.apply(base));
