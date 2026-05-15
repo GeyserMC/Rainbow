@@ -12,6 +12,8 @@ import net.minecraft.world.item.component.CustomModelData;
 import org.geysermc.rainbow.CodecUtil;
 import org.geysermc.rainbow.PackConstants;
 import org.geysermc.rainbow.RainbowIO;
+import org.geysermc.rainbow.definition.GeyserMappings;
+import org.geysermc.rainbow.definition.block.GeyserBlockMappings;
 import org.geysermc.rainbow.mapping.AssetCacheStats;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.BedrockItemMapper;
@@ -60,7 +62,7 @@ public class BedrockPack implements PackSerializer.Serializable {
         this.serializer = serializer;
 
         // Not reading existing item mappings/texture atlas for now since that doesn't work all that well yet
-        this.context = new PackContext(new GeyserItemMappings(), paths, item -> {
+        this.context = new PackContext(new GeyserMappings(), paths, item -> {
             itemTextures.withItemTexture(item);
             bedrockItems.add(item);
         }, assetResolver, geometryRenderer, reportSuccesses);
@@ -138,9 +140,10 @@ public class BedrockPack implements PackSerializer.Serializable {
     
     @Override
     public CompletableFuture<?> save(PackSerializingContext serializingContext) {
-        return PackSerializer.Serializable.wrapCodec(GeyserItemMappings.CODEC, context.mappings(), PackPaths::mappings)
-                .with(PackSerializer.Serializable.wrapOptionalCodec(PackManifest.CODEC, manifest, PackPaths::manifest))
-                .with(PackSerializer.Serializable.wrapCodec(BedrockTextureAtlas.ITEM_ATLAS_CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), PackPaths::itemAtlas))
+        return PackSerializer.Serializable.wrapCodec(GeyserBlockMappings.CODEC, context.mappings().blocks(), PackPaths::blockMappings)
+                .with(GeyserItemMappings.CODEC, context.mappings().items(), PackPaths::itemMappings)
+                .with(PackManifest.CODEC, manifest, PackPaths::manifest)
+                .with(BedrockTextureAtlas.ITEM_ATLAS_CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), PackPaths::itemAtlas)
                 .with(bedrockItems)
                 .with(paths.languageOutput().map(languageFolder -> context -> LanguageUtil.saveLanguages(context, languageFolder)))
                 .save(serializingContext);
@@ -150,8 +153,12 @@ public class BedrockPack implements PackSerializer.Serializable {
         return context.cacheStats();
     }
 
-    public int getMappings() {
-        return context.mappings().size();
+    public int blockMappingsSize() {
+        return context.mappings().blocks().size();
+    }
+
+    public int itemMappingsSize() {
+        return context.mappings().items().size();
     }
 
     public Set<BedrockItem> getBedrockItems() {
@@ -300,7 +307,7 @@ public class BedrockPack implements PackSerializer.Serializable {
         }
 
         public BedrockPack build() {
-            PackPaths paths = new PackPaths(mappingsPath, packRootPath, attachablesPath.apply(packRootPath),
+            PackPaths paths = new PackPaths(null, mappingsPath, packRootPath, attachablesPath.apply(packRootPath),
                     geometryPath.apply(packRootPath), animationPath.apply(packRootPath), renderControllersPath.apply(packRootPath),
                     manifestPath.apply(packRootPath), itemAtlasPath.apply(packRootPath),
                     Optional.ofNullable(packZipFile), Optional.ofNullable(languageFolder));

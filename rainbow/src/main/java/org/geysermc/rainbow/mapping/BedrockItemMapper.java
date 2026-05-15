@@ -282,7 +282,7 @@ public class BedrockItemMapper {
                     new GeyserBaseItemDefinition.BedrockOptions(Optional.empty(), true, geometry.handheld(), calculateProtectionValue(itemStack), tags),
                     itemStack.components());
             try {
-                packContext.mappings().map(itemStack.item(), definitionCreator.apply(base));
+                packContext.mappings().items().map(itemStack.item(), definitionCreator.apply(base));
             } catch (Exception exception) {
                 reporter.forChild(() -> "mapping with bedrock identifier " + bedrockIdentifier + " ").report(() -> "failed to pass mapping: " + exception.getMessage());
                 return;

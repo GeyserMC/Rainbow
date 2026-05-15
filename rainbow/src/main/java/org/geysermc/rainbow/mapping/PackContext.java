@@ -1,7 +1,7 @@
 package org.geysermc.rainbow.mapping;
 
+import org.geysermc.rainbow.definition.GeyserMappings;
 import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
-import org.geysermc.rainbow.definition.item.GeyserItemMappings;
 import org.geysermc.rainbow.mapping.geometry.MappedGeometryCache;
 import org.geysermc.rainbow.mapping.texture.ModelTextureCache;
 import org.geysermc.rainbow.pack.PackPaths;
@@ -10,7 +10,7 @@ import java.util.Optional;
 
 // TODO maybe split the responsibilities of this class
 public final class PackContext {
-    private final GeyserItemMappings mappings;
+    private final GeyserMappings mappings;
     private final PackPaths paths;
     private final BedrockItemConsumer itemConsumer;
     private final AssetResolver assetResolver;
@@ -19,7 +19,7 @@ public final class PackContext {
     private final ModelTextureCache textureCache = new ModelTextureCache();
     private final MappedGeometryCache geometryCache = new MappedGeometryCache();
 
-    public PackContext(GeyserItemMappings mappings, PackPaths paths, BedrockItemConsumer itemConsumer, AssetResolver assetResolver,
+    public PackContext(GeyserMappings mappings, PackPaths paths, BedrockItemConsumer itemConsumer, AssetResolver assetResolver,
                        Optional<GeometryRenderer> geometryRenderer, boolean reportSuccesses) {
         this.mappings = mappings;
         this.paths = paths;
@@ -29,7 +29,7 @@ public final class PackContext {
         this.reportSuccesses = reportSuccesses;
     }
 
-    public GeyserItemMappings mappings() {
+    public GeyserMappings mappings() {
         return mappings;
     }
 

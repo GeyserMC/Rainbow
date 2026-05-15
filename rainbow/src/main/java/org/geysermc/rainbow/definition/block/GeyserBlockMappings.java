@@ -27,6 +27,8 @@ public class GeyserBlockMappings {
 
     private final Map<Holder<Block>, GeyserBlockMapping> mappings = new Object2ObjectOpenHashMap<>();
 
+    public GeyserBlockMappings() {}
+
     private GeyserBlockMappings(Map<Holder<Block>, GeyserBlockMapping> mappings) {
         this.mappings.putAll(mappings);
     }

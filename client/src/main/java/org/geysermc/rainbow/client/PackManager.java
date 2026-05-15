@@ -155,7 +155,7 @@ Texture cache: %d written, %d cache hits
 
 -- MAPPING TREE REPORT --
 %s
-""".formatted(randomSummaryComment(), RainbowClient.getVersion(), pack.resources.name(), pack.resources.getMappings(), pack.resources.getItemTextureAtlasSize(),
+""".formatted(randomSummaryComment(), RainbowClient.getVersion(), pack.resources.name(), pack.resources.itemMappingsSize(), pack.resources.getItemTextureAtlasSize(),
                 geometries, animations, packSerializer.jsonExported(), packSerializer.texturesExported(),
                 pack.skulls.usernames(), pack.skulls.uuids(), pack.skulls.textures(),
                 cacheStats.geometry().size(), cacheStats.geometry().hits(),

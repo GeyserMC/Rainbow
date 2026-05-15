@@ -232,8 +232,7 @@ public interface ModelTextures extends PackAssetCache.Cacheable<ModelTextures>, 
                     serializableStack = serializableStack.with(TextureHolder.createCustom(getFrameIdentifier(frame), () -> openedTexture.getFrame(i)));
                 }
 
-                serializableStack = serializableStack.with(PackSerializer.Serializable.wrapCodec(BedrockRenderControllers.CODEC, createRenderController(openedTexture),
-                        paths -> paths.renderControllersPath(getRenderControllerIdentifier())));
+                serializableStack = serializableStack.with(BedrockRenderControllers.CODEC, createRenderController(openedTexture), paths -> paths.renderControllersPath(getRenderControllerIdentifier()));
                 return serializableStack.save(context);
             }
         }

@@ -25,7 +25,6 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 
-// TODO validation: if block has only one state, then base must be present
 // Doesn't include all properties, some (mainly related to creative inventory) we don't use
 public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, boolean includeInCreativeInventory,
                                  boolean onlyOverrideStates, Map<String, BlockDefinition> stateOverrides) {

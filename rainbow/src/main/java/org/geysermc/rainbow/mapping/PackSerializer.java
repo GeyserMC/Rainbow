@@ -26,8 +26,24 @@ public interface PackSerializer {
             return context -> CompletableFuture.allOf(save(context), other.save(context));
         }
 
+        default <T> Serializable with(Codec<T> codec, T object, Function<PackPaths, Path> pathGetter) {
+            return with(wrapCodec(codec, object, pathGetter));
+        }
+
+        default <T> Serializable with(Codec<T> codec, T object, BiFunction<PackPaths, T, Path> pathResolver) {
+            return with(wrapCodec(codec, object, pathResolver));
+        }
+
         default Serializable with(Optional<? extends Serializable> other) {
             return other.map(this::with).orElse(this);
+        }
+
+        default <T> Serializable with(Codec<T> codec, Optional<T> optional, Function<PackPaths, Path> pathGetter) {
+            return with(wrapOptionalCodec(codec, optional, pathGetter));
+        }
+
+        default <T> Serializable with(Codec<T> codec, Optional<T> optional, BiFunction<PackPaths, T, Path> pathResolver) {
+            return with(wrapOptionalCodec(codec, optional, pathResolver));
         }
 
         default Serializable with(Collection<? extends Serializable> others) {

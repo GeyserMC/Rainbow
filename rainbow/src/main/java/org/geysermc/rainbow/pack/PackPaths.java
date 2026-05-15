@@ -8,7 +8,7 @@ import org.geysermc.rainbow.pack.attachable.BedrockAttachable;
 import java.nio.file.Path;
 import java.util.Optional;
 
-public record PackPaths(Path mappings, Path packRoot, Path attachables, Path geometries, Path animations,
+public record PackPaths(Path blockMappings, Path itemMappings, Path packRoot, Path attachables, Path geometries, Path animations,
                         Path renderControllers, Path manifest, Path itemAtlas, Optional<Path> zipOutput, Optional<Path> languageOutput) {
 
     public Path animationPath(String identifier) {
