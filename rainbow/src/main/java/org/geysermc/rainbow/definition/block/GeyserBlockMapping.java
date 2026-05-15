@@ -6,6 +6,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ExtraCodecs;
@@ -14,15 +15,18 @@ import org.geysermc.rainbow.CodecUtil;
 import org.geysermc.rainbow.Vectors;
 import org.geysermc.rainbow.codec.OptionalMapCodec;
 import org.joml.Vector3fc;
+import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 
 // TODO validation: if block has only one state, then base must be present
 // Doesn't include all properties, some (mainly related to creative inventory) we don't use
-// TODO full block geometry
 public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, boolean includeInCreativeInventory,
                                  boolean onlyOverrideStates, Map<String, BlockDefinition> stateOverrides) {
     public static final Codec<GeyserBlockMapping> CODEC = RecordCodecBuilder.create(instance ->
@@ -34,6 +38,74 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
                     Codec.unboundedMap(Codec.STRING, BlockDefinition.CODEC).fieldOf("state_overrides").forGetter(GeyserBlockMapping::stateOverrides)
             ).apply(instance, GeyserBlockMapping::new)
     );
+
+    public static Builder builder(String name) {
+        return new Builder(name);
+    }
+
+    public static BlockDefinition.Builder definition() {
+        return new BlockDefinition.Builder();
+    }
+
+    public static Geometry.Builder geometry(String identifier) {
+        return new Geometry.Builder(identifier);
+    }
+
+    public static MaterialInstances.Builder materials() {
+        return new MaterialInstances.Builder();
+    }
+
+    public static PlacementFilter.Builder placementFilter() {
+        return new PlacementFilter.Builder();
+    }
+
+    public static PlacementFilter.Condition.Builder placementCondition() {
+        return new PlacementFilter.Condition.Builder();
+    }
+
+    public static class Builder {
+        private final String name;
+        private @Nullable BlockDefinition base;
+        private boolean includeInCreativeInventory = false;
+        private boolean onlyOverrideStates = false;
+        private final Map<String, BlockDefinition> stateOverrides = new Object2ObjectOpenHashMap<>();
+
+        public Builder(String name) {
+            this.name = name;
+        }
+
+        public Builder withBase(BlockDefinition.Builder base) {
+            return withBase(base.build());
+        }
+
+        public Builder withBase(BlockDefinition base) {
+            this.base = base;
+            return this;
+        }
+
+        public Builder includeInCreativeInventory() {
+            this.includeInCreativeInventory = true;
+            return this;
+        }
+
+        public Builder onlyOverrideStates() {
+            this.onlyOverrideStates = true;
+            return this;
+        }
+
+        public Builder withStateOverride(String blockState, BlockDefinition.Builder override) {
+            return withStateOverride(blockState, override.build());
+        }
+
+        public Builder withStateOverride(String blockState, BlockDefinition override) {
+            stateOverrides.put(blockState, override);
+            return this;
+        }
+
+        public GeyserBlockMapping build() {
+            return new GeyserBlockMapping(name, Optional.ofNullable(base), includeInCreativeInventory, onlyOverrideStates, Map.copyOf(stateOverrides));
+        }
+    }
 
     // Note that destructible by mining is documented as int but read as float
     public record BlockDefinition(Optional<Box> selectionBox, List<Box> collisionBoxes, Optional<Float> destructibleByMining,
@@ -56,6 +128,111 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
                 ).apply(instance, BlockDefinition::new)
         );
         public static final Codec<BlockDefinition> CODEC = MAP_CODEC.codec();
+
+        public static class Builder {
+            private @Nullable Box selectionBox = null;
+            private final List<Box> collisionBoxes = new ArrayList<>();
+            private float destructibleByMining = Float.MAX_VALUE;
+            private @Nullable GeometryWithMaterials geometry = null;
+            private Optional<Float> friction = Optional.empty();
+            private OptionalInt lightEmission = OptionalInt.empty();
+            private OptionalInt lightDampening = OptionalInt.empty();
+            private boolean placeAir = true;
+            private Transformation transformation = Transformation.EMPTY;
+            private PlacementFilter placementFilter = PlacementFilter.EMPTY;
+            private final List<Identifier> tags = new ArrayList<>();
+
+            public Builder withSelectionBox(Box selectionBox) {
+                this.selectionBox = selectionBox;
+                return this;
+            }
+
+            public Builder withCollisionBox(Box collisionBox) {
+                collisionBoxes.add(collisionBox);
+                return this;
+            }
+
+            public Builder withHardness(float hardness) {
+                destructibleByMining = hardness;
+                return this;
+            }
+
+            public Builder withFullBlockGeometry(MaterialInstances.Builder materials) {
+                return withGeometry("minecraft:geometry.full_block", materials);
+            }
+
+            public Builder withGeometry(String geometry, MaterialInstances.Builder materials) {
+                return withGeometry(new Geometry(geometry), materials.build());
+            }
+
+            public Builder withGeometry(Geometry.Builder geometry, MaterialInstances.Builder materials) {
+                return withGeometry(geometry.build(), materials.build());
+            }
+
+            public Builder withGeometry(Geometry geometry, MaterialInstances materials) {
+                return withGeometry(new GeometryWithMaterials(geometry, materials));
+            }
+
+            public Builder withGeometry(GeometryWithMaterials geometry) {
+                this.geometry = geometry;
+                return this;
+            }
+
+            public Builder withFriction(float friction) {
+                this.friction = Optional.of(friction);
+                return this;
+            }
+
+            public Builder withLightEmission(int lightEmission) {
+                this.lightEmission = OptionalInt.of(lightEmission);
+                return this;
+            }
+
+            public Builder withLightDampening(int lightDampening) {
+                this.lightDampening = OptionalInt.of(lightDampening);
+                return this;
+            }
+
+            public Builder noPlaceAir() {
+                this.placeAir = false;
+                return this;
+            }
+
+            public Builder withTransformation(Vector3fc scale, Vector3fc translation) {
+                return withTransformation(new Transformation(scale, translation));
+            }
+
+            public Builder withTransformation(Vector3fc scale, Vector3fc translation, Quadrant rotationX, Quadrant rotationY, Quadrant rotationZ) {
+                return withTransformation(new Transformation(scale, translation, rotationX, rotationY, rotationZ));
+            }
+
+            public Builder withTransformation(Transformation transformation) {
+                this.transformation = transformation;
+                return this;
+            }
+
+            public Builder withPlacementFilter(PlacementFilter.Builder placementFilter) {
+                return withPlacementFilter(placementFilter.build());
+            }
+
+            public Builder withPlacementFilter(PlacementFilter placementFilter) {
+                this.placementFilter = placementFilter;
+                return this;
+            }
+
+            public Builder withTag(Identifier tag) {
+                tags.add(tag);
+                return this;
+            }
+
+            public BlockDefinition build() {
+                return new BlockDefinition(Optional.ofNullable(selectionBox), List.copyOf(collisionBoxes),
+                        destructibleByMining == Float.MAX_VALUE ? Optional.empty() : Optional.of(destructibleByMining),
+                        Optional.ofNullable(geometry), friction, lightEmission,
+                        lightDampening, placeAir, transformation,
+                        placementFilter, List.copyOf(tags));
+            }
+        }
     }
 
     public record Box(Vector3fc origin, Vector3fc size) {
@@ -85,6 +262,32 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
                         Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("bone_visibility", Map.of()).forGetter(Geometry::visibilityFilter)
                 ).apply(instance, Geometry::new)
         );
+
+        public Geometry(String identifier) {
+            this(identifier, Map.of());
+        }
+
+        public static class Builder {
+            private final String identifier;
+            private final Map<String, String> visibilityFilter = new Object2ObjectOpenHashMap<>();
+
+            public Builder(String identifier) {
+                this.identifier = identifier;
+            }
+
+            public Builder withVisibilityFilter(String bone, boolean visible) {
+                return withVisibilityFilter(bone, visible ? "1" : "0");
+            }
+
+            public Builder withVisibilityFilter(String bone, String molang) {
+                visibilityFilter.put(bone, molang);
+                return this;
+            }
+
+            public Geometry build() {
+                return new Geometry(identifier, Map.copyOf(visibilityFilter));
+            }
+        }
     }
 
     public record MaterialInstances(Map<String, Instance> instances) {
@@ -96,6 +299,26 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
             return DataResult.success(instances);
         });
 
+        public static class Builder {
+            private final Map<String, Instance> instances = new Object2ObjectOpenHashMap<>();
+
+            public Builder withInstance(String key, String texture, Instance.RenderMethod renderMethod, boolean faceDimming, boolean ambientOcclusion) {
+                return withInstance(key, new Instance(texture, renderMethod, faceDimming, ambientOcclusion));
+            }
+
+            public Builder withInstance(String key, Instance instance) {
+                instances.put(key, instance);
+                return this;
+            }
+
+            public MaterialInstances build() {
+                if (instances.isEmpty()) {
+                    throw new IllegalStateException("Must have at least one material instance");
+                }
+                return new MaterialInstances(Map.copyOf(instances));
+            }
+        }
+
         public record Instance(Optional<String> texture, RenderMethod renderMethod, boolean faceDimming, boolean ambientOcclusion) {
             public static final Codec<Instance> CODEC = RecordCodecBuilder.create(instance ->
                     instance.group(
@@ -105,6 +328,10 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
                             Codec.BOOL.optionalFieldOf("ambient_occlusion", true).forGetter(Instance::ambientOcclusion)
                     ).apply(instance, Instance::new)
             );
+
+            public Instance(String texture, RenderMethod renderMethod, boolean faceDimming, boolean ambientOcclusion) {
+                this(Optional.of(texture), renderMethod, faceDimming, ambientOcclusion);
+            }
 
             public enum RenderMethod implements StringRepresentable {
                 OPAQUE("opaque"),
@@ -136,6 +363,26 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
         public static final Codec<PlacementFilter> CODEC = Condition.CODEC.listOf().fieldOf("conditions").codec().xmap(PlacementFilter::new, PlacementFilter::conditions);
         public static final PlacementFilter EMPTY = new PlacementFilter(List.of());
 
+        public static class Builder {
+            private final List<Condition> conditions = new ArrayList<>();
+
+            public Builder withCondition(Condition.Builder condition) {
+                return withCondition(condition.build());
+            }
+
+            public Builder withCondition(Condition condition) {
+                conditions.add(condition);
+                return this;
+            }
+
+            public PlacementFilter build() {
+                if (conditions.isEmpty()) {
+                    return EMPTY;
+                }
+                return new PlacementFilter(List.copyOf(conditions));
+            }
+        }
+
         public record Condition(List<Direction> allowedFaces, List<Either<BlockFilter, TagFilter>> blockFilters) {
             public static final Codec<Condition> CODEC = RecordCodecBuilder.create(instance ->
                     instance.group(
@@ -143,6 +390,30 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
                             Codec.either(BlockFilter.CODEC, TagFilter.CODEC).listOf().fieldOf("block_filter").forGetter(Condition::blockFilters)
                     ).apply(instance, Condition::new)
             );
+
+            public static class Builder {
+                private final Set<Direction> allowedFaces = new HashSet<>();
+                private final List<Either<BlockFilter, TagFilter>> blockFilters = new ArrayList<>();
+
+                public Builder allowFace(Direction face) {
+                    allowedFaces.add(face);
+                    return this;
+                }
+
+                public Builder withBlockFilter(Identifier block) {
+                    this.blockFilters.add(Either.left(new BlockFilter(block)));
+                    return this;
+                }
+
+                public Builder withTagFilter(Identifier tag) {
+                    this.blockFilters.add(Either.right(new TagFilter(tag)));
+                    return this;
+                }
+
+                public Condition build() {
+                    return new Condition(List.copyOf(allowedFaces), List.copyOf(blockFilters));
+                }
+            }
 
             public record BlockFilter(Identifier block) {
                 public static final Codec<BlockFilter> CODEC = Identifier.CODEC.xmap(BlockFilter::new, BlockFilter::block);
@@ -164,5 +435,19 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
                 ).apply(instance, Transformation::new)
         );
         public static final Transformation EMPTY = new Transformation(Vectors.VECTOR3F_ONE, Vectors.VECTOR3F_ZERO, ZERO_ROTATION);
+
+        public Transformation {
+            if (rotation.size() != 3) {
+                throw new IllegalArgumentException("Rotation must have exactly 3 elements");
+            }
+        }
+
+        public Transformation(Vector3fc scale, Vector3fc translation, Quadrant rotationX, Quadrant rotationY, Quadrant rotationZ) {
+            this(scale, translation, List.of(rotationX, rotationY, rotationZ));
+        }
+
+        public Transformation(Vector3fc scale, Vector3fc translation) {
+            this(scale, translation, ZERO_ROTATION);
+        }
     }
 }

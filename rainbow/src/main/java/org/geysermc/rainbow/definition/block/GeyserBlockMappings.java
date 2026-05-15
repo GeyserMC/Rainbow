@@ -31,6 +31,24 @@ public class GeyserBlockMappings {
         this.mappings.putAll(mappings);
     }
 
+    public void map(Holder<Block> block, GeyserBlockMapping.Builder mapping) {
+        map(block, mapping.build());
+    }
+
+    public void map(Holder<Block> block, GeyserBlockMapping mapping) {
+        if (block.value().getStateDefinition().isSingletonState() && (mapping.base().isEmpty() || !mapping.stateOverrides().isEmpty())) {
+            throw new IllegalArgumentException("mapping must have a base and must not have state overrides because the base block only has a single state");
+        } else if (mappings.containsKey(block)) {
+            throw new IllegalStateException("tried to register duplicate mapping for block " + block);
+        }
+        mappings.put(block, mapping);
+    }
+
+    public int size() {
+        // Maybe count state overrides too?
+        return mappings.size();
+    }
+
     public Map<Holder<Block>, GeyserBlockMapping> mappings() {
         return Collections.unmodifiableMap(mappings);
     }
