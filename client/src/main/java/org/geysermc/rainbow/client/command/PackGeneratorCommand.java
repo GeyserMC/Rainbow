@@ -101,6 +101,12 @@ public class PackGeneratorCommand {
                                 )
                         )
                          */
+                        .then(ClientCommands.literal("blocks")
+                                .executes(runWithPack(packManager, (source, pack) -> {
+                                    pack.resources().tryMapAllVanillaBlocks();
+                                    source.sendFeedback(Component.literal("woo!"));
+                                }))
+                        )
                         .then(ClientCommands.literal("inventory")
                                 .executes(runWithPack(packManager, (source, _) -> {
                                     packMapper.setItemProvider(InventoryMapper.INSTANCE);

@@ -4,6 +4,7 @@
   "package": "org.geysermc.rainbow.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "BlockStateModelSimpleCachedUnbakedRootAccessor",
     "FaceBakeryAccessor",
     "LateBoundIdMapperAccessor",
     "NativeImageAccessor",

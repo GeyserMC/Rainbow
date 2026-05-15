@@ -101,7 +101,14 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
             return this;
         }
 
+        public boolean hasStateOverrides() {
+            return !stateOverrides.isEmpty();
+        }
+
         public GeyserBlockMapping build() {
+            if (onlyOverrideStates && stateOverrides.isEmpty()) {
+                throw new IllegalStateException("onlyOverrideStates is set to true, but there are no state overrides");
+            }
             return new GeyserBlockMapping(name, Optional.ofNullable(base), includeInCreativeInventory, onlyOverrideStates, Map.copyOf(stateOverrides));
         }
     }

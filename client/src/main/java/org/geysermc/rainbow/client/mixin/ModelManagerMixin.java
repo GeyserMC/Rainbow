@@ -1,6 +1,7 @@
 package org.geysermc.rainbow.client.mixin;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.renderer.item.ClientItem;
 import net.minecraft.client.resources.model.BlockStateModelLoader;
 import net.minecraft.client.resources.model.ClientItemInfoLoader;
@@ -9,6 +10,7 @@ import net.minecraft.client.resources.model.ResolvedModel;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
+import net.minecraft.world.level.block.state.BlockState;
 import org.geysermc.rainbow.client.accessor.ResolvedModelAccessor;
 import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
@@ -24,6 +26,8 @@ import java.util.Optional;
 @Mixin(ModelManager.class)
 public abstract class ModelManagerMixin implements PreparableReloadListener, AutoCloseable, ResolvedModelAccessor {
     @Unique
+    private BlockStateModelLoader.@Nullable LoadedModels loadedBlockStateModels;
+    @Unique
     private @Nullable Map<Identifier, ResolvedModel> unbakedResolvedModels;
     @Unique
     private @Nullable Map<Identifier, ClientItem> clientItems;
@@ -34,6 +38,7 @@ public abstract class ModelManagerMixin implements PreparableReloadListener, Aut
                                                  @SuppressWarnings("rawtypes") CallbackInfoReturnable callbackInfoReturnable) {
         // Ideally we'd somehow use the "this" instance, but that's not possible here since the method we inject into is a static one
         ModelManagerMixin thiz = ((ModelManagerMixin) (Object) Minecraft.getInstance().getModelManager());
+        thiz.loadedBlockStateModels = blockStateModels;
 
         // Couldn't be bothered setting up access wideners, this resolves the second component of the ResolvedModels record, which is called "models"
         try {
@@ -45,6 +50,11 @@ public abstract class ModelManagerMixin implements PreparableReloadListener, Aut
         }
 
         thiz.clientItems = itemInfos.contents();
+    }
+
+    @Override
+    public Optional<BlockStateModel.UnbakedRoot> rainbow$getBlockStateModel(BlockState state) {
+        return loadedBlockStateModels == null ? Optional.empty() : Optional.ofNullable(loadedBlockStateModels.models().get(state));
     }
 
     @Override

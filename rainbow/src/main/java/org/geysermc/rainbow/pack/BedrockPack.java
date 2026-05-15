@@ -4,11 +4,13 @@ import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.CustomModelData;
+import net.minecraft.world.level.block.Block;
 import org.geysermc.rainbow.CodecUtil;
 import org.geysermc.rainbow.PackConstants;
 import org.geysermc.rainbow.RainbowIO;
@@ -16,6 +18,7 @@ import org.geysermc.rainbow.definition.GeyserMappings;
 import org.geysermc.rainbow.definition.block.GeyserBlockMappings;
 import org.geysermc.rainbow.mapping.AssetCacheStats;
 import org.geysermc.rainbow.mapping.AssetResolver;
+import org.geysermc.rainbow.mapping.BedrockBlockMapper;
 import org.geysermc.rainbow.mapping.BedrockItemMapper;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mapping.PackSerializer;
@@ -73,6 +76,16 @@ public class BedrockPack implements PackSerializer.Serializable {
         return name;
     }
 
+    public void tryMapAllVanillaBlocks() {
+        for (Block block : BuiltInRegistries.BLOCK) {
+            Identifier identifier = BuiltInRegistries.BLOCK.getKey(block);
+            if (identifier.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
+                BedrockBlockMapper.tryMapBlock(block, reporter.forChild(() -> "block " + identifier + " "), context);
+            }
+        }
+    }
+
+    // TODO rename this to mapItem or something
     public MappingResult map(ItemStackTemplate stack) {
         AtomicBoolean problems = new AtomicBoolean();
         ProblemReporter mapReporter = new ProblemReporter() {
