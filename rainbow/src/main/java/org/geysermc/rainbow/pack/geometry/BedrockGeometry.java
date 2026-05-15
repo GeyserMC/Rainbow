@@ -6,6 +6,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Direction;
 import net.minecraft.util.ExtraCodecs;
+import org.geysermc.rainbow.Vectors;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.pack.BedrockVersion;
 import org.joml.Vector2fc;
@@ -23,8 +24,6 @@ import java.util.concurrent.CompletableFuture;
 
 public record BedrockGeometry(BedrockVersion formatVersion, List<GeometryDefinition> definitions) {
     public static final BedrockVersion FORMAT_VERSION = BedrockVersion.of(1, 21, 0);
-    // TODO move to util
-    public static final Vector3fc VECTOR3F_ZERO = new Vector3f();
 
     public static final Codec<BedrockGeometry> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
@@ -156,8 +155,8 @@ public record BedrockGeometry(BedrockVersion formatVersion, List<GeometryDefinit
 
             private Optional<String> parent = Optional.empty();
             private Optional<String> binding = Optional.empty();
-            private Vector3fc pivot = VECTOR3F_ZERO;
-            private Vector3fc rotation = VECTOR3F_ZERO;
+            private Vector3fc pivot = Vectors.VECTOR3F_ZERO;
+            private Vector3fc rotation = Vectors.VECTOR3F_ZERO;
             private boolean mirror = false;
             private float inflate = 0.0F;
 
@@ -230,8 +229,8 @@ public record BedrockGeometry(BedrockVersion formatVersion, List<GeometryDefinit
             private final Vector3fc size;
             private final Map<Direction, Face> faces = new HashMap<>();
 
-            private Vector3fc rotation = VECTOR3F_ZERO;
-            private Vector3fc pivot = VECTOR3F_ZERO;
+            private Vector3fc rotation = Vectors.VECTOR3F_ZERO;
+            private Vector3fc pivot = Vectors.VECTOR3F_ZERO;
             private float inflate = 0.0F;
             private boolean mirror = false;
 
@@ -289,7 +288,7 @@ public record BedrockGeometry(BedrockVersion formatVersion, List<GeometryDefinit
     }
 
     private static MapCodec<Vector3fc> defaultToZeroCodec(String name) {
-        return ExtraCodecs.VECTOR3F.optionalFieldOf(name).xmap(optional -> optional.orElse(VECTOR3F_ZERO),
+        return ExtraCodecs.VECTOR3F.optionalFieldOf(name).xmap(optional -> optional.orElse(Vectors.VECTOR3F_ZERO),
                 vector -> vector.length() == 0.0F ? Optional.empty() : Optional.of(vector));
     }
 }
