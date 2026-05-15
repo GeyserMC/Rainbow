@@ -40,14 +40,22 @@ public class GeyserBlockMappings {
     public void map(Holder<Block> block, GeyserBlockMapping mapping) {
         if (block.value().getStateDefinition().isSingletonState() && (mapping.base().isEmpty() || !mapping.stateOverrides().isEmpty())) {
             throw new IllegalArgumentException("mapping must have a base and must not have state overrides because the base block only has a single state");
-        } else if (mapping.base().isEmpty() && mapping.stateOverrides().isEmpty()) {
-            throw new IllegalArgumentException("mapping must at least have a base or a single state override");
+        } else if (mapping.base().isEmpty() && !mapping.onlyOverrideStates()) {
+            throw new IllegalArgumentException("mapping must have a base or only override states");
         } else if (mapping.onlyOverrideStates() && mapping.stateOverrides().isEmpty()) {
             throw new IllegalArgumentException("mapping must have at least a single state override, as onlyOverrideStates is set to true");
-        } else if (mappings.containsKey(block)) {
-            throw new IllegalStateException("tried to register duplicate mapping for block " + block);
         }
-        mappings.put(block, mapping);
+
+        GeyserBlockMapping existing = mappings.get(block);
+        if (existing != null) {
+            if (existing.onlyOverrideStates() && mapping.onlyOverrideStates()) {
+                mappings.put(block, existing.mergeStateOverrides(mapping));
+            } else {
+                throw new IllegalStateException("tried to register existing mapping for block " + block + ", and was unable to merge");
+            }
+        } else {
+            mappings.put(block, mapping);
+        }
     }
 
     public int size() {

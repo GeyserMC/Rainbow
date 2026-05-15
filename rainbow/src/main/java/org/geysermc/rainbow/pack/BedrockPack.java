@@ -11,6 +11,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import org.geysermc.rainbow.CodecUtil;
 import org.geysermc.rainbow.PackConstants;
 import org.geysermc.rainbow.RainbowIO;
@@ -80,9 +81,13 @@ public class BedrockPack implements PackSerializer.Serializable {
         for (Block block : BuiltInRegistries.BLOCK) {
             Identifier identifier = BuiltInRegistries.BLOCK.getKey(block);
             if (identifier.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
-                BedrockBlockMapper.tryMapBlock(block, reporter.forChild(() -> "block " + identifier + " "), context);
+                BedrockBlockMapper.tryMapBlock(block, reporter, context);
             }
         }
+    }
+
+    public void mapBlockStateExplicitly(BlockState state) {
+        BedrockBlockMapper.tryMapBlockState(state, reporter, context);
     }
 
     // TODO rename this to mapItem or something

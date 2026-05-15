@@ -6,10 +6,18 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.ChatFormatting;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.commands.arguments.coordinates.Coordinates;
+import net.minecraft.commands.arguments.coordinates.LocalCoordinates;
+import net.minecraft.commands.arguments.coordinates.WorldCoordinate;
+import net.minecraft.commands.arguments.coordinates.WorldCoordinates;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import org.geysermc.rainbow.client.PackManager;
 import org.geysermc.rainbow.client.mapper.InventoryMapper;
 import org.geysermc.rainbow.client.mapper.PackMapper;
@@ -44,6 +52,18 @@ public class PackGeneratorCommand {
                         )
                 )
                 .then(ClientCommands.literal("map")
+                        .then(ClientCommands.literal("block")
+                                .then(ClientCommands.argument("target", BlockPosArgument.blockPos())
+                                        .executes(context -> {
+                                            BlockPos pos = clientCoordinatesToBlockPos(context.getSource(), context.getArgument("target", Coordinates.class));
+                                            BlockState state = context.getSource().getLevel().getBlockState(pos);
+                                            return runWithPack(packManager, (source, pack) -> {
+                                                pack.resources().mapBlockStateExplicitly(state);
+                                                source.sendFeedback(Component.literal("wooo!"));
+                                            }).run(context);
+                                        })
+                                )
+                        )
                         .executes(runWithPack(packManager, (source, pack) -> {
                             ItemStack heldItem = source.getPlayer().getMainHandItem();
                             if (heldItem.isEmpty()) {
@@ -141,5 +161,16 @@ public class PackGeneratorCommand {
                     () -> context.getSource().sendError(NO_PACK_CREATED));
             return 0;
         };
+    }
+
+    private static BlockPos clientCoordinatesToBlockPos(FabricClientCommandSource source, Coordinates coordinates) {
+        if (coordinates instanceof WorldCoordinates(WorldCoordinate x, WorldCoordinate y, WorldCoordinate z)) {
+            Vec3 pos = source.getPosition();
+            return BlockPos.containing(new Vec3(x.get(pos.x), y.get(pos.y), z.get(pos.z)));
+        } else if (coordinates instanceof LocalCoordinates(double left, double up, double forwards)) {
+            Vec3 origin = source.getPosition();
+            return BlockPos.containing(Vec3.applyLocalCoordinatesToRotation(source.getRotation(), new Vec3(left, up, forwards)).add(origin.x, origin.y, origin.z));
+        }
+        throw new IllegalStateException("Don't know how to turn " + coordinates + " into a BlockPos");
     }
 }

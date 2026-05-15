@@ -18,6 +18,7 @@ import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,27 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
                     Codec.unboundedMap(Codec.STRING, BlockDefinition.CODEC).fieldOf("state_overrides").forGetter(GeyserBlockMapping::stateOverrides)
             ).apply(instance, GeyserBlockMapping::new)
     );
+
+    public GeyserBlockMapping mergeStateOverrides(GeyserBlockMapping other) {
+        if (other.stateOverrides.isEmpty()) {
+            return this;
+        } else if (stateOverrides.isEmpty()) {
+            return new GeyserBlockMapping(name, base, includeInCreativeInventory, onlyOverrideStates, other.stateOverrides);
+        }
+        Map<String, BlockDefinition> newOverrides = new Object2ObjectOpenHashMap<>(stateOverrides);
+        newOverrides.putAll(other.stateOverrides);
+        return new GeyserBlockMapping(name, base, includeInCreativeInventory, onlyOverrideStates, Collections.unmodifiableMap(newOverrides));
+    }
+
+    public GeyserBlockMapping withStateOverride(String state, BlockDefinition.Builder override) {
+        return withStateOverride(state, override.build());
+    }
+
+    public GeyserBlockMapping withStateOverride(String state, BlockDefinition override) {
+        Map<String, BlockDefinition> newOverrides = new Object2ObjectOpenHashMap<>(stateOverrides);
+        newOverrides.put(state, override);
+        return new GeyserBlockMapping(name, base, includeInCreativeInventory, onlyOverrideStates, Collections.unmodifiableMap(newOverrides));
+    }
 
     public static Builder builder(String name) {
         return new Builder(name);
@@ -307,6 +329,10 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
 
         public static class Builder {
             private final Map<String, Instance> instances = new Object2ObjectOpenHashMap<>();
+
+            public Builder withInstance(String key, String texture) {
+                return withInstance(key, texture, Instance.RenderMethod.OPAQUE, true, true);
+            }
 
             public Builder withInstance(String key, String texture, Instance.RenderMethod renderMethod, boolean faceDimming, boolean ambientOcclusion) {
                 return withInstance(key, new Instance(texture, renderMethod, faceDimming, ambientOcclusion));
