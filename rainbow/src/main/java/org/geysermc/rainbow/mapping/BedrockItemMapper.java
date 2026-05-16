@@ -288,7 +288,7 @@ public class BedrockItemMapper {
                 return;
             }
 
-            packContext.itemConsumer().accept(new BedrockItem(bedrockIdentifier, base.textureName(), textures, geometry, attachable));
+            packContext.assetConsumer().acceptItem(new BedrockItem(bedrockIdentifier, base.textureName(), textures, geometry, attachable));
         }
 
         public void report(String problem) {

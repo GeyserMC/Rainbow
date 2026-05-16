@@ -150,7 +150,7 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
                         CodecUtil.optionalInt("light_emission").forGetter(BlockDefinition::lightEmission),
                         CodecUtil.optionalInt("light_dampening").forGetter(BlockDefinition::lightDampening),
                         Codec.BOOL.optionalFieldOf("place_air", true).forGetter(BlockDefinition::placeAir),
-                        Transformation.CODEC.optionalFieldOf("transformation", Transformation.EMPTY).forGetter(BlockDefinition::transformation),
+                        Transformation.CODEC.optionalFieldOf("transformation", Transformation.IDENTITY).forGetter(BlockDefinition::transformation),
                         PlacementFilter.CODEC.optionalFieldOf("placement_filter", PlacementFilter.EMPTY).forGetter(BlockDefinition::placementFilter),
                         Identifier.CODEC.listOf().optionalFieldOf("tags", List.of()).forGetter(BlockDefinition::tags)
                 ).apply(instance, BlockDefinition::new)
@@ -166,7 +166,7 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
             private OptionalInt lightEmission = OptionalInt.empty();
             private OptionalInt lightDampening = OptionalInt.empty();
             private boolean placeAir = true;
-            private Transformation transformation = Transformation.EMPTY;
+            private Transformation transformation = Transformation.IDENTITY;
             private PlacementFilter placementFilter = PlacementFilter.EMPTY;
             private final List<Identifier> tags = new ArrayList<>();
 
@@ -189,8 +189,16 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
                 return withGeometry("minecraft:geometry.full_block", materials);
             }
 
+            public Builder withCrossGeometry(MaterialInstances.Builder materials) {
+                return withGeometry("minecraft:geometry.cross", materials);
+            }
+
             public Builder withGeometry(String geometry, MaterialInstances.Builder materials) {
-                return withGeometry(new Geometry(geometry), materials.build());
+                return withGeometry(geometry, materials.build());
+            }
+
+            public Builder withGeometry(String geometry, MaterialInstances materials) {
+                return withGeometry(new Geometry(geometry), materials);
             }
 
             public Builder withGeometry(Geometry.Builder geometry, MaterialInstances.Builder materials) {
@@ -326,6 +334,7 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
             }
             return DataResult.success(instances);
         });
+        public static MaterialInstances EMPTY = new MaterialInstances(Map.of());
 
         public static class Builder {
             private final Map<String, Instance> instances = new Object2ObjectOpenHashMap<>();
@@ -466,7 +475,7 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
                         Codec.list(Quadrant.CODEC, 3, 3).optionalFieldOf("rotation", ZERO_ROTATION).forGetter(Transformation::rotation)
                 ).apply(instance, Transformation::new)
         );
-        public static final Transformation EMPTY = new Transformation(Vectors.VECTOR3F_ONE, Vectors.VECTOR3F_ZERO, ZERO_ROTATION);
+        public static final Transformation IDENTITY = new Transformation(Vectors.VECTOR3F_ONE, Vectors.VECTOR3F_ZERO, ZERO_ROTATION);
 
         public Transformation {
             if (rotation.size() != 3) {

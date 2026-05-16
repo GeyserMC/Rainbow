@@ -12,18 +12,18 @@ import java.util.Optional;
 public final class PackContext {
     private final GeyserMappings mappings;
     private final PackPaths paths;
-    private final BedrockItemConsumer itemConsumer;
+    private final BedrockAssetConsumer assetConsumer;
     private final AssetResolver assetResolver;
     private final Optional<GeometryRenderer> geometryRenderer;
     private final boolean reportSuccesses;
     private final ModelTextureCache textureCache = new ModelTextureCache();
     private final MappedGeometryCache geometryCache = new MappedGeometryCache();
 
-    public PackContext(GeyserMappings mappings, PackPaths paths, BedrockItemConsumer itemConsumer, AssetResolver assetResolver,
+    public PackContext(GeyserMappings mappings, PackPaths paths, BedrockAssetConsumer assetConsumer, AssetResolver assetResolver,
                        Optional<GeometryRenderer> geometryRenderer, boolean reportSuccesses) {
         this.mappings = mappings;
         this.paths = paths;
-        this.itemConsumer = itemConsumer;
+        this.assetConsumer = assetConsumer;
         this.assetResolver = assetResolver;
         this.geometryRenderer = geometryRenderer;
         this.reportSuccesses = reportSuccesses;
@@ -37,8 +37,8 @@ public final class PackContext {
         return paths;
     }
 
-    public BedrockItemConsumer itemConsumer() {
-        return itemConsumer;
+    public BedrockAssetConsumer assetConsumer() {
+        return assetConsumer;
     }
 
     public AssetResolver assetResolver() {

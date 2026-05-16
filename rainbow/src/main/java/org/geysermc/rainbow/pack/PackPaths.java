@@ -19,6 +19,7 @@ public record PackPaths(Path mappingsRoot, Path packRoot, Optional<Path> zipOutp
 
     private static final Path MANIFEST = Path.of("manifest.json");
     private static final Path ITEM_ATLAS = Path.of("textures/item_texture.json");
+    private static final Path TERRAIN_ATLAS = Path.of("textures/terrain_texture.json");
 
     public Path blockMappings() {
         return mappingsRoot.resolve(BLOCK_MAPPINGS);
@@ -55,5 +56,9 @@ public record PackPaths(Path mappingsRoot, Path packRoot, Optional<Path> zipOutp
 
     public Path itemAtlas() {
         return packRoot.resolve(ITEM_ATLAS);
+    }
+
+    public Path terrainAtlas() {
+        return packRoot.resolve(TERRAIN_ATLAS);
     }
 }

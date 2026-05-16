@@ -12,6 +12,7 @@ import org.geysermc.rainbow.pack.BedrockVersion;
 import org.joml.Vector2fc;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
+import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -259,16 +260,20 @@ public record BedrockGeometry(BedrockVersion formatVersion, List<GeometryDefinit
                 return this;
             }
 
+            public Builder withFace(Direction direction, Vector2fc uvOrigin, Vector2fc uvSize) {
+                return withFace(direction, uvOrigin, uvSize, Quadrant.R0);
+            }
+
             public Builder withFace(Direction direction, Vector2fc uvOrigin, Vector2fc uvSize, Quadrant uvRotation) {
+                return withFace(direction, uvOrigin, uvSize, uvRotation, null);
+            }
+
+            public Builder withFace(Direction direction, Vector2fc uvOrigin, Vector2fc uvSize, Quadrant uvRotation, @Nullable String materialInstance) {
                 if (faces.containsKey(direction)) {
                     throw new IllegalArgumentException("Already added a face for direction " + direction);
                 }
-                faces.put(direction, new Face(uvOrigin, uvSize, uvRotation));
+                faces.put(direction, new Face(uvOrigin, uvSize, uvRotation, Optional.ofNullable(materialInstance)));
                 return this;
-            }
-
-            public Builder withFace(Direction direction, Vector2fc uvOrigin, Vector2fc uvSize) {
-                return withFace(direction, uvOrigin, uvSize, Quadrant.R0);
             }
 
             public Cube build() {
@@ -277,12 +282,13 @@ public record BedrockGeometry(BedrockVersion formatVersion, List<GeometryDefinit
         }
     }
 
-    public record Face(Vector2fc uvOrigin, Vector2fc uvSize, Quadrant uvRotation) {
+    public record Face(Vector2fc uvOrigin, Vector2fc uvSize, Quadrant uvRotation, Optional<String> materialInstance) {
         public static final Codec<Face> CODEC = RecordCodecBuilder.create(instance ->
                 instance.group(
                         ExtraCodecs.VECTOR2F.fieldOf("uv").forGetter(Face::uvOrigin),
                         ExtraCodecs.VECTOR2F.fieldOf("uv_size").forGetter(Face::uvSize),
-                        Quadrant.CODEC.optionalFieldOf("uv_rotation", Quadrant.R0).forGetter(Face::uvRotation)
+                        Quadrant.CODEC.optionalFieldOf("uv_rotation", Quadrant.R0).forGetter(Face::uvRotation),
+                        Codec.STRING.optionalFieldOf("material_instance").forGetter(Face::materialInstance)
                 ).apply(instance, Face::new)
         );
     }

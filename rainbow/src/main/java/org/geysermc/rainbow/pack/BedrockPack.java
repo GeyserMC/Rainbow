@@ -19,6 +19,7 @@ import org.geysermc.rainbow.definition.GeyserMappings;
 import org.geysermc.rainbow.definition.block.GeyserBlockMappings;
 import org.geysermc.rainbow.mapping.AssetCacheStats;
 import org.geysermc.rainbow.mapping.AssetResolver;
+import org.geysermc.rainbow.mapping.BedrockAssetConsumer;
 import org.geysermc.rainbow.mapping.BedrockBlockMapper;
 import org.geysermc.rainbow.mapping.BedrockItemMapper;
 import org.geysermc.rainbow.mapping.PackContext;
@@ -40,7 +41,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
-public class BedrockPack implements PackSerializer.Serializable {
+public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Serializable {
     // Debug only
     private static final boolean ALLOW_MAPPING_VANILLA_ITEMS = false;
 
@@ -50,6 +51,8 @@ public class BedrockPack implements PackSerializer.Serializable {
     private final PackSerializer serializer;
 
     private final BedrockTextures.Builder itemTextures = BedrockTextures.builder();
+    private final BedrockTextures.Builder terrainTextures = BedrockTextures.builder();
+    private final Set<BedrockBlock> bedrockBlocks = new HashSet<>();
     private final Set<BedrockItem> bedrockItems = new HashSet<>();
     private final Set<Identifier> modelsMapped = new HashSet<>();
     private final Set<Pair<Holder<Item>, Integer>> customModelDataMapped = new HashSet<>();
@@ -66,10 +69,7 @@ public class BedrockPack implements PackSerializer.Serializable {
         this.serializer = serializer;
 
         // Not reading existing item mappings/texture atlas for now since that doesn't work all that well yet
-        this.context = new PackContext(new GeyserMappings(), paths, item -> {
-            itemTextures.withItemTexture(item);
-            bedrockItems.add(item);
-        }, assetResolver, geometryRenderer, reportSuccesses);
+        this.context = new PackContext(new GeyserMappings(), paths, this, assetResolver, geometryRenderer, reportSuccesses);
         this.reporter = reporter;
     }
 
@@ -155,13 +155,27 @@ public class BedrockPack implements PackSerializer.Serializable {
         }
         return baseSerialization;
     }
-    
+
+    @Override
+    public void acceptBlock(BedrockBlock block) {
+        terrainTextures.withBlockTextures(block);
+        bedrockBlocks.add(block);
+    }
+
+    @Override
+    public void acceptItem(BedrockItem item) {
+        itemTextures.withItemTexture(item);
+        bedrockItems.add(item);
+    }
+
     @Override
     public CompletableFuture<?> save(PackSerializingContext serializingContext) {
         return PackSerializer.Serializable.wrapCodec(GeyserBlockMappings.CODEC, context.mappings().blocks(), PackPaths::blockMappings)
                 .with(GeyserItemMappings.CODEC, context.mappings().items(), PackPaths::itemMappings)
                 .with(PackManifest.CODEC, manifest, PackPaths::manifest)
-                .with(BedrockTextureAtlas.ITEM_ATLAS_CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), PackPaths::itemAtlas)
+                .with(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), PackPaths::itemAtlas)
+                .with(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.terrainAtlas(name, terrainTextures), PackPaths::terrainAtlas)
+                .with(bedrockBlocks)
                 .with(bedrockItems)
                 .with(paths.languageOutput().map(languageFolder -> context -> LanguageUtil.saveLanguages(context, languageFolder)))
                 .save(serializingContext);

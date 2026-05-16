@@ -44,8 +44,9 @@ public class GeometryMapper {
         Vector3f max = new Vector3f(Float.MIN_VALUE);
 
         UnbakedCuboidGeometry geometry = transformGeometry((UnbakedCuboidGeometry) top, transformation);
-        for (CuboidModelElement element : geometry.elements()) {
-            BedrockGeometry.Cube cube = mapCuboidModelElement(element, textures).build();
+        List<CuboidModelElement> elements = geometry.elements();
+        for (int i = 0; i < elements.size(); i++) {
+            BedrockGeometry.Cube cube = mapCuboidModelElement(elements.get(i), i, textures).build();
             bone.withCube(cube);
             min.min(cube.origin());
             max.max(cube.origin().add(cube.size(), new Vector3f()));
@@ -63,7 +64,7 @@ public class GeometryMapper {
     // After hours of painfully suffering and 40 test builds of Rainbow, I finally got the right formula together and somehow made this mess of a code
     // work properly, or at least, I think it is. I physically jumped in the air and cheered as I saw my models convert properly.
     // Now, make sure you are ready to witness my deformed creation
-    private static BedrockGeometry.Cube.Builder mapCuboidModelElement(CuboidModelElement element, ModelTextures textures) {
+    private static BedrockGeometry.Cube.Builder mapCuboidModelElement(CuboidModelElement element, int elementIndex, ModelTextures textures) {
         // For some reason the X axis is inverted on bedrock (thanks Blockbench!!)
 
         // The centre of the model is back by 8 in the X and Z direction on bedrock, so start by move the from and to points of the cube, and later the pivot, like that
@@ -110,7 +111,7 @@ public class GeometryMapper {
                 uvSize.mul(widthMultiplier, heightMultiplier);
                 uvOrigin.add(sprite.x(), sprite.y());
             });
-            builder.withFace(direction, uvOrigin, uvSize, face.rotation());
+            builder.withFace(direction, uvOrigin, uvSize, face.rotation(), getMeaningfulMaterialInstanceName(direction, face.texture(), elementIndex));
         }
 
         CuboidRotation rotation = element.rotation();
@@ -157,5 +158,9 @@ public class GeometryMapper {
     private static Vector3fc transformVector(Vector3fc original, Transformation transformation) {
         // Translate first, then scale
         return original.add(transformation.translation(), new Vector3f()).mul(transformation.scale());
+    }
+
+    public static String getMeaningfulMaterialInstanceName(Direction face, String texture, int elementIndex) {
+        return texture + "_" + face.getName() + "_" + elementIndex;
     }
 }
