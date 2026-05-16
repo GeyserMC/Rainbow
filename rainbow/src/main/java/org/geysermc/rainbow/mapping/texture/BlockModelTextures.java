@@ -1,6 +1,7 @@
 package org.geysermc.rainbow.mapping.texture;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import net.minecraft.client.resources.metadata.animation.FrameSize;
 import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.client.resources.model.sprite.TextureSlots;
 import org.geysermc.rainbow.mapping.AssetResolver;
@@ -11,33 +12,33 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public record BlockModelTextures(Map<String, TextureHolder> textures, Map<String, SpriteInfo> sprites, boolean cached) implements ModelTextures<BlockModelTextures> {
+public record BlockModelTextures(Map<String, TextureHolder> textures, Map<String, SpriteInfo> sprites, int width, int height, boolean cached) implements ModelTextures<BlockModelTextures> {
 
     public BlockModelTextures(TextureSlots textures, AssetResolver assets) {
         Map<String, Material> materials = ModelTextures.getCleanMaterials(textures);
         Map<String, TextureHolder> textureHolders = new Object2ObjectOpenHashMap<>();
         Map<String, SpriteInfo> sprites = new Object2ObjectOpenHashMap<>();
+        AtomicInteger width = new AtomicInteger();
+        AtomicInteger height = new AtomicInteger();
+
         materials.forEach((key, material) -> {
             assets.getPossibleAtlasTextureSafely(material.sprite()).ifPresent(texture -> {
                 try (texture) {
                     textureHolders.put(key, TextureHolder.createBuiltIn(material.sprite()));
                     sprites.put(key, new SpriteInfo(texture));
+                    FrameSize size = texture.sizeOfFrame();
+                    if (size.width() > width.get()) {
+                        width.set(size.width());
+                    }
+                    if (size.height() > height.get()) {
+                        height.set(size.height());
+                    }
                 }
             });
         });
-        this(Collections.unmodifiableMap(textureHolders), Collections.unmodifiableMap(sprites), false);
-    }
-
-    // Used in GeometryMapper only, should not matter for block geometry?
-    @Override
-    public int width() {
-        return 0;
-    }
-
-    @Override
-    public int height() {
-        return 0;
+        this(Collections.unmodifiableMap(textureHolders), Collections.unmodifiableMap(sprites), width.get(), height.get(), false);
     }
 
     @Override
@@ -55,7 +56,7 @@ public record BlockModelTextures(Map<String, TextureHolder> textures, Map<String
         if (cached) {
             return this;
         }
-        return new BlockModelTextures(textures, sprites, true);
+        return new BlockModelTextures(textures, sprites, width, height, true);
     }
 
     @Override
