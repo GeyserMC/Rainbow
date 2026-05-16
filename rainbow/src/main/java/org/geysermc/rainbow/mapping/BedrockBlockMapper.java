@@ -22,9 +22,12 @@ import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.definition.block.GeyserBlockMapping;
 import org.geysermc.rainbow.mapping.geometry.GeometryMapper;
 import org.geysermc.rainbow.mapping.geometry.MappedGeometry;
+import org.geysermc.rainbow.mapping.texture.BlockModelTextures;
 import org.geysermc.rainbow.mixin.BlockStateModelSimpleCachedUnbakedRootAccessor;
+import org.geysermc.rainbow.pack.BedrockBlock;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public class BedrockBlockMapper {
@@ -99,6 +102,7 @@ public class BedrockBlockMapper {
         // We can't specify light emission per single model element, so we specify the highest value that is used across the model
         // FIXME this seem to be actual light on bedrock?
         builder.withLightEmission(getMaxLightEmission(geometry));
+        BlockModelTextures textures = context.blockTextureCache().load(model, () -> new BlockModelTextures(model.getTopTextureSlots(), context.assetResolver()));
 
         /*if (looksLikeFullBlockModel(model.getTopGeometry())) {
             builder.withFullBlockGeometry(GeyserBlockMapping.materials()
@@ -108,10 +112,12 @@ public class BedrockBlockMapper {
                     .withInstance("*", "FIXME", GeyserBlockMapping.MaterialInstances.Instance.RenderMethod.OPAQUE, true, ambientOcclusion));
         } else {*/
             Identifier modelIdentifier = Rainbow.getModelIdentifier(model);
-            MappedGeometry mappedGeometry = context.geometryCache().mapGeometry(modelIdentifier, model, Transformation.IDENTITY, );
+            Optional<MappedGeometry> mappedGeometry = Optional.of(context.geometryCache().mapGeometry(modelIdentifier, model, Transformation.IDENTITY, textures));
             GeyserBlockMapping.MaterialInstances materials = mapMaterials(geometry, model.getTopTextureSlots(), ambientOcclusion);
-            builder.withGeometry(mappedGeometry.identifier(), materials);
+            builder.withGeometry(mappedGeometry.get().identifier(), materials);
         //}
+
+        context.assetConsumer().acceptBlock(new BedrockBlock(textures, mappedGeometry));
         return builder;
     }
 
@@ -140,7 +146,7 @@ public class BedrockBlockMapper {
                     Material material = textures.getMaterial(face.texture());
                     if (material != null) {
                         builder.withInstance(GeometryMapper.getMeaningfulMaterialInstanceName(direction, face.texture(), elementIndex),
-                                material.sprite().toString(), GeyserBlockMapping.MaterialInstances.Instance.RenderMethod.OPAQUE, true, ambientOcclusion);
+                                Rainbow.bedrockSafeIdentifier(material.sprite()), GeyserBlockMapping.MaterialInstances.Instance.RenderMethod.OPAQUE, true, ambientOcclusion);
                     }
                 });
             }

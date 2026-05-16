@@ -51,7 +51,7 @@ import org.geysermc.rainbow.definition.item.predicate.GeyserConditionPredicate;
 import org.geysermc.rainbow.definition.item.predicate.GeyserMatchPredicate;
 import org.geysermc.rainbow.definition.item.predicate.GeyserPredicate;
 import org.geysermc.rainbow.definition.item.predicate.GeyserRangeDispatchPredicate;
-import org.geysermc.rainbow.mapping.texture.ModelTextures;
+import org.geysermc.rainbow.mapping.texture.ItemModelTextures;
 import org.geysermc.rainbow.mixin.LateBoundIdMapperAccessor;
 import org.geysermc.rainbow.mixin.RangeSelectItemModelAccessor;
 import org.geysermc.rainbow.pack.BedrockItem;
@@ -260,7 +260,7 @@ public class BedrockItemMapper {
                             bedrockIdentifier = modelIdentifier;
                         }
 
-                        ModelTextures textures = packContext.textureCache().load(itemStack, itemModel, packContext);
+                        ItemModelTextures textures = packContext.itemTextureCache().load(itemModel, () -> ItemModelTextures.load(itemStack, itemModel, packContext));
 
                         BedrockGeometryContext geometry = BedrockGeometryContext.create(bedrockIdentifier, itemModel, finaliseTransformation(model.transformation()), textures, packContext);
                         BedrockAttachableContext attachable = BedrockAttachableContext.create(bedrockIdentifier, itemStack, geometry, textures, packContext);
@@ -273,7 +273,7 @@ public class BedrockItemMapper {
                     }, () -> report("missing block model " + modelIdentifier));
         }
 
-        private void create(Identifier bedrockIdentifier, ModelTextures textures, BedrockGeometryContext geometry, BedrockAttachableContext attachable) {
+        private void create(Identifier bedrockIdentifier, ItemModelTextures textures, BedrockGeometryContext geometry, BedrockAttachableContext attachable) {
             List<Identifier> tags = itemStack.is(ItemTags.TRIMMABLE_ARMOR) ? TRIMMABLE_ARMOR_TAGS : List.of();
 
             GeyserBaseItemDefinition base = new GeyserBaseItemDefinition(bedrockIdentifier,

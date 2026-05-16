@@ -11,7 +11,7 @@ import org.geysermc.rainbow.pack.geometry.BedrockGeometry;
 
 public class MappedGeometryCache extends PackAssetCache<MappedGeometryCache.Key, MappedGeometry> {
 
-    public MappedGeometry mapGeometry(Identifier bedrockIdentifier, ResolvedModel model, Transformation transformation, ModelTextures textures) {
+    public MappedGeometry mapGeometry(Identifier bedrockIdentifier, ResolvedModel model, Transformation transformation, ModelTextures<?> textures) {
         return getOrCompute(new Key(model, transformation), () -> {
             String safeIdentifier = Rainbow.bedrockSafeIdentifier(bedrockIdentifier);
             BedrockGeometry geometry = GeometryMapper.mapGeometry(safeIdentifier, "bone", model, transformation, textures);

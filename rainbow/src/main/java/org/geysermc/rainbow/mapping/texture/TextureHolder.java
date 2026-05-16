@@ -3,6 +3,7 @@ package org.geysermc.rainbow.mapping.texture;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
+import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.image.NativeImageUtil;
 import org.geysermc.rainbow.mapping.AssetResolver;
@@ -66,6 +67,10 @@ public abstract class TextureHolder implements PackSerializer.Serializable {
 
     public Identifier destination() {
         return destination;
+    }
+
+    public String bedrockSafeDestination() {
+        return Rainbow.bedrockSafeIdentifier(destination);
     }
 
     protected void reportMissing(ProblemReporter reporter) {

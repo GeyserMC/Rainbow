@@ -23,7 +23,7 @@ import java.util.Map;
 public class GeometryMapper {
     private static final Vector3fc CENTRE_OFFSET = new Vector3f(8.0F, 0.0F, 8.0F);
 
-    public static BedrockGeometry mapGeometry(String identifier, String boneName, ResolvedModel model, Transformation transformation, ModelTextures textures) {
+    public static BedrockGeometry mapGeometry(String identifier, String boneName, ResolvedModel model, Transformation transformation, ModelTextures<?> textures) {
         UnbakedGeometry top = model.getTopGeometry();
         if (top == UnbakedGeometry.EMPTY) {
             return BedrockGeometry.EMPTY;
@@ -64,7 +64,7 @@ public class GeometryMapper {
     // After hours of painfully suffering and 40 test builds of Rainbow, I finally got the right formula together and somehow made this mess of a code
     // work properly, or at least, I think it is. I physically jumped in the air and cheered as I saw my models convert properly.
     // Now, make sure you are ready to witness my deformed creation
-    private static BedrockGeometry.Cube.Builder mapCuboidModelElement(CuboidModelElement element, int elementIndex, ModelTextures textures) {
+    private static BedrockGeometry.Cube.Builder mapCuboidModelElement(CuboidModelElement element, int elementIndex, ModelTextures<?> textures) {
         // For some reason the X axis is inverted on bedrock (thanks Blockbench!!)
 
         // The centre of the model is back by 8 in the X and Z direction on bedrock, so start by move the from and to points of the cube, and later the pivot, like that

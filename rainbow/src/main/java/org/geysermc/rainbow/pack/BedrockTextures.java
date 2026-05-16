@@ -33,7 +33,7 @@ public record BedrockTextures(Map<String, String> textures) {
         private final Map<String, String> textures = new HashMap<>();
 
         public Builder withBlockTextures(BedrockBlock block) {
-            block.textures().forEach((key, texture) -> withTexture(key, TEXTURES_FOLDER + texture.destination().getPath()));
+            block.textures().textures().forEach((_, texture) -> withTexture(texture.bedrockSafeDestination(), TEXTURES_FOLDER + texture.destination().getPath()));
             return this;
         }
 

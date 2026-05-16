@@ -2,22 +2,21 @@ package org.geysermc.rainbow.mapping.texture;
 
 import net.minecraft.client.resources.model.ResolvedModel;
 import net.minecraft.client.resources.model.sprite.Material;
-import net.minecraft.world.item.ItemStackTemplate;
 import org.geysermc.rainbow.mapping.PackAssetCache;
-import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mixin.TextureSlotsAccessor;
 
 import java.util.Map;
+import java.util.function.Supplier;
 
-public class ModelTextureCache extends PackAssetCache<ModelTextureCache.Key, ModelTextures> {
+public class ModelTextureCache<T extends ModelTextures<T>> extends PackAssetCache<ModelTextureCache.Key, T> {
 
-    public ModelTextures load(ItemStackTemplate stack, ResolvedModel model, PackContext context) {
-        return getOrCompute(new Key(model), () -> ModelTextures.load(stack, model, context));
+    public T load(ResolvedModel model, Supplier<T> computer) {
+        return getOrCompute(new Key(model), computer);
     }
 
     public record Key(Map<String, Material> textures) {
 
-        public Key(ResolvedModel model) {
+        private Key(ResolvedModel model) {
             this(((TextureSlotsAccessor) model.getTopTextureSlots()).getResolvedValues());
         }
     }
