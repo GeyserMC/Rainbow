@@ -36,8 +36,10 @@ public record BedrockTextures(Map<String, String> textures) {
         private final Map<String, String> textures = new HashMap<>();
 
         public Builder withBlockTextures(BedrockBlock block) {
-            block.textures().materials().ifLeft(this::withBlockMaterial);
-            block.textures().materials().ifRight(infos -> infos.values().forEach(this::withBlockMaterial));
+            if (!block.textures().cached()) {
+                block.textures().materials().ifLeft(this::withBlockMaterial);
+                block.textures().materials().ifRight(infos -> infos.values().forEach(this::withBlockMaterial));
+            }
             return this;
         }
 
@@ -46,7 +48,10 @@ public record BedrockTextures(Map<String, String> textures) {
         }
 
         public Builder withItemTexture(BedrockItem item) {
-            return withTexture(item.textureName(), TEXTURES_FOLDER + item.textures().icon().getPath());
+            if (!item.textures().cached()) {
+                return withTexture(item.textures().icon().bedrockSafeName(), item.textures().icon().bedrockSafeDestination());
+            }
+            return this;
         }
 
         public Builder withTexture(String name, String texture) {

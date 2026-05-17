@@ -54,9 +54,8 @@ public record BedrockAttachableContext(Optional<BedrockAttachable> attachable, O
                     EquipmentClientInfo.LayerType layerType = getEquipmentLayer(slot, glider);
                     List<EquipmentClientInfo.Layer> layers = equipmentInfo.get().getLayers(layerType);
                     if (!layers.isEmpty()) {
-                        Identifier equipmentTexture = getEquipmentTexture(layers, layerType);
-                        return new BedrockAttachableContext(BedrockAttachable.equipment(identifier, slot, equipmentTexture.getPath(), glider).build(),
-                                TextureHolder.createBuiltIn(equipmentTexture));
+                        TextureHolder equipmentTexture = TextureHolder.createBuiltIn(getEquipmentTexture(layers, layerType));
+                        return new BedrockAttachableContext(BedrockAttachable.equipment(identifier, slot, equipmentTexture, glider).build(), equipmentTexture);
                     }
                 }
             }

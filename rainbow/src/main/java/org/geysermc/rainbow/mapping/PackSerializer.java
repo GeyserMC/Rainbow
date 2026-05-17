@@ -55,19 +55,19 @@ public interface PackSerializer {
         }
 
         static <T> Serializable wrapCodec(Codec<T> codec, T object, Function<PackPaths, Path> pathGetter) {
-            return wrapCodec(codec, object, (paths, _) -> pathGetter.apply(paths));
+            return context -> context.save(codec, object, pathGetter);
         }
 
         static <T> Serializable wrapCodec(Codec<T> codec, T object, BiFunction<PackPaths, T, Path> pathResolver) {
-            return context -> context.serializer().saveJson(codec, object, pathResolver.apply(context.paths(), object));
+            return context -> context.save(codec, object, pathResolver);
         }
 
         static <T> Serializable wrapOptionalCodec(Codec<T> codec, Optional<T> optional, Function<PackPaths, Path> pathGetter) {
-            return wrapOptionalCodec(codec, optional, (paths, _) -> pathGetter.apply(paths));
+            return context -> context.save(codec, optional, pathGetter);
         }
 
         static <T> Serializable wrapOptionalCodec(Codec<T> codec, Optional<T> optional, BiFunction<PackPaths, T, Path> pathResolver) {
-            return optional.map(object -> wrapCodec(codec, object, pathResolver)).orElseGet(Serializable::noop);
+            return context -> context.save(codec, optional, pathResolver);
         }
 
         static Serializable allOf(Collection<? extends Serializable> serializables) {

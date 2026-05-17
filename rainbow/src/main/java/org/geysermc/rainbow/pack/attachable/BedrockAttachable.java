@@ -12,7 +12,7 @@ import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.EquipmentSlot;
 import org.geysermc.rainbow.PackConstants;
-import org.geysermc.rainbow.pack.texture.BedrockTextures;
+import org.geysermc.rainbow.mapping.texture.TextureHolder;
 import org.geysermc.rainbow.pack.BedrockVersion;
 import org.geysermc.rainbow.pack.animation.VanillaAnimations;
 import org.geysermc.rainbow.pack.geometry.VanillaGeometries;
@@ -39,7 +39,7 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
         return new Builder(identifier);
     }
 
-    public static BedrockAttachable.Builder equipment(Identifier identifier, EquipmentSlot slot, String texture, boolean glider) {
+    public static BedrockAttachable.Builder equipment(Identifier identifier, EquipmentSlot slot, TextureHolder texture, boolean glider) {
         String script = switch (slot) {
             case HEAD -> "variable.helmet_layer_visible = 0.0;";
             case CHEST -> "variable.chest_layer_visible = 0.0;";
@@ -94,12 +94,16 @@ public record BedrockAttachable(BedrockVersion formatVersion, AttachableInfo inf
             return this;
         }
 
+        public Builder withTexture(DisplaySlot slot, TextureHolder texture) {
+            return withTexture(slot, texture.bedrockSafeDestination());
+        }
+
         public Builder withTexture(DisplaySlot slot, String texture) {
             return withTexture(slot.name, texture);
         }
 
         public Builder withTexture(String slot, String texture) {
-            textures.put(slot, BedrockTextures.TEXTURES_FOLDER + texture);
+            textures.put(slot, texture);
             return this;
         }
 

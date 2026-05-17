@@ -70,6 +70,10 @@ public abstract class TextureHolder implements PackSerializer.Serializable {
     }
 
     public String bedrockSafeDestination() {
+        return bedrockSafeDestination(destination);
+    }
+
+    public static String bedrockSafeDestination(Identifier destination) {
         return BedrockTextures.TEXTURES_FOLDER + destination.getPath();
     }
 

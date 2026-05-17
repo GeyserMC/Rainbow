@@ -279,7 +279,7 @@ public class BedrockItemMapper {
             GeyserBaseItemDefinition base = new GeyserBaseItemDefinition(bedrockIdentifier,
                     Optional.ofNullable(itemStack.components().split().added().get(DataComponents.ITEM_NAME)).map(Component::tryCollapseToString),
                     predicateStack,
-                    new GeyserBaseItemDefinition.BedrockOptions(Optional.empty(), true, geometry.handheld(), calculateProtectionValue(itemStack), tags),
+                    new GeyserBaseItemDefinition.BedrockOptions(Optional.of(textures.icon().bedrockSafeName()), true, geometry.handheld(), calculateProtectionValue(itemStack), tags),
                     itemStack.components());
             try {
                 packContext.mappings().items().map(itemStack.item(), definitionCreator.apply(base));
@@ -288,7 +288,7 @@ public class BedrockItemMapper {
                 return;
             }
 
-            packContext.assetConsumer().acceptItem(new BedrockItem(bedrockIdentifier, base.textureName(), textures, geometry, attachable));
+            packContext.assetConsumer().acceptItem(new BedrockItem(bedrockIdentifier, textures, geometry, attachable));
         }
 
         public void report(String problem) {
