@@ -54,7 +54,7 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
 
         Identifier modelIdentifier = Rainbow.getModelIdentifier(model);
 
-        if (materials.size() == 1) {
+        if (ModelTextures.usesSingleMaterial(materials)) {
             Material singleMaterial = materials.values().stream().findAny().orElseThrow();
             return context.assetResolver().getPossibleAtlasTextureSafely(singleMaterial.sprite())
                     .<ItemModelTextures>map(texture -> {
@@ -72,7 +72,7 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
     private static TextureHolder createIcon(Identifier identifier, ItemStackTemplate stack, Map<String, Material> materials, PackContext context) {
         // Fallback to trying layer0 when there is no renderer
         return context.geometryRenderer()
-                .map(renderer -> renderer.render(identifier, stack))
+                .map(renderer -> renderer.render(identifier.withSuffix("_icon"), stack))
                 .or(() -> Optional.ofNullable(materials.get("layer0"))
                         .map(material -> TextureHolder.createBuiltIn(identifier, material.sprite())))
                 .orElseGet(() -> TextureHolder.createNonExistent(identifier));
@@ -190,7 +190,7 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
             } else if (!flatBuiltinModel) {
                 // Not flat built-in, so modify attachable similar to StitchedTextures
                 return builder
-                        .withTexture(BedrockAttachable.DisplaySlot.DEFAULT, ItemModelTextures.getStitchedIdentifier(texture).getPath())
+                        .withTexture(BedrockAttachable.DisplaySlot.DEFAULT, texture.getPath())
                         .withRenderController(VanillaRenderControllers.ITEM_DEFAULT);
             }
             return ItemModelTextures.super.applyToAttachable(builder);
@@ -204,8 +204,9 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
                 if (flatBuiltinModel) {
                     return TextureHolder.createBuiltIn(texture).save(context);
                 }
-                // Else, save icon and texture with _stitched suffix
-                return iconTexture.with(TextureHolder.createBuiltIn(ItemModelTextures.getStitchedIdentifier(texture), texture)).save(context);
+                // Else, save icon and texture
+                // Please note that this can lead to a texture saving twice if a mapped block also uses this same texture
+                return iconTexture.with(TextureHolder.createBuiltIn(texture)).save(context);
             }
 
             // Texture must exist at this point, else a missing texture would've been returned by the load function

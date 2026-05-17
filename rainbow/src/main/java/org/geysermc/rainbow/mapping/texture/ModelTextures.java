@@ -34,10 +34,18 @@ public interface ModelTextures<T extends ModelTextures<T>> extends PackAssetCach
         return materials;
     }
 
+    static boolean usesSingleMaterial(Map<String, Material> cleanMaterials) {
+        return cleanMaterials.size() == 1 || areAllMaterialsTheSame(cleanMaterials);
+    }
+
     static String sanitizeMaterialReference(String reference) {
         if (TextureSlotsAccessor.invokeIsTextureReference(reference)) {
             return reference.substring(1);
         }
         return reference;
+    }
+
+    private static boolean areAllMaterialsTheSame(Map<String, Material> materials) {
+        return materials.values().stream().distinct().count() <= 1L;
     }
 }

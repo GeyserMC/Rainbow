@@ -71,7 +71,7 @@ public class BedrockBlockMapper {
     }
 
     private static String getNameForBlock(Block block) {
-        return Rainbow.getModdedIdentifier(BuiltInRegistries.BLOCK.getKey(block).getPath()).toString();
+        return Rainbow.bedrockSafeIdentifier(BuiltInRegistries.BLOCK.getKey(block));
     }
 
     private static void tryMapBlockState(BlockState state, ProblemReporter reporter, PackContext context, boolean includeVanilla, Consumer<GeyserBlockMapping.BlockDefinition.Builder> definitionConsumer) {
@@ -104,18 +104,22 @@ public class BedrockBlockMapper {
         builder.withLightEmission(getMaxLightEmission(geometry));
         BlockModelTextures textures = context.blockTextureCache().load(model, () -> new BlockModelTextures(model.getTopTextureSlots(), context.assetResolver()));
 
-        /*if (looksLikeFullBlockModel(model.getTopGeometry())) {
-            builder.withFullBlockGeometry(GeyserBlockMapping.materials()
-                    .withInstance("*", "FIXME", GeyserBlockMapping.MaterialInstances.Instance.RenderMethod.OPAQUE, true, ambientOcclusion));
-        } else if (looksLikeCrossBlockModel(model.getTopGeometry())) {
+        Optional<MappedGeometry> mappedGeometry = Optional.empty();
+        if (looksLikeFullBlockModel(model.getTopGeometry()) && textures.singleMaterial().isPresent()) {
+            builder.withFullBlockGeometry(GeyserBlockMapping.materials().withInstance("*", mapMaterial(textures.singleMaterial().get(), ambientOcclusion)));
+        /*} else if (looksLikeCrossBlockModel(model.getTopGeometry())) {
             builder.withCrossGeometry(GeyserBlockMapping.materials()
                     .withInstance("*", "FIXME", GeyserBlockMapping.MaterialInstances.Instance.RenderMethod.OPAQUE, true, ambientOcclusion));
-        } else {*/
+        */} else {
             Identifier modelIdentifier = Rainbow.getModelIdentifier(model);
-            Optional<MappedGeometry> mappedGeometry = Optional.of(context.geometryCache().mapGeometry(modelIdentifier, model, Transformation.IDENTITY, textures));
-            GeyserBlockMapping.MaterialInstances materials = mapMaterials(geometry, model.getTopTextureSlots(), ambientOcclusion);
+            mappedGeometry = Optional.of(context.geometryCache().mapGeometry(modelIdentifier, model, Transformation.IDENTITY, textures));
+            GeyserBlockMapping.MaterialInstances materials = textures.singleMaterial()
+                    .map(material -> GeyserBlockMapping.materials()
+                            .withInstance("*", mapMaterial(material, ambientOcclusion))
+                            .build())
+                    .orElseGet(() -> mapMaterials(geometry, model.getTopTextureSlots(), ambientOcclusion));
             builder.withGeometry(mappedGeometry.get().identifier(), materials);
-        //}
+        }
 
         context.assetConsumer().acceptBlock(new BedrockBlock(textures, mappedGeometry));
         return builder;
@@ -145,14 +149,19 @@ public class BedrockBlockMapper {
                 element.faces().forEach((direction, face) -> {
                     Material material = textures.getMaterial(face.texture());
                     if (material != null) {
-                        builder.withInstance(GeometryMapper.getMeaningfulMaterialInstanceName(direction, face.texture(), elementIndex),
-                                Rainbow.bedrockSafeIdentifier(material.sprite()), GeyserBlockMapping.MaterialInstances.Instance.RenderMethod.OPAQUE, true, ambientOcclusion);
+                        builder.withInstance(GeometryMapper.getMeaningfulMaterialInstanceName(direction, face.texture(), elementIndex), mapMaterial(material, ambientOcclusion));
                     }
                 });
             }
             return builder.build();
         }
         return GeyserBlockMapping.MaterialInstances.EMPTY;
+    }
+
+    private static GeyserBlockMapping.MaterialInstances.Instance mapMaterial(Material material, boolean ambientOcclusion) {
+        // TODO OPAQUE
+        return new GeyserBlockMapping.MaterialInstances.Instance(Rainbow.bedrockSafeIdentifier(material.sprite()), GeyserBlockMapping.MaterialInstances.Instance.RenderMethod.OPAQUE,
+                true, ambientOcclusion);
     }
 
     private static int getMaxLightEmission(UnbakedGeometry geometry) {

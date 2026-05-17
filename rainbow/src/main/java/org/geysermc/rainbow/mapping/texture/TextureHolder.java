@@ -9,6 +9,7 @@ import org.geysermc.rainbow.image.NativeImageUtil;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -75,5 +76,18 @@ public abstract class TextureHolder implements PackSerializer.Serializable {
 
     protected void reportMissing(ProblemReporter reporter) {
         reporter.report(() -> "missing texture for " + destination + "; please provide it manually");
+    }
+
+    @Override
+    public boolean equals(@Nullable Object other) {
+        if (!(other instanceof TextureHolder that)) {
+            return false;
+        }
+        return destination.equals(that.destination);
+    }
+
+    @Override
+    public int hashCode() {
+        return destination.hashCode();
     }
 }
