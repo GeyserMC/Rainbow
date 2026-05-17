@@ -238,6 +238,10 @@ public record GeyserBlockMapping(String name, Optional<BlockDefinition> base, bo
                 return withTransformation(new Transformation(scale, translation));
             }
 
+            public Builder withTransformation(Quadrant rotationX, Quadrant rotationY, Quadrant rotationZ) {
+                return withTransformation(new Transformation(Vectors.VECTOR3F_ONE, Vectors.VECTOR3F_ZERO, rotationX, rotationY, rotationZ));
+            }
+
             public Builder withTransformation(Vector3fc scale, Vector3fc translation, Quadrant rotationX, Quadrant rotationY, Quadrant rotationZ) {
                 return withTransformation(new Transformation(scale, translation, rotationX, rotationY, rotationZ));
             }

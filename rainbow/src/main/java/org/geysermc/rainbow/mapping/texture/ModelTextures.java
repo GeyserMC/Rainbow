@@ -35,6 +35,10 @@ public interface ModelTextures<T extends ModelTextures<T>> extends PackAssetCach
         return materials;
     }
 
+    static boolean hasNoMaterials(TextureSlots textures) {
+        return getCleanMaterials(textures).isEmpty();
+    }
+
     static boolean usesSingleMaterial(Map<String, Material> cleanMaterials) {
         return cleanMaterials.size() == 1 || areAllMaterialsTheSame(cleanMaterials);
     }

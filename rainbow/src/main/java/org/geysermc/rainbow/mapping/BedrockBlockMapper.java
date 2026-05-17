@@ -23,6 +23,7 @@ import org.geysermc.rainbow.definition.block.GeyserBlockMapping;
 import org.geysermc.rainbow.mapping.geometry.GeometryMapper;
 import org.geysermc.rainbow.mapping.geometry.MappedGeometry;
 import org.geysermc.rainbow.mapping.texture.BlockModelTextures;
+import org.geysermc.rainbow.mapping.texture.ModelTextures;
 import org.geysermc.rainbow.mixin.BlockStateModelSimpleCachedUnbakedRootAccessor;
 import org.geysermc.rainbow.pack.BedrockBlock;
 
@@ -55,7 +56,7 @@ public class BedrockBlockMapper {
     public static void tryMapBlockState(BlockState state, ProblemReporter reporter, PackContext context) {
         GeyserBlockMapping.Builder mapping = GeyserBlockMapping.builder(getNameForBlock(state.getBlock()));
         mapping.onlyOverrideStates();
-        tryMapBlockState(state, reporter, context, true, definition -> {
+        tryMapBlockState(state, stateChild(reporter, state), context, true, definition -> {
             mapping.withStateOverride(blockStatePropertiesToString(state), definition);
             context.mappings().blocks().map(state.getBlock().builtInRegistryHolder(), mapping);
         });
@@ -63,11 +64,11 @@ public class BedrockBlockMapper {
 
     private static ProblemReporter blockChild(ProblemReporter reporter, Block block) {
         Identifier identifier = BuiltInRegistries.BLOCK.getKey(block);
-        return reporter.forChild(() -> "block " + identifier + " ");
+        return reporter.forChild(() -> "block " + identifier);
     }
 
     private static ProblemReporter stateChild(ProblemReporter reporter, BlockState state) {
-        return blockChild(reporter, state.getBlock()).forChild(() -> "state " + blockStatePropertiesToString(state) + " ");
+        return blockChild(reporter, state.getBlock()).forChild(() -> "[" + blockStatePropertiesToString(state) + "]");
     }
 
     private static String getNameForBlock(Block block) {
@@ -81,14 +82,25 @@ public class BedrockBlockMapper {
                 // TODO better weight handling
                 Variant stateVariant = contents instanceof SingleVariant.Unbaked(Variant variant) ? variant
                         : ((SingleVariant.Unbaked) ((WeightedVariants.Unbaked) contents).entries().unwrap().getFirst().value()).variant();
-                // Only map variants that don't use a vanilla block model
-                if (includeVanilla || !stateVariant.modelLocation().getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
-                    context.assetResolver().getResolvedModel(stateVariant.modelLocation())
-                            .ifPresentOrElse(model -> definitionConsumer.accept(mapBlockState(state, model, stateVariant.modelState(), context)),
-                                    () -> reporter.report(() -> "missing block model: " + stateVariant.modelLocation()));
+                Identifier stateModel = stateVariant.modelLocation();
+
+                // If not including vanilla, only map variants that don't use a vanilla block model
+                if (includeVanilla || !stateModel.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
+                    context.assetResolver().getResolvedModel(stateModel)
+                            .ifPresentOrElse(model -> {
+                                if (ModelTextures.hasNoMaterials(model.getTopTextureSlots())) {
+                                    reporter.report(() -> "unable to map block model " + stateModel + " as it has no textures");
+                                } else {
+                                    if (context.reportSuccesses()) {
+                                        reporter.report(() -> "creating mapping for block model " + stateModel);
+                                    }
+                                    definitionConsumer.accept(mapBlockState(state, model, stateVariant.modelState(), context));
+                                }
+                            }, () -> reporter.report(() -> "missing block model: " + stateModel));
                 }
-            } else {
-                reporter.report(() -> "only mapping of simple roots is supported for now");
+            } else if (includeVanilla) {
+                // Only report this one if explicitly mapping vanilla
+                reporter.report(() -> "multi-part block state definitions are unsupported");
             }
         }, () -> reporter.report(() -> "missing block state definition"));
     }
@@ -99,18 +111,14 @@ public class BedrockBlockMapper {
         UnbakedGeometry geometry = model.getTopGeometry();
         boolean ambientOcclusion = model.getTopAmbientOcclusion();
 
-        // We can't specify light emission per single model element, so we specify the highest value that is used across the model
-        // FIXME this seem to be actual light on bedrock?
-        builder.withLightEmission(getMaxLightEmission(geometry));
         BlockModelTextures textures = context.blockTextureCache().load(model, () -> BlockModelTextures.create(model.getTopTextureSlots(), context.assetResolver()));
 
         Optional<MappedGeometry> mappedGeometry = Optional.empty();
         if (looksLikeFullBlockModel(model.getTopGeometry()) && textures.isSingleMaterial()) {
             builder.withFullBlockGeometry(GeyserBlockMapping.materials().withInstance("*", mapMaterial(textures.getSingleMaterial().orElseThrow().material(), ambientOcclusion)));
-        /*} else if (looksLikeCrossBlockModel(model.getTopGeometry())) {
-            builder.withCrossGeometry(GeyserBlockMapping.materials()
-                    .withInstance("*", "FIXME", GeyserBlockMapping.MaterialInstances.Instance.RenderMethod.OPAQUE, true, ambientOcclusion));
-        */} else {
+        } else if (looksLikeCrossBlockModel(model.getTopGeometry()) && textures.isSingleMaterial()) {
+            builder.withCrossGeometry(GeyserBlockMapping.materials().withInstance("*", mapMaterial(textures.getSingleMaterial().orElseThrow().material(), ambientOcclusion)));
+        } else {
             Identifier modelIdentifier = Rainbow.getModelIdentifier(model);
             mappedGeometry = Optional.of(context.geometryCache().mapGeometry(modelIdentifier, model, Transformation.IDENTITY, textures));
             GeyserBlockMapping.MaterialInstances materials = textures.getSingleMaterial()
@@ -121,6 +129,15 @@ public class BedrockBlockMapper {
             builder.withGeometry(mappedGeometry.get().identifier(), materials);
         }
 
+        Block base = state.getBlock();
+        // Java and bedrock do friction differently.
+        // As friction goes up on bedrock, friction increases and the surface is less slippery
+        // On Java, this is the opposite: as friction increases, a surface is more slippery
+        // This is an approximate conversion
+        builder.withFriction(-base.getFriction() + 1.0F);
+        builder.withLightEmission(state.getLightEmission());
+        builder.withLightDampening(state.getLightDampening());
+        builder.withTransformation(modelState.x(), modelState.y(), modelState.z());
         context.assetConsumer().acceptBlock(new BedrockBlock(textures, mappedGeometry));
         return builder;
     }
@@ -135,7 +152,10 @@ public class BedrockBlockMapper {
 
     private static boolean looksLikeCrossBlockModel(UnbakedGeometry geometry) {
         if (geometry instanceof UnbakedCuboidGeometry(List<CuboidModelElement> elements) && elements.size() == 2) {
-
+            CuboidModelElement first = elements.getFirst();
+            CuboidModelElement second = elements.getLast();
+            return first.from().equals(0.8F, 0.0F, 8.0F) && first.to().equals(15.2F, 16.0F, 8.0F)
+                    && second.from().equals(8.0F, 0.0F, 0.8F) && second.to().equals(8.0F, 16.0F, 15.2F);
         }
         return false;
     }
@@ -162,19 +182,6 @@ public class BedrockBlockMapper {
         // TODO OPAQUE
         return new GeyserBlockMapping.MaterialInstances.Instance(Rainbow.bedrockSafeIdentifier(material.sprite()), GeyserBlockMapping.MaterialInstances.Instance.RenderMethod.OPAQUE,
                 true, ambientOcclusion);
-    }
-
-    private static int getMaxLightEmission(UnbakedGeometry geometry) {
-        if (geometry instanceof UnbakedCuboidGeometry(List<CuboidModelElement> elements)) {
-            int maxEmission = 0;
-            for (CuboidModelElement element : elements) {
-                if (element.lightEmission() > maxEmission) {
-                    maxEmission = element.lightEmission();
-                }
-            }
-            return maxEmission;
-        }
-        return 0;
     }
 
     private static String blockStatePropertiesToString(BlockState state) {
