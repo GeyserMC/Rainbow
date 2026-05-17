@@ -32,7 +32,7 @@ What do I do now?
 In this folder, you'll find 4 important files/folders along with this one:
 
 - custom-skulls.yml: put this in Geyser's config folder. These are the exported player skulls. The file may already exist in Geyser's config folder, be careful with overwriting it!
-- geyser_mappings.json: put this in the "custom_mappings" folder in Geyser's config folder. These are the generated item mappings.
+- custom_mappings: you need to put the files in here in the `custom_mappings` folder in Geyser's config folder. These are the generated Geyser mappings.
 - pack.zip: put this in the "packs" folder in Geyser's config folder. This is the generated bedrock resourcepack.
 - lang: put all files in this folder in the "locales/overrides" folder in Geyser's config folder. These are the exported custom translation strings.
   - The folder can be empty or non-existent if no language files are found. This is usually not an issue!
