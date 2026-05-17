@@ -18,7 +18,6 @@ import org.geysermc.rainbow.ProblemSuccessReporter;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.definition.GeyserMappings;
 import org.geysermc.rainbow.definition.block.GeyserBlockMappings;
-import org.geysermc.rainbow.mapping.AssetCacheStats;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.BedrockAssetConsumer;
 import org.geysermc.rainbow.mapping.BedrockBlockMapper;
@@ -179,29 +178,13 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
                 .save(serializingContext);
     }
 
-    public AssetCacheStats cacheStats() {
-        return context.cacheStats();
-    }
-
     public PackStats stats() {
         return new PackStats(context.cacheStats(), context.mappings().blocks().size(), context.mappings().items().size(),
                 itemTextures.build().size(), terrainTextures.build().size(), flipbookTextures.build().size());
     }
 
-    public int blockMappingsSize() {
-        return context.mappings().blocks().size();
-    }
-
-    public int itemMappingsSize() {
-        return context.mappings().items().size();
-    }
-
     public Set<BedrockItem> getBedrockItems() {
         return Collections.unmodifiableSet(bedrockItems);
-    }
-
-    public int getItemTextureAtlasSize() {
-        return itemTextures.build().size();
     }
 
     public ProblemReporter getReporter() {
