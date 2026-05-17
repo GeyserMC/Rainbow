@@ -22,6 +22,7 @@ public interface ModelTextures<T extends ModelTextures<T>> extends PackAssetCach
     boolean requiresAttachable();
 
     record SpriteInfo(int x, int y, int width, int height) {
+        public static final SpriteInfo EMPTY = new SpriteInfo(0, 0, 0, 0);
 
         public SpriteInfo(TextureResource texture) {
             this(0, 0, texture.sizeOfFrame().width(), texture.sizeOfFrame().height());

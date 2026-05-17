@@ -27,6 +27,9 @@ import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
 import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
 import org.geysermc.rainbow.definition.item.GeyserItemMappings;
+import org.geysermc.rainbow.pack.texture.BedrockFlipbookTextures;
+import org.geysermc.rainbow.pack.texture.BedrockTextureAtlas;
+import org.geysermc.rainbow.pack.texture.BedrockTextures;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
@@ -52,6 +55,7 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
 
     private final BedrockTextures.Builder itemTextures = BedrockTextures.builder();
     private final BedrockTextures.Builder terrainTextures = BedrockTextures.builder();
+    private final BedrockFlipbookTextures.Builder flipbookTextures = BedrockFlipbookTextures.builder();
     private final Set<BedrockBlock> bedrockBlocks = new HashSet<>();
     private final Set<BedrockItem> bedrockItems = new HashSet<>();
     private final Set<Identifier> modelsMapped = new HashSet<>();
@@ -156,9 +160,11 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
         return baseSerialization;
     }
 
+    // TODO: no duplicates in texture atlases and flipbook textures
     @Override
     public void acceptBlock(BedrockBlock block) {
         terrainTextures.withBlockTextures(block);
+        block.textures().addFlipbookTextures(flipbookTextures);
         bedrockBlocks.add(block);
     }
 
@@ -175,6 +181,7 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
                 .with(PackManifest.CODEC, manifest, PackPaths::manifest)
                 .with(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), PackPaths::itemAtlas)
                 .with(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.terrainAtlas(name, terrainTextures), PackPaths::terrainAtlas)
+                .with(BedrockFlipbookTextures.CODEC, flipbookTextures.build(), PackPaths::flipbookTextures)
                 .with(bedrockBlocks)
                 .with(bedrockItems)
                 .with(paths.languageOutput().map(languageFolder -> context -> LanguageUtil.saveLanguages(context, languageFolder)))

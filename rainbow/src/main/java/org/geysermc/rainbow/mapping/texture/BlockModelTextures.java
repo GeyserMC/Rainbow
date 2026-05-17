@@ -1,5 +1,6 @@
 package org.geysermc.rainbow.mapping.texture;
 
+import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.client.resources.model.sprite.Material;
@@ -7,6 +8,7 @@ import net.minecraft.client.resources.model.sprite.TextureSlots;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
+import org.geysermc.rainbow.pack.texture.BedrockFlipbookTextures;
 
 import java.util.Collections;
 import java.util.Map;
@@ -14,57 +16,51 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public record BlockModelTextures(Map<String, TextureHolder> textures, Map<String, SpriteInfo> sprites, int width, int height, Optional<Material> singleMaterial,
-                                 boolean cached) implements ModelTextures<BlockModelTextures> {
+public record BlockModelTextures(Either<MaterialInfo, Map<String, MaterialInfo>> materials, int width, int height, boolean cached) implements ModelTextures<BlockModelTextures> {
 
-    public BlockModelTextures(TextureSlots textures, AssetResolver assets) {
+    public static BlockModelTextures create(TextureSlots textures, AssetResolver assets) {
         Map<String, Material> materials = ModelTextures.getCleanMaterials(textures);
-        Map<String, TextureHolder> textureHolders = new Object2ObjectOpenHashMap<>();
-        Map<String, SpriteInfo> sprites = new Object2ObjectOpenHashMap<>();
-        AtomicInteger width = new AtomicInteger();
-        AtomicInteger height = new AtomicInteger();
 
-        Optional<Material> singleMaterial = Optional.empty();
         if (ModelTextures.usesSingleMaterial(materials)) {
-            singleMaterial = materials.values().stream().findAny();
-            singleMaterial.flatMap(material -> assets.getPossibleAtlasTextureSafely(material.sprite())
-                    .map(texture -> Pair.of(material, texture))).ifPresent(materialAndTexture -> {
-                try (TextureResource texture = materialAndTexture.getSecond()) {
-                    TextureHolder holder = TextureHolder.createBuiltIn(materialAndTexture.getFirst().sprite());
-                    SpriteInfo sprite = new SpriteInfo(texture);
-                    width.set(sprite.width());
-                    height.set(sprite.height());
-                    materials.keySet().forEach(key -> {
-                        textureHolders.put(key, holder);
-                        sprites.put(key, sprite);
-                    });
-                }
-            });
+            MaterialInfo materialInfo = materials.values().stream().findAny()
+                    .map(material -> assets.getPossibleAtlasTextureSafely(material.sprite())
+                            .map(texture -> Pair.of(material, texture))
+                            .map(materialAndTexture -> {
+                                try (TextureResource texture = materialAndTexture.getSecond()) {
+                                    return new MaterialInfo(texture, materialAndTexture.getFirst());
+                                }
+                            })
+                            .orElseGet(() -> MaterialInfo.createMissing(material)))
+                    .orElseThrow();
+            return new BlockModelTextures(Either.left(materialInfo), materialInfo.sprite.width(), materialInfo.sprite.height(), false);
         } else {
+            Map<String, MaterialInfo> materialInfos = new Object2ObjectOpenHashMap<>();
+            AtomicInteger width = new AtomicInteger();
+            AtomicInteger height = new AtomicInteger();
+
             // Don't bother optimising this for distinct textures
             materials.forEach((key, material) -> {
                 assets.getPossibleAtlasTextureSafely(material.sprite()).ifPresent(texture -> {
                     try (texture) {
-                        textureHolders.put(key, TextureHolder.createBuiltIn(material.sprite()));
-                        SpriteInfo sprite = new SpriteInfo(texture);
-                        sprites.put(key, sprite);
-                        if (sprite.width() > width.get()) {
-                            width.set(sprite.width());
+                        MaterialInfo materialInfo = new MaterialInfo(texture, material);
+                        materialInfos.put(key, materialInfo);
+                        if (materialInfo.sprite.width() > width.get()) {
+                            width.set(materialInfo.sprite.width());
                         }
-                        if (sprite.height() > height.get()) {
-                            height.set(sprite.height());
+                        if (materialInfo.sprite.height() > height.get()) {
+                            height.set(materialInfo.sprite.height());
                         }
                     }
                 });
             });
+            return new BlockModelTextures(Either.right(Collections.unmodifiableMap(materialInfos)), width.get(), height.get(), false);
         }
-
-        this(Collections.unmodifiableMap(textureHolders), Collections.unmodifiableMap(sprites), width.get(), height.get(), singleMaterial, false);
     }
 
     @Override
     public Optional<SpriteInfo> getSprite(String key) {
-        return Optional.ofNullable(sprites.get(ModelTextures.sanitizeMaterialReference(key)));
+        return materials.map(material -> Optional.of(material.sprite),
+                map -> Optional.ofNullable(map.get(ModelTextures.sanitizeMaterialReference(key))).map(MaterialInfo::sprite));
     }
 
     @Override
@@ -77,16 +73,36 @@ public record BlockModelTextures(Map<String, TextureHolder> textures, Map<String
         if (cached) {
             return this;
         }
-        return new BlockModelTextures(textures, sprites, width, height, singleMaterial, true);
+        return new BlockModelTextures(materials, width, height, true);
+    }
+
+    public void addFlipbookTextures(BedrockFlipbookTextures.Builder builder) {
+        if (!cached) {
+            
+        }
     }
 
     @Override
     public CompletableFuture<?> save(PackSerializingContext context) {
         if (!cached) {
             return PackSerializer.Serializable.noop()
-                    .with(textures.values().stream().distinct().toList())
+                    .with(materials.map(MaterialInfo::texture,
+                            map -> map.values().stream()
+                                    .map(MaterialInfo::texture)
+                                    .collect(PackSerializer.Serializable::noop, PackSerializer.Serializable::with, PackSerializer.Serializable::with)))
                     .save(context);
         }
         return PackSerializer.noop();
+    }
+
+    public record MaterialInfo(TextureHolder texture, SpriteInfo sprite, Material material) {
+
+        private MaterialInfo(TextureResource texture, Material material) {
+            this(TextureHolder.createBuiltIn(material.sprite()), new SpriteInfo(texture), material);
+        }
+
+        private static MaterialInfo createMissing(Material material) {
+            return new MaterialInfo(TextureHolder.createNonExistent(material.sprite()), SpriteInfo.EMPTY, material);
+        }
     }
 }

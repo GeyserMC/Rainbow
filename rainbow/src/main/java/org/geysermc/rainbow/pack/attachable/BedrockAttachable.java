@@ -12,7 +12,7 @@ import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.EquipmentSlot;
 import org.geysermc.rainbow.PackConstants;
-import org.geysermc.rainbow.pack.BedrockTextures;
+import org.geysermc.rainbow.pack.texture.BedrockTextures;
 import org.geysermc.rainbow.pack.BedrockVersion;
 import org.geysermc.rainbow.pack.animation.VanillaAnimations;
 import org.geysermc.rainbow.pack.geometry.VanillaGeometries;

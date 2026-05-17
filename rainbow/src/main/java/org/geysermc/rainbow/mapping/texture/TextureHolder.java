@@ -29,9 +29,7 @@ public abstract class TextureHolder implements PackSerializer.Serializable {
         return load(context.assetResolver(), context.reporter())
                 .flatMap(texture -> {
                     try (texture) {
-                        try (NativeImage firstFrame = texture.getFirstFrame()) {
-                            return RainbowIO.safeIO(() -> context.serializer().saveTexture(NativeImageUtil.writeToByteArray(firstFrame), context.paths().texturePath(this)));
-                        }
+                        return RainbowIO.safeIO(() -> context.serializer().saveTexture(NativeImageUtil.writeToByteArray(texture.texture()), context.paths().texturePath(this)));
                     }
                 })
                 .orElseGet(() -> {

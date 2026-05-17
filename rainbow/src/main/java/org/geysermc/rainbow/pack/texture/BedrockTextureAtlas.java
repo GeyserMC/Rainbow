@@ -1,4 +1,4 @@
-package org.geysermc.rainbow.pack;
+package org.geysermc.rainbow.pack.texture;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

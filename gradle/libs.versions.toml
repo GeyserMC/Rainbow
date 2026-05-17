@@ -4,7 +4,7 @@ minecraft-supported-base = "26.1"
 minecraft-supported-modrinth = "26.1,26.1.1,26.1.2"
 
 fabric-loom = "1.16.1"
-fabric-loader = "0.18.4"
+fabric-loader = "0.19.2"
 fabric-api = "0.144.1+26.1"
 
 minotaur = "2.9.0"
