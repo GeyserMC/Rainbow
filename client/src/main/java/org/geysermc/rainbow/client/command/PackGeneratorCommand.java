@@ -21,6 +21,7 @@ import net.minecraft.world.phys.Vec3;
 import org.geysermc.rainbow.client.PackManager;
 import org.geysermc.rainbow.client.mapper.InventoryMapper;
 import org.geysermc.rainbow.client.mapper.PackMapper;
+import org.geysermc.rainbow.pack.BedrockPack;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -58,24 +59,29 @@ public class PackGeneratorCommand {
                                             BlockPos pos = clientCoordinatesToBlockPos(context.getSource(), context.getArgument("target", Coordinates.class));
                                             BlockState state = context.getSource().getLevel().getBlockState(pos);
                                             return runWithPack(packManager, (source, pack) -> {
-                                                pack.resources().mapBlockStateExplicitly(state);
-                                                source.sendFeedback(Component.literal("wooo!"));
+                                                switch (pack.resources().mapBlockStateExplicitly(state)) {
+                                                    case NONE_MAPPED -> source.sendError(Component.translatable("commands.rainbow.no_block_mapped"));
+                                                    case PROBLEMS_OCCURRED -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_target_block_problems"));
+                                                    case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_target_block"));
+                                                }
                                             }).run(context);
                                         })
                                 )
                         )
-                        .executes(runWithPack(packManager, (source, pack) -> {
-                            ItemStack heldItem = source.getPlayer().getMainHandItem();
-                            if (heldItem.isEmpty()) {
-                                source.sendError(Component.literal("Must hold an item to map"));
-                            } else {
-                                switch (packMapper.mapItems(pack, List.of(ItemStackTemplate.fromNonEmptyStack(heldItem))).toSingleResult()) {
-                                    case NONE_MAPPED -> source.sendError(Component.translatable("commands.rainbow.no_item_mapped"));
-                                    case PROBLEMS_OCCURRED -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item_problems"));
-                                    case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item"));
-                                }
-                            }
-                        }))
+                        .then(ClientCommands.literal("item")
+                                .executes(runWithPack(packManager, (source, pack) -> {
+                                    ItemStack heldItem = source.getPlayer().getMainHandItem();
+                                    if (heldItem.isEmpty()) {
+                                        source.sendError(Component.literal("Must hold an item to map"));
+                                    } else {
+                                        switch (packMapper.mapItems(pack, List.of(ItemStackTemplate.fromNonEmptyStack(heldItem))).toSingleResult()) {
+                                            case NONE_MAPPED -> source.sendError(Component.translatable("commands.rainbow.no_item_mapped"));
+                                            case PROBLEMS_OCCURRED -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item_problems"));
+                                            case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item"));
+                                        }
+                                    }
+                                }))
+                        )
                 )
                 .then(ClientCommands.literal("mapinventory")
                         .executes(runWithPack(packManager, (source, pack) -> {
@@ -91,7 +97,7 @@ public class PackGeneratorCommand {
                                 if (results.itemsMapped() > 0) {
                                     source.sendFeedback(Component.translatable("commands.rainbow.mapped_items_from_inventory", results.itemsMapped()));
                                     if (results.problems() > 0) {
-                                        source.sendFeedback(Component.translatable("commands.rainbow.mapped_items_problems"));
+                                        source.sendFeedback(Component.translatable("chat.rainbow.mapped_problems"));
                                     }
                                 }
                                 if (results.skullsMapped() > 0) {
@@ -123,8 +129,16 @@ public class PackGeneratorCommand {
                          */
                         .then(ClientCommands.literal("blocks")
                                 .executes(runWithPack(packManager, (source, pack) -> {
-                                    pack.resources().tryMapAllVanillaBlocks();
-                                    source.sendFeedback(Component.literal("woo!"));
+                                    BedrockPack.MappingResults results = pack.resources().tryMapAllVanillaBlocks();
+                                    switch (results.toSingleResult()) {
+                                        case NONE_MAPPED -> source.sendFeedback(Component.translatable("commands.rainbow.no_blocks_mapped"));
+                                        case MAPPED_SUCCESSFULLY, PROBLEMS_OCCURRED -> {
+                                            source.sendFeedback(Component.translatable("commands.rainbow.mapped_blocks", results.amountMapped()));
+                                            if (results.problems() > 0) {
+                                                source.sendFeedback(Component.translatable("chat.rainbow.mapped_problems"));
+                                            }
+                                        }
+                                    }
                                 }))
                         )
                         .then(ClientCommands.literal("inventory")

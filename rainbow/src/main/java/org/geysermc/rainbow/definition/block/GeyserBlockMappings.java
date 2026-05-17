@@ -59,8 +59,9 @@ public class GeyserBlockMappings {
     }
 
     public int size() {
-        // Maybe count state overrides too?
-        return mappings.size();
+        return mappings.values().stream()
+                .mapToInt(mapping -> (mapping.base().isPresent() ? 1 : 0) + mapping.stateOverrides().size())
+                .sum();
     }
 
     public Map<Holder<Block>, GeyserBlockMapping> mappings() {

@@ -40,7 +40,7 @@ public class PackMapper {
                     player.sendSystemMessage(Component.translatable("chat.rainbow.mapped_skulls", results.skullsMapped));
                 }
                 if (results.problems > 0) {
-                    player.sendSystemMessage(Component.translatable("commands.rainbow.mapped_items_problems"));
+                    player.sendSystemMessage(Component.translatable("chat.rainbow.mapped_problems"));
                 }
                 if (itemProvider.isDone()) {
                     player.sendSystemMessage(Component.translatable("chat.rainbow.automatic_mapping_finished"));
@@ -61,7 +61,7 @@ public class PackMapper {
         int itemsMapped = 0;
         int problems = 0;
         for (ItemStackTemplate stack : items) {
-            switch (pack.resources().map(stack)) {
+            switch (pack.resources().mapItem(stack)) {
                 case MAPPED_SUCCESSFULLY -> itemsMapped++;
                 case PROBLEMS_OCCURRED -> problems++;
             }

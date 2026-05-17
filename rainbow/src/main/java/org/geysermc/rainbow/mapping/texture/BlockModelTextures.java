@@ -1,5 +1,6 @@
 package org.geysermc.rainbow.mapping.texture;
 
+import com.mojang.blaze3d.platform.Transparency;
 import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -121,14 +122,16 @@ public record BlockModelTextures(Either<MaterialInfo, Map<String, MaterialInfo>>
         return PackSerializer.noop();
     }
 
-    public record MaterialInfo(TextureHolder texture, Optional<TextureResource.AnimationInfo> animation, SpriteInfo sprite, Material material) {
+    public record MaterialInfo(TextureHolder texture, Optional<TextureResource.AnimationInfo> animation, Transparency transparency, SpriteInfo sprite, Material material) {
 
         private MaterialInfo(TextureResource texture, Material material) {
-            this(TextureHolder.createBuiltIn(material.sprite()), texture.animation(), new SpriteInfo(texture), material);
+            this(TextureHolder.createBuiltIn(material.sprite()), texture.animation(),
+                    material.forceTranslucent() ? Transparency.TRANSLUCENT : texture.texture().computeTransparency(),
+                    new SpriteInfo(texture), material);
         }
 
         private static MaterialInfo createMissing(Material material) {
-            return new MaterialInfo(TextureHolder.createNonExistent(material.sprite()), Optional.empty(), SpriteInfo.EMPTY, material);
+            return new MaterialInfo(TextureHolder.createNonExistent(material.sprite()), Optional.empty(), Transparency.NONE, SpriteInfo.EMPTY, material);
         }
     }
 }

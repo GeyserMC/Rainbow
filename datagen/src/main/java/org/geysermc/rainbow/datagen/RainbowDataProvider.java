@@ -116,7 +116,7 @@ public abstract class RainbowDataProvider implements DataProvider {
                         Set<Item> sortedItemInfos = new TreeSet<>(Comparator.comparing(item -> item.builtInRegistryHolder().key().identifier()));
                         sortedItemInfos.addAll(providers.getItemInfos().keySet());
                         for (Item item : sortedItemInfos) {
-                            pack.map(getVanillaItem(item).builtInRegistryHolder(), getVanillaDataComponentPatch(item));
+                            pack.mapItem(getVanillaItem(item).builtInRegistryHolder(), getVanillaDataComponentPatch(item));
                         }
                         return pack;
                     }

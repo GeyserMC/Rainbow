@@ -1,5 +1,6 @@
 package org.geysermc.rainbow.mapping;
 
+import com.mojang.blaze3d.platform.Transparency;
 import com.mojang.math.Transformation;
 import net.minecraft.client.data.models.blockstates.PropertyValueList;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
@@ -14,12 +15,13 @@ import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.client.resources.model.sprite.TextureSlots;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import org.geysermc.rainbow.ProblemSuccessReporter;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.definition.block.GeyserBlockMapping;
+import org.geysermc.rainbow.definition.block.GeyserBlockMapping.MaterialInstances.Instance.RenderMethod;
 import org.geysermc.rainbow.mapping.geometry.GeometryMapper;
 import org.geysermc.rainbow.mapping.geometry.MappedGeometry;
 import org.geysermc.rainbow.mapping.texture.BlockModelTextures;
@@ -33,7 +35,7 @@ import java.util.function.Consumer;
 
 public class BedrockBlockMapper {
 
-    public static void tryMapBlock(Block block, ProblemReporter reporter, PackContext context) {
+    public static void tryMapBlock(Block block, ProblemSuccessReporter reporter, PackContext context) {
         GeyserBlockMapping.Builder mapping = GeyserBlockMapping.builder(getNameForBlock(block));
 
         StateDefinition<Block, BlockState> stateDefinition = block.getStateDefinition();
@@ -53,7 +55,7 @@ public class BedrockBlockMapper {
         }
     }
 
-    public static void tryMapBlockState(BlockState state, ProblemReporter reporter, PackContext context) {
+    public static void tryMapBlockState(BlockState state, ProblemSuccessReporter reporter, PackContext context) {
         GeyserBlockMapping.Builder mapping = GeyserBlockMapping.builder(getNameForBlock(state.getBlock()));
         mapping.onlyOverrideStates();
         tryMapBlockState(state, stateChild(reporter, state), context, true, definition -> {
@@ -62,12 +64,12 @@ public class BedrockBlockMapper {
         });
     }
 
-    private static ProblemReporter blockChild(ProblemReporter reporter, Block block) {
+    private static ProblemSuccessReporter blockChild(ProblemSuccessReporter reporter, Block block) {
         Identifier identifier = BuiltInRegistries.BLOCK.getKey(block);
         return reporter.forChild(() -> "block " + identifier);
     }
 
-    private static ProblemReporter stateChild(ProblemReporter reporter, BlockState state) {
+    private static ProblemSuccessReporter stateChild(ProblemSuccessReporter reporter, BlockState state) {
         return blockChild(reporter, state.getBlock()).forChild(() -> "[" + blockStatePropertiesToString(state) + "]");
     }
 
@@ -75,7 +77,7 @@ public class BedrockBlockMapper {
         return Rainbow.bedrockSafeIdentifier(BuiltInRegistries.BLOCK.getKey(block));
     }
 
-    private static void tryMapBlockState(BlockState state, ProblemReporter reporter, PackContext context, boolean includeVanilla, Consumer<GeyserBlockMapping.BlockDefinition.Builder> definitionConsumer) {
+    private static void tryMapBlockState(BlockState state, ProblemSuccessReporter reporter, PackContext context, boolean includeVanilla, Consumer<GeyserBlockMapping.BlockDefinition.Builder> definitionConsumer) {
         context.assetResolver().getBlockStateModel(state).ifPresentOrElse(root -> {
             if (root instanceof BlockStateModel.SimpleCachedUnbakedRoot simpleRoot) {
                 BlockStateModel.Unbaked contents = ((BlockStateModelSimpleCachedUnbakedRootAccessor) simpleRoot).getContents();
@@ -92,7 +94,7 @@ public class BedrockBlockMapper {
                                     reporter.report(() -> "unable to map block model " + stateModel + " as it has no textures");
                                 } else {
                                     if (context.reportSuccesses()) {
-                                        reporter.report(() -> "creating mapping for block model " + stateModel);
+                                        reporter.reportSuccess(() -> "creating mapping for block model " + stateModel);
                                     }
                                     definitionConsumer.accept(mapBlockState(state, model, stateVariant.modelState(), context));
                                 }
@@ -112,20 +114,21 @@ public class BedrockBlockMapper {
         boolean ambientOcclusion = model.getTopAmbientOcclusion();
 
         BlockModelTextures textures = context.blockTextureCache().load(model, () -> BlockModelTextures.create(model.getTopTextureSlots(), context.assetResolver()));
+        RenderMethod renderMethod = computeRenderMethod(textures);
 
         Optional<MappedGeometry> mappedGeometry = Optional.empty();
         if (looksLikeFullBlockModel(model.getTopGeometry()) && textures.isSingleMaterial()) {
-            builder.withFullBlockGeometry(GeyserBlockMapping.materials().withInstance("*", mapMaterial(textures.getSingleMaterial().orElseThrow().material(), ambientOcclusion)));
+            builder.withFullBlockGeometry(GeyserBlockMapping.materials().withInstance("*", mapMaterial(textures.getSingleMaterial().orElseThrow().material(), renderMethod, ambientOcclusion)));
         } else if (looksLikeCrossBlockModel(model.getTopGeometry()) && textures.isSingleMaterial()) {
-            builder.withCrossGeometry(GeyserBlockMapping.materials().withInstance("*", mapMaterial(textures.getSingleMaterial().orElseThrow().material(), ambientOcclusion)));
+            builder.withCrossGeometry(GeyserBlockMapping.materials().withInstance("*", mapMaterial(textures.getSingleMaterial().orElseThrow().material(), renderMethod, ambientOcclusion)));
         } else {
             Identifier modelIdentifier = Rainbow.getModelIdentifier(model);
             mappedGeometry = Optional.of(context.geometryCache().mapGeometry(modelIdentifier, model, Transformation.IDENTITY, textures));
             GeyserBlockMapping.MaterialInstances materials = textures.getSingleMaterial()
                     .map(material -> GeyserBlockMapping.materials()
-                            .withInstance("*", mapMaterial(material.material(), ambientOcclusion))
+                            .withInstance("*", mapMaterial(material.material(), renderMethod, ambientOcclusion))
                             .build())
-                    .orElseGet(() -> mapMaterials(geometry, model.getTopTextureSlots(), ambientOcclusion));
+                    .orElseGet(() -> mapMaterials(geometry, model.getTopTextureSlots(), renderMethod, ambientOcclusion));
             builder.withGeometry(mappedGeometry.get().identifier(), materials);
         }
 
@@ -160,7 +163,7 @@ public class BedrockBlockMapper {
         return false;
     }
 
-    private static GeyserBlockMapping.MaterialInstances mapMaterials(UnbakedGeometry geometry, TextureSlots textures, boolean ambientOcclusion) {
+    private static GeyserBlockMapping.MaterialInstances mapMaterials(UnbakedGeometry geometry, TextureSlots textures, RenderMethod renderMethod, boolean ambientOcclusion) {
         if (geometry instanceof UnbakedCuboidGeometry(List<CuboidModelElement> elements)) {
             GeyserBlockMapping.MaterialInstances.Builder builder = GeyserBlockMapping.materials();
             for (int i = 0; i < elements.size(); i++) {
@@ -169,7 +172,7 @@ public class BedrockBlockMapper {
                 element.faces().forEach((direction, face) -> {
                     Material material = textures.getMaterial(face.texture());
                     if (material != null) {
-                        builder.withInstance(GeometryMapper.getMeaningfulMaterialInstanceName(direction, face.texture(), elementIndex), mapMaterial(material, ambientOcclusion));
+                        builder.withInstance(GeometryMapper.getMeaningfulMaterialInstanceName(direction, face.texture(), elementIndex), mapMaterial(material, renderMethod, ambientOcclusion));
                     }
                 });
             }
@@ -178,10 +181,29 @@ public class BedrockBlockMapper {
         return GeyserBlockMapping.MaterialInstances.EMPTY;
     }
 
-    private static GeyserBlockMapping.MaterialInstances.Instance mapMaterial(Material material, boolean ambientOcclusion) {
-        // TODO OPAQUE
-        return new GeyserBlockMapping.MaterialInstances.Instance(Rainbow.bedrockSafeIdentifier(material.sprite()), GeyserBlockMapping.MaterialInstances.Instance.RenderMethod.OPAQUE,
-                true, ambientOcclusion);
+    private static GeyserBlockMapping.MaterialInstances.Instance mapMaterial(Material material, RenderMethod renderMethod, boolean ambientOcclusion) {
+        return new GeyserBlockMapping.MaterialInstances.Instance(Rainbow.bedrockSafeIdentifier(material.sprite()), renderMethod, true, ambientOcclusion);
+    }
+
+    private static RenderMethod computeRenderMethod(BlockModelTextures textures) {
+        return textures.materials().map(info -> mapTransparency(info.transparency()), infos -> {
+            for (BlockModelTextures.MaterialInfo info : infos.values()) {
+                RenderMethod method = mapTransparency(info.transparency());
+                if (method != RenderMethod.OPAQUE) {
+                    return method;
+                }
+            }
+            return RenderMethod.OPAQUE;
+        });
+    }
+
+    private static RenderMethod mapTransparency(Transparency transparency) {
+        if (transparency.hasTranslucent()) {
+            return RenderMethod.BLEND;
+        } else if (transparency.hasTransparent()) {
+            return RenderMethod.ALPHA_TEST;
+        }
+        return RenderMethod.OPAQUE;
     }
 
     private static String blockStatePropertiesToString(BlockState state) {

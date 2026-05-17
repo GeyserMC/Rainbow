@@ -14,6 +14,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.geysermc.rainbow.CodecUtil;
 import org.geysermc.rainbow.PackConstants;
+import org.geysermc.rainbow.ProblemSuccessReporter;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.definition.GeyserMappings;
 import org.geysermc.rainbow.definition.block.GeyserBlockMappings;
@@ -40,9 +41,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
 
 public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Serializable {
     // Debug only
@@ -81,35 +80,27 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
         return name;
     }
 
-    public void tryMapAllVanillaBlocks() {
+    public MappingResults tryMapAllVanillaBlocks() {
+        int startCount = bedrockBlocks.size();
+        ProblemSuccessReporter mapReporter = new ProblemSuccessReporter(reporter);
         for (Block block : BuiltInRegistries.BLOCK) {
             Identifier identifier = BuiltInRegistries.BLOCK.getKey(block);
             if (identifier.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
-                BedrockBlockMapper.tryMapBlock(block, reporter, context);
+                BedrockBlockMapper.tryMapBlock(block, mapReporter, context);
             }
         }
+        return new MappingResults(bedrockBlocks.size() - startCount, mapReporter.problemsSeen());
     }
 
-    public void mapBlockStateExplicitly(BlockState state) {
-        BedrockBlockMapper.tryMapBlockState(state, reporter, context);
+    public MappingResult mapBlockStateExplicitly(BlockState state) {
+        int startCount = bedrockBlocks.size();
+        ProblemSuccessReporter mapReporter = new ProblemSuccessReporter(reporter);
+        BedrockBlockMapper.tryMapBlockState(state, mapReporter, context);
+        return bedrockBlocks.size() == startCount ? MappingResult.NONE_MAPPED : mapReporter.problemsSeen() > 0 ? MappingResult.PROBLEMS_OCCURRED : MappingResult.MAPPED_SUCCESSFULLY;
     }
 
-    // TODO rename this to mapItem or something
-    public MappingResult map(ItemStackTemplate stack) {
-        AtomicBoolean problems = new AtomicBoolean();
-        ProblemReporter mapReporter = new ProblemReporter() {
-
-            @Override
-            public ProblemReporter forChild(PathElement child) {
-                return reporter.forChild(child);
-            }
-
-            @Override
-            public void report(Problem problem) {
-                problems.set(true);
-                reporter.report(problem);
-            }
-        };
+    public MappingResult mapItem(ItemStackTemplate stack) {
+        ProblemSuccessReporter mapReporter = new ProblemSuccessReporter(reporter);
 
         Identifier customModel = ALLOW_MAPPING_VANILLA_ITEMS ? stack.get(DataComponents.ITEM_MODEL) : stack.components().split().added().get(DataComponents.ITEM_MODEL);
         if (customModel == null) {
@@ -139,11 +130,11 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
             BedrockItemMapper.tryMapStack(stack, customModel, mapReporter, context, false);
         }
 
-        return problems.get() ? MappingResult.PROBLEMS_OCCURRED : MappingResult.MAPPED_SUCCESSFULLY;
+        return mapReporter.problemsSeen() > 0 ? MappingResult.PROBLEMS_OCCURRED : MappingResult.MAPPED_SUCCESSFULLY;
     }
 
-    public MappingResult map(Holder<Item> item, DataComponentPatch patch) {
-        return map(new ItemStackTemplate(item, 1, patch));
+    public MappingResult mapItem(Holder<Item> item, DataComponentPatch patch) {
+        return mapItem(new ItemStackTemplate(item, 1, patch));
     }
 
     public CompletableFuture<?> save() {
@@ -160,7 +151,6 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
         return baseSerialization;
     }
 
-    // TODO: no duplicates in texture atlases and flipbook textures
     @Override
     public void acceptBlock(BedrockBlock block) {
         terrainTextures.withBlockTextures(block);
@@ -280,11 +270,7 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
         public BedrockPack build() {
             PackPaths paths = new PackPaths(mappingsRoot, packRoot, Optional.ofNullable(packZipFile), Optional.ofNullable(languageFolder));
             return new BedrockPack(name, Optional.ofNullable(manifest), paths, packSerializer, assetResolver, Optional.ofNullable(geometryRenderer),
-                    reporter.apply(() -> "Bedrock pack " + name + " "), reportSuccesses);
-        }
-
-        private static UnaryOperator<Path> resolve(Path child) {
-            return root -> root.resolve(child);
+                    reporter.apply(() -> "Bedrock pack " + name), reportSuccesses);
         }
 
         private static PackManifest defaultManifest(String name) {
@@ -296,5 +282,12 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
         NONE_MAPPED,
         MAPPED_SUCCESSFULLY,
         PROBLEMS_OCCURRED
+    }
+
+    public record MappingResults(int amountMapped, int problems) {
+
+        public MappingResult toSingleResult() {
+            return problems > 0 ? MappingResult.PROBLEMS_OCCURRED : amountMapped > 0 ? BedrockPack.MappingResult.MAPPED_SUCCESSFULLY : BedrockPack.MappingResult.NONE_MAPPED;
+        }
     }
 }

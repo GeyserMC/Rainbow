@@ -31,7 +31,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.util.ExtraCodecs;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.CrossbowItem;
@@ -41,6 +40,7 @@ import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.equipment.trim.TrimMaterial;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ArrayUtils;
+import org.geysermc.rainbow.ProblemSuccessReporter;
 import org.geysermc.rainbow.mapping.attachable.BedrockAttachableContext;
 import org.geysermc.rainbow.mapping.geometry.BedrockGeometryContext;
 import org.geysermc.rainbow.definition.item.GeyserBaseItemDefinition;
@@ -72,18 +72,18 @@ public class BedrockItemMapper {
         return ((LateBoundIdMapperAccessor<Identifier, ?>) mapper).getIdToValue().inverse().get(type);
     }
 
-    public static void tryMapStack(ItemStackTemplate stack, Identifier modelIdentifier, ProblemReporter reporter, PackContext context, boolean ignoreTopPlainModel) {
+    public static void tryMapStack(ItemStackTemplate stack, Identifier modelIdentifier, ProblemSuccessReporter reporter, PackContext context, boolean ignoreTopPlainModel) {
         context.assetResolver().getClientItem(modelIdentifier).map(ClientItem::model)
                 .ifPresentOrElse(model -> mapItem(model, stack, reporter.forChild(() -> "client item definition " + modelIdentifier + " "),
                                 base -> new GeyserSingleItemDefinition(base, Optional.of(modelIdentifier)), context, ignoreTopPlainModel),
                         () -> reporter.report(() -> "missing client item definition " + modelIdentifier));
     }
 
-    public static void tryMapStack(ItemStackTemplate stack, int customModelData, ProblemReporter reporter, PackContext context) {
+    public static void tryMapStack(ItemStackTemplate stack, int customModelData, ProblemSuccessReporter reporter, PackContext context) {
         Identifier itemModel = stack.get(DataComponents.ITEM_MODEL);
         assert itemModel != null;
         ItemModel.Unbaked vanillaModel = context.assetResolver().getClientItem(itemModel).map(ClientItem::model).orElseThrow();
-        ProblemReporter childReporter = reporter.forChild(() -> "item model " + itemModel + " with custom model data " + customModelData + " ");
+        ProblemSuccessReporter childReporter = reporter.forChild(() -> "item model " + itemModel + " with custom model data " + customModelData + " ");
         if (vanillaModel instanceof RangeSelectItemModel.Unbaked(Optional<Transformation> _, RangeSelectItemModelProperty property, float scale, List<RangeSelectItemModel.Entry> entries, Optional<ItemModel.Unbaked> fallback)) {
             // WHY, Mojang?
             if (property instanceof net.minecraft.client.renderer.item.properties.numeric.CustomModelDataProperty(int index)) {
@@ -110,7 +110,7 @@ public class BedrockItemMapper {
         childReporter.report(() -> "item model is not range_dispatch, unable to apply custom model data");
     }
 
-    public static void mapItem(ItemModel.Unbaked model, ItemStackTemplate stack, ProblemReporter reporter,
+    public static void mapItem(ItemModel.Unbaked model, ItemStackTemplate stack, ProblemSuccessReporter reporter,
                                Function<GeyserBaseItemDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext,
                                boolean ignoreTopPlainModel) {
         mapItem(model, new MappingContext(stack, reporter, definitionCreator, packContext, ignoreTopPlainModel));
@@ -219,11 +219,11 @@ public class BedrockItemMapper {
     }
 
     private record MappingContext(List<GeyserPredicate> predicateStack, Optional<Transformation> transformationStack,
-                                  ItemStackTemplate itemStack, ProblemReporter reporter,
+                                  ItemStackTemplate itemStack, ProblemSuccessReporter reporter,
                                   Function<GeyserBaseItemDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext,
                                   boolean ignorePlainModel) {
 
-        public MappingContext(ItemStackTemplate stack, ProblemReporter reporter, Function<GeyserBaseItemDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext,
+        public MappingContext(ItemStackTemplate stack, ProblemSuccessReporter reporter, Function<GeyserBaseItemDefinition, GeyserItemDefinition> definitionCreator, PackContext packContext,
                               boolean ignorePlainModel) {
             this(List.of(), Optional.empty(), stack, reporter, definitionCreator, packContext, ignorePlainModel);
         }
@@ -267,7 +267,7 @@ public class BedrockItemMapper {
 
                         if (packContext.reportSuccesses()) {
                             // Not a problem, but just report to get the model printed in the report file
-                            report("creating mapping for block model " + modelIdentifier);
+                            reporter.reportSuccess(() -> "creating mapping for block model " + modelIdentifier);
                         }
                         create(bedrockIdentifier, textures, geometry, attachable);
                     }, () -> report("missing block model " + modelIdentifier));
