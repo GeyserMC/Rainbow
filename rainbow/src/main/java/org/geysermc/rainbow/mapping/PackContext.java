@@ -1,8 +1,10 @@
 package org.geysermc.rainbow.mapping;
 
-import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
 import org.geysermc.rainbow.definition.GeyserMappings;
+import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
 import org.geysermc.rainbow.mapping.geometry.MappedGeometryCache;
+import org.geysermc.rainbow.mapping.texture.BlockModelTextures;
+import org.geysermc.rainbow.mapping.texture.ItemModelTextures;
 import org.geysermc.rainbow.mapping.texture.ModelTextureCache;
 import org.geysermc.rainbow.pack.PackPaths;
 
@@ -12,18 +14,19 @@ import java.util.Optional;
 public final class PackContext {
     private final GeyserMappings mappings;
     private final PackPaths paths;
-    private final BedrockItemConsumer itemConsumer;
+    private final BedrockAssetConsumer assetConsumer;
     private final AssetResolver assetResolver;
     private final Optional<GeometryRenderer> geometryRenderer;
     private final boolean reportSuccesses;
-    private final ModelTextureCache textureCache = new ModelTextureCache();
+    private final ModelTextureCache<BlockModelTextures> blockTextureCache = new ModelTextureCache<>();
+    private final ModelTextureCache<ItemModelTextures> itemTextureCache = new ModelTextureCache<>();
     private final MappedGeometryCache geometryCache = new MappedGeometryCache();
 
-    public PackContext(GeyserMappings mappings, PackPaths paths, BedrockItemConsumer itemConsumer, AssetResolver assetResolver,
+    public PackContext(GeyserMappings mappings, PackPaths paths, BedrockAssetConsumer assetConsumer, AssetResolver assetResolver,
                        Optional<GeometryRenderer> geometryRenderer, boolean reportSuccesses) {
         this.mappings = mappings;
         this.paths = paths;
-        this.itemConsumer = itemConsumer;
+        this.assetConsumer = assetConsumer;
         this.assetResolver = assetResolver;
         this.geometryRenderer = geometryRenderer;
         this.reportSuccesses = reportSuccesses;
@@ -37,8 +40,8 @@ public final class PackContext {
         return paths;
     }
 
-    public BedrockItemConsumer itemConsumer() {
-        return itemConsumer;
+    public BedrockAssetConsumer assetConsumer() {
+        return assetConsumer;
     }
 
     public AssetResolver assetResolver() {
@@ -53,8 +56,12 @@ public final class PackContext {
         return reportSuccesses;
     }
 
-    public ModelTextureCache textureCache() {
-        return textureCache;
+    public ModelTextureCache<BlockModelTextures> blockTextureCache() {
+        return blockTextureCache;
+    }
+
+    public ModelTextureCache<ItemModelTextures> itemTextureCache() {
+        return itemTextureCache;
     }
 
     public MappedGeometryCache geometryCache() {
@@ -62,6 +69,6 @@ public final class PackContext {
     }
 
     public AssetCacheStats cacheStats() {
-        return new AssetCacheStats(geometryCache.stats(), textureCache.stats());
+        return new AssetCacheStats(geometryCache.stats(), blockTextureCache.stats(), itemTextureCache.stats());
     }
 }

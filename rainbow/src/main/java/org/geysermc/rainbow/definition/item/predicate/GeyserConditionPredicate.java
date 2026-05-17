@@ -1,4 +1,4 @@
-package org.geysermc.rainbow.definition.predicate;
+package org.geysermc.rainbow.definition.item.predicate;
 
 import com.google.common.base.Suppliers;
 import com.mojang.serialization.Codec;

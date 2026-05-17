@@ -6,13 +6,22 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.ChatFormatting;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.commands.arguments.coordinates.Coordinates;
+import net.minecraft.commands.arguments.coordinates.LocalCoordinates;
+import net.minecraft.commands.arguments.coordinates.WorldCoordinate;
+import net.minecraft.commands.arguments.coordinates.WorldCoordinates;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import org.geysermc.rainbow.client.PackManager;
 import org.geysermc.rainbow.client.mapper.InventoryMapper;
 import org.geysermc.rainbow.client.mapper.PackMapper;
+import org.geysermc.rainbow.pack.BedrockPack;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -44,18 +53,35 @@ public class PackGeneratorCommand {
                         )
                 )
                 .then(ClientCommands.literal("map")
-                        .executes(runWithPack(packManager, (source, pack) -> {
-                            ItemStack heldItem = source.getPlayer().getMainHandItem();
-                            if (heldItem.isEmpty()) {
-                                source.sendError(Component.literal("Must hold an item to map"));
-                            } else {
-                                switch (packMapper.mapItems(pack, List.of(ItemStackTemplate.fromNonEmptyStack(heldItem))).toSingleResult()) {
-                                    case NONE_MAPPED -> source.sendError(Component.translatable("commands.rainbow.no_item_mapped"));
-                                    case PROBLEMS_OCCURRED -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item_problems"));
-                                    case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item"));
-                                }
-                            }
-                        }))
+                        .then(ClientCommands.literal("block")
+                                .then(ClientCommands.argument("target", BlockPosArgument.blockPos())
+                                        .executes(context -> {
+                                            BlockPos pos = clientCoordinatesToBlockPos(context.getSource(), context.getArgument("target", Coordinates.class));
+                                            BlockState state = context.getSource().getLevel().getBlockState(pos);
+                                            return runWithPack(packManager, (source, pack) -> {
+                                                switch (pack.resources().mapBlockStateExplicitly(state)) {
+                                                    case NONE_MAPPED -> source.sendError(Component.translatable("commands.rainbow.no_block_mapped"));
+                                                    case PROBLEMS_OCCURRED -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_target_block_problems"));
+                                                    case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_target_block"));
+                                                }
+                                            }).run(context);
+                                        })
+                                )
+                        )
+                        .then(ClientCommands.literal("item")
+                                .executes(runWithPack(packManager, (source, pack) -> {
+                                    ItemStack heldItem = source.getPlayer().getMainHandItem();
+                                    if (heldItem.isEmpty()) {
+                                        source.sendError(Component.literal("Must hold an item to map"));
+                                    } else {
+                                        switch (packMapper.mapItems(pack, List.of(ItemStackTemplate.fromNonEmptyStack(heldItem))).toSingleResult()) {
+                                            case NONE_MAPPED -> source.sendError(Component.translatable("commands.rainbow.no_item_mapped"));
+                                            case PROBLEMS_OCCURRED -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item_problems"));
+                                            case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_held_item"));
+                                        }
+                                    }
+                                }))
+                        )
                 )
                 .then(ClientCommands.literal("mapinventory")
                         .executes(runWithPack(packManager, (source, pack) -> {
@@ -71,7 +97,7 @@ public class PackGeneratorCommand {
                                 if (results.itemsMapped() > 0) {
                                     source.sendFeedback(Component.translatable("commands.rainbow.mapped_items_from_inventory", results.itemsMapped()));
                                     if (results.problems() > 0) {
-                                        source.sendFeedback(Component.translatable("commands.rainbow.mapped_items_problems"));
+                                        source.sendFeedback(Component.translatable("chat.rainbow.mapped_problems"));
                                     }
                                 }
                                 if (results.skullsMapped() > 0) {
@@ -101,6 +127,20 @@ public class PackGeneratorCommand {
                                 )
                         )
                          */
+                        .then(ClientCommands.literal("blocks")
+                                .executes(runWithPack(packManager, (source, pack) -> {
+                                    BedrockPack.MappingResults results = pack.resources().tryMapAllVanillaBlocks();
+                                    switch (results.toSingleResult()) {
+                                        case NONE_MAPPED -> source.sendFeedback(Component.translatable("commands.rainbow.no_blocks_mapped"));
+                                        case MAPPED_SUCCESSFULLY, PROBLEMS_OCCURRED -> {
+                                            source.sendFeedback(Component.translatable("commands.rainbow.mapped_blocks", results.amountMapped()));
+                                            if (results.problems() > 0) {
+                                                source.sendFeedback(Component.translatable("chat.rainbow.mapped_problems"));
+                                            }
+                                        }
+                                    }
+                                }))
+                        )
                         .then(ClientCommands.literal("inventory")
                                 .executes(runWithPack(packManager, (source, _) -> {
                                     packMapper.setItemProvider(InventoryMapper.INSTANCE);
@@ -135,5 +175,16 @@ public class PackGeneratorCommand {
                     () -> context.getSource().sendError(NO_PACK_CREATED));
             return 0;
         };
+    }
+
+    private static BlockPos clientCoordinatesToBlockPos(FabricClientCommandSource source, Coordinates coordinates) {
+        if (coordinates instanceof WorldCoordinates(WorldCoordinate x, WorldCoordinate y, WorldCoordinate z)) {
+            Vec3 pos = source.getPosition();
+            return BlockPos.containing(new Vec3(x.get(pos.x), y.get(pos.y), z.get(pos.z)));
+        } else if (coordinates instanceof LocalCoordinates(double left, double up, double forwards)) {
+            Vec3 origin = source.getPosition();
+            return BlockPos.containing(Vec3.applyLocalCoordinatesToRotation(source.getRotation(), new Vec3(left, up, forwards)).add(origin.x, origin.y, origin.z));
+        }
+        throw new IllegalStateException("Don't know how to turn " + coordinates + " into a BlockPos");
     }
 }

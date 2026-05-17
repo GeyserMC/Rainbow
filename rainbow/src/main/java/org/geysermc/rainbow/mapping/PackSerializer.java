@@ -26,12 +26,28 @@ public interface PackSerializer {
             return context -> CompletableFuture.allOf(save(context), other.save(context));
         }
 
+        default <T> Serializable with(Codec<T> codec, T object, Function<PackPaths, Path> pathGetter) {
+            return with(wrapCodec(codec, object, pathGetter));
+        }
+
+        default <T> Serializable with(Codec<T> codec, T object, BiFunction<PackPaths, T, Path> pathResolver) {
+            return with(wrapCodec(codec, object, pathResolver));
+        }
+
         default Serializable with(Optional<? extends Serializable> other) {
             return other.map(this::with).orElse(this);
         }
 
+        default <T> Serializable with(Codec<T> codec, Optional<T> optional, Function<PackPaths, Path> pathGetter) {
+            return with(wrapOptionalCodec(codec, optional, pathGetter));
+        }
+
+        default <T> Serializable with(Codec<T> codec, Optional<T> optional, BiFunction<PackPaths, T, Path> pathResolver) {
+            return with(wrapOptionalCodec(codec, optional, pathResolver));
+        }
+
         default Serializable with(Collection<? extends Serializable> others) {
-            return with(context -> CompletableFuture.allOf(others.stream().map(serializable -> serializable.save(context)).toArray(CompletableFuture[]::new)));
+            return with(allOf(others));
         }
 
         static Serializable wrapOptional(Optional<? extends Serializable> optional) {
@@ -39,19 +55,23 @@ public interface PackSerializer {
         }
 
         static <T> Serializable wrapCodec(Codec<T> codec, T object, Function<PackPaths, Path> pathGetter) {
-            return wrapCodec(codec, object, (paths, _) -> pathGetter.apply(paths));
+            return context -> context.save(codec, object, pathGetter);
         }
 
         static <T> Serializable wrapCodec(Codec<T> codec, T object, BiFunction<PackPaths, T, Path> pathResolver) {
-            return context -> context.serializer().saveJson(codec, object, pathResolver.apply(context.paths(), object));
+            return context -> context.save(codec, object, pathResolver);
         }
 
         static <T> Serializable wrapOptionalCodec(Codec<T> codec, Optional<T> optional, Function<PackPaths, Path> pathGetter) {
-            return wrapOptionalCodec(codec, optional, (paths, _) -> pathGetter.apply(paths));
+            return context -> context.save(codec, optional, pathGetter);
         }
 
         static <T> Serializable wrapOptionalCodec(Codec<T> codec, Optional<T> optional, BiFunction<PackPaths, T, Path> pathResolver) {
-            return optional.map(object -> wrapCodec(codec, object, pathResolver)).orElseGet(Serializable::noop);
+            return context -> context.save(codec, optional, pathResolver);
+        }
+
+        static Serializable allOf(Collection<? extends Serializable> serializables) {
+            return context -> CompletableFuture.allOf(serializables.stream().map(serializable -> serializable.save(context)).toArray(CompletableFuture[]::new));
         }
 
         static Serializable noop() {

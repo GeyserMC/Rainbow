@@ -4,6 +4,7 @@ import com.google.gson.JsonParser;
 import com.mojang.blaze3d.platform.NativeImage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.renderer.item.ClientItem;
 import net.minecraft.client.renderer.texture.SpriteContents;
 import net.minecraft.client.renderer.texture.TextureAtlas;
@@ -19,6 +20,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.item.equipment.EquipmentAsset;
+import net.minecraft.world.level.block.state.BlockState;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.client.accessor.ResolvedModelAccessor;
@@ -47,6 +49,11 @@ public class ClientAssetResolver implements AssetResolver {
         equipmentAssetManager = ((EntityRenderDispatcherAccessor) minecraft.getEntityRenderDispatcher()).getEquipmentAssets();
         resourceManager = minecraft.getResourceManager();
         atlasManager = minecraft.getAtlasManager();
+    }
+
+    @Override
+    public Optional<BlockStateModel.UnbakedRoot> getBlockStateModel(BlockState state) {
+        return ((ResolvedModelAccessor) modelManager).rainbow$getBlockStateModel(state);
     }
 
     @Override
@@ -93,7 +100,7 @@ public class ClientAssetResolver implements AssetResolver {
                 accessor.getFrames().stream()
                         .map(frame -> new TextureResource.FrameInfo(frame.index(), frame.time()))
                         .toList(),
-                accessor.getFrameRowSize()));
+                accessor.getFrameRowSize(), accessor.getInterpolateFrames()));
     }
 
     @Override

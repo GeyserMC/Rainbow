@@ -8,28 +8,62 @@ import org.geysermc.rainbow.pack.attachable.BedrockAttachable;
 import java.nio.file.Path;
 import java.util.Optional;
 
-public record PackPaths(Path mappings, Path packRoot, Path attachables, Path geometries, Path animations,
-                        Path renderControllers, Path manifest, Path itemAtlas, Optional<Path> zipOutput, Optional<Path> languageOutput) {
+public record PackPaths(Path mappingsRoot, Path packRoot, Optional<Path> zipOutput, Optional<Path> languageOutput) {
+    private static final Path BLOCK_MAPPINGS = Path.of("geyser_block_mappings.json");
+    private static final Path ITEM_MAPPINGS = Path.of("geyser_item_mappings.json");
 
-    public Path animationPath(String identifier) {
-        return animations.resolve(identifier + ".animation.json");
+    private static final Path ANIMATION_DIRECTORY = Path.of("animations");
+    private static final Path ATTACHABLES_DIRECTORY = Path.of("attachables");
+    private static final Path GEOMETRY_DIRECTORY = Path.of("models/entity");
+    private static final Path RENDER_CONTROLLERS_DIRECTORY = Path.of("render_controllers");
+
+    private static final Path MANIFEST = Path.of("manifest.json");
+    private static final Path ITEM_ATLAS = Path.of("textures/item_texture.json");
+    private static final Path TERRAIN_ATLAS = Path.of("textures/terrain_texture.json");
+    private static final Path FLIPBOOK_TEXTURES = Path.of("textures/flipbook_textures.json");
+
+    public Path blockMappings() {
+        return mappingsRoot.resolve(BLOCK_MAPPINGS);
     }
 
-    public Path attachablePath(BedrockAttachable attachable) {
-        return attachables.resolve(Rainbow.bedrockSafeIdentifier(attachable.info().identifier()) + ".json");
+    public Path itemMappings() {
+        return mappingsRoot.resolve(ITEM_MAPPINGS);
     }
 
-    public Path geometryPath(String identifier) {
-        return geometries.resolve(identifier + ".geo.json");
+    public Path animation(String identifier) {
+        return packRoot.resolve(ANIMATION_DIRECTORY, Path.of(identifier + ".animation.json"));
     }
 
-    public Path renderControllersPath(String identifier) {
-        return renderControllers.resolve(identifier + ".render_controllers.json");
+    public Path attachable(BedrockAttachable attachable) {
+        return packRoot.resolve(ATTACHABLES_DIRECTORY, Path.of(Rainbow.bedrockSafeIdentifier(attachable.info().identifier()) + ".json"));
+    }
+
+    public Path geometry(String identifier) {
+        return packRoot.resolve(GEOMETRY_DIRECTORY, Path.of(identifier + ".geo.json"));
+    }
+
+    public Path renderControllers(String identifier) {
+        return packRoot.resolve(RENDER_CONTROLLERS_DIRECTORY, Path.of(identifier + ".render_controllers.json"));
     }
 
     public Path texturePath(TextureHolder texture) {
         Identifier textureIdentifier = Rainbow.decorateTextureIdentifier(texture.destination());
-        // TODO proper texture folder field
         return packRoot.resolve(textureIdentifier.getPath());
+    }
+
+    public Path manifest() {
+        return packRoot.resolve(MANIFEST);
+    }
+
+    public Path itemAtlas() {
+        return packRoot.resolve(ITEM_ATLAS);
+    }
+
+    public Path terrainAtlas() {
+        return packRoot.resolve(TERRAIN_ATLAS);
+    }
+
+    public Path flipbookTextures() {
+        return packRoot.resolve(FLIPBOOK_TEXTURES);
     }
 }

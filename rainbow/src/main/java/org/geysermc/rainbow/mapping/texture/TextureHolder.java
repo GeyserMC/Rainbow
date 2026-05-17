@@ -3,11 +3,14 @@ package org.geysermc.rainbow.mapping.texture;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
+import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.image.NativeImageUtil;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
+import org.geysermc.rainbow.pack.texture.BedrockTextures;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -27,9 +30,7 @@ public abstract class TextureHolder implements PackSerializer.Serializable {
         return load(context.assetResolver(), context.reporter())
                 .flatMap(texture -> {
                     try (texture) {
-                        try (NativeImage firstFrame = texture.getFirstFrame()) {
-                            return RainbowIO.safeIO(() -> context.serializer().saveTexture(NativeImageUtil.writeToByteArray(firstFrame), context.paths().texturePath(this)));
-                        }
+                        return RainbowIO.safeIO(() -> context.serializer().saveTexture(NativeImageUtil.writeToByteArray(texture.texture()), context.paths().texturePath(this)));
                     }
                 })
                 .orElseGet(() -> {
@@ -68,7 +69,32 @@ public abstract class TextureHolder implements PackSerializer.Serializable {
         return destination;
     }
 
+    public String bedrockSafeDestination() {
+        return bedrockSafeDestination(destination);
+    }
+
+    public static String bedrockSafeDestination(Identifier destination) {
+        return BedrockTextures.TEXTURES_FOLDER + destination.getPath();
+    }
+
+    public String bedrockSafeName() {
+        return Rainbow.bedrockSafeIdentifier(destination);
+    }
+
     protected void reportMissing(ProblemReporter reporter) {
         reporter.report(() -> "missing texture for " + destination + "; please provide it manually");
+    }
+
+    @Override
+    public boolean equals(@Nullable Object other) {
+        if (!(other instanceof TextureHolder that)) {
+            return false;
+        }
+        return destination.equals(that.destination);
+    }
+
+    @Override
+    public int hashCode() {
+        return destination.hashCode();
     }
 }

@@ -4,22 +4,33 @@ import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.CustomModelData;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import org.geysermc.rainbow.CodecUtil;
 import org.geysermc.rainbow.PackConstants;
+import org.geysermc.rainbow.ProblemSuccessReporter;
 import org.geysermc.rainbow.RainbowIO;
-import org.geysermc.rainbow.mapping.AssetCacheStats;
+import org.geysermc.rainbow.definition.GeyserMappings;
+import org.geysermc.rainbow.definition.block.GeyserBlockMappings;
 import org.geysermc.rainbow.mapping.AssetResolver;
+import org.geysermc.rainbow.mapping.BedrockAssetConsumer;
+import org.geysermc.rainbow.mapping.BedrockBlockMapper;
 import org.geysermc.rainbow.mapping.BedrockItemMapper;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
+import org.geysermc.rainbow.mapping.PackStats;
 import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
-import org.geysermc.rainbow.definition.GeyserMappings;
+import org.geysermc.rainbow.definition.item.GeyserItemMappings;
+import org.geysermc.rainbow.pack.texture.BedrockFlipbookTextures;
+import org.geysermc.rainbow.pack.texture.BedrockTextureAtlas;
+import org.geysermc.rainbow.pack.texture.BedrockTextures;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
@@ -30,11 +41,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
 
-public class BedrockPack implements PackSerializer.Serializable {
+public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Serializable {
     // Debug only
     private static final boolean ALLOW_MAPPING_VANILLA_ITEMS = false;
 
@@ -44,6 +53,9 @@ public class BedrockPack implements PackSerializer.Serializable {
     private final PackSerializer serializer;
 
     private final BedrockTextures.Builder itemTextures = BedrockTextures.builder();
+    private final BedrockTextures.Builder terrainTextures = BedrockTextures.builder();
+    private final BedrockFlipbookTextures.Builder flipbookTextures = BedrockFlipbookTextures.builder();
+    private final Set<BedrockBlock> bedrockBlocks = new HashSet<>();
     private final Set<BedrockItem> bedrockItems = new HashSet<>();
     private final Set<Identifier> modelsMapped = new HashSet<>();
     private final Set<Pair<Holder<Item>, Integer>> customModelDataMapped = new HashSet<>();
@@ -60,10 +72,7 @@ public class BedrockPack implements PackSerializer.Serializable {
         this.serializer = serializer;
 
         // Not reading existing item mappings/texture atlas for now since that doesn't work all that well yet
-        this.context = new PackContext(new GeyserMappings(), paths, item -> {
-            itemTextures.withItemTexture(item);
-            bedrockItems.add(item);
-        }, assetResolver, geometryRenderer, reportSuccesses);
+        this.context = new PackContext(new GeyserMappings(), paths, this, assetResolver, geometryRenderer, reportSuccesses);
         this.reporter = reporter;
     }
 
@@ -71,21 +80,27 @@ public class BedrockPack implements PackSerializer.Serializable {
         return name;
     }
 
-    public MappingResult map(ItemStackTemplate stack) {
-        AtomicBoolean problems = new AtomicBoolean();
-        ProblemReporter mapReporter = new ProblemReporter() {
-
-            @Override
-            public ProblemReporter forChild(PathElement child) {
-                return reporter.forChild(child);
+    public MappingResults tryMapAllVanillaBlocks() {
+        int startCount = bedrockBlocks.size();
+        ProblemSuccessReporter mapReporter = new ProblemSuccessReporter(reporter);
+        for (Block block : BuiltInRegistries.BLOCK) {
+            Identifier identifier = BuiltInRegistries.BLOCK.getKey(block);
+            if (identifier.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
+                BedrockBlockMapper.tryMapBlock(block, mapReporter, context);
             }
+        }
+        return new MappingResults(bedrockBlocks.size() - startCount, mapReporter.problemsSeen());
+    }
 
-            @Override
-            public void report(Problem problem) {
-                problems.set(true);
-                reporter.report(problem);
-            }
-        };
+    public MappingResult mapBlockStateExplicitly(BlockState state) {
+        int startCount = bedrockBlocks.size();
+        ProblemSuccessReporter mapReporter = new ProblemSuccessReporter(reporter);
+        BedrockBlockMapper.tryMapBlockState(state, mapReporter, context);
+        return bedrockBlocks.size() == startCount ? MappingResult.NONE_MAPPED : mapReporter.problemsSeen() > 0 ? MappingResult.PROBLEMS_OCCURRED : MappingResult.MAPPED_SUCCESSFULLY;
+    }
+
+    public MappingResult mapItem(ItemStackTemplate stack) {
+        ProblemSuccessReporter mapReporter = new ProblemSuccessReporter(reporter);
 
         Identifier customModel = ALLOW_MAPPING_VANILLA_ITEMS ? stack.get(DataComponents.ITEM_MODEL) : stack.components().split().added().get(DataComponents.ITEM_MODEL);
         if (customModel == null) {
@@ -115,11 +130,11 @@ public class BedrockPack implements PackSerializer.Serializable {
             BedrockItemMapper.tryMapStack(stack, customModel, mapReporter, context, false);
         }
 
-        return problems.get() ? MappingResult.PROBLEMS_OCCURRED : MappingResult.MAPPED_SUCCESSFULLY;
+        return mapReporter.problemsSeen() > 0 ? MappingResult.PROBLEMS_OCCURRED : MappingResult.MAPPED_SUCCESSFULLY;
     }
 
-    public MappingResult map(Holder<Item> item, DataComponentPatch patch) {
-        return map(new ItemStackTemplate(item, 1, patch));
+    public MappingResult mapItem(Holder<Item> item, DataComponentPatch patch) {
+        return mapItem(new ItemStackTemplate(item, 1, patch));
     }
 
     public CompletableFuture<?> save() {
@@ -135,31 +150,41 @@ public class BedrockPack implements PackSerializer.Serializable {
         }
         return baseSerialization;
     }
-    
+
+    @Override
+    public void acceptBlock(BedrockBlock block) {
+        terrainTextures.withBlockTextures(block);
+        block.textures().addFlipbookTextures(flipbookTextures);
+        bedrockBlocks.add(block);
+    }
+
+    @Override
+    public void acceptItem(BedrockItem item) {
+        itemTextures.withItemTexture(item);
+        bedrockItems.add(item);
+    }
+
     @Override
     public CompletableFuture<?> save(PackSerializingContext serializingContext) {
-        return PackSerializer.Serializable.wrapCodec(GeyserMappings.CODEC, context.mappings(), PackPaths::mappings)
-                .with(PackSerializer.Serializable.wrapOptionalCodec(PackManifest.CODEC, manifest, PackPaths::manifest))
-                .with(PackSerializer.Serializable.wrapCodec(BedrockTextureAtlas.ITEM_ATLAS_CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), PackPaths::itemAtlas))
+        return PackSerializer.Serializable.wrapCodec(GeyserBlockMappings.CODEC, context.mappings().blocks(), PackPaths::blockMappings)
+                .with(GeyserItemMappings.CODEC, context.mappings().items(), PackPaths::itemMappings)
+                .with(PackManifest.CODEC, manifest, PackPaths::manifest)
+                .with(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), PackPaths::itemAtlas)
+                .with(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.terrainAtlas(name, terrainTextures), PackPaths::terrainAtlas)
+                .with(BedrockFlipbookTextures.CODEC, flipbookTextures.build(), PackPaths::flipbookTextures)
+                .with(bedrockBlocks)
                 .with(bedrockItems)
                 .with(paths.languageOutput().map(languageFolder -> context -> LanguageUtil.saveLanguages(context, languageFolder)))
                 .save(serializingContext);
     }
 
-    public AssetCacheStats cacheStats() {
-        return context.cacheStats();
-    }
-
-    public int getMappings() {
-        return context.mappings().size();
+    public PackStats stats() {
+        return new PackStats(context.cacheStats(), context.mappings().blocks().size(), context.mappings().items().size(),
+                itemTextures.build().size(), terrainTextures.build().size(), flipbookTextures.build().size());
     }
 
     public Set<BedrockItem> getBedrockItems() {
         return Collections.unmodifiableSet(bedrockItems);
-    }
-
-    public int getItemTextureAtlasSize() {
-        return itemTextures.build().size();
     }
 
     public ProblemReporter getReporter() {
@@ -179,36 +204,22 @@ public class BedrockPack implements PackSerializer.Serializable {
     }
 
     public static class Builder {
-        private static final Path ATTACHABLES_DIRECTORY = Path.of("attachables");
-        private static final Path GEOMETRY_DIRECTORY = Path.of("models/entity");
-        private static final Path ANIMATION_DIRECTORY = Path.of("animations");
-        private static final Path RENDER_CONTROLLERS_DIRECTORY = Path.of("render_controllers");
-
-        private static final Path MANIFEST_FILE = Path.of("manifest.json");
-        private static final Path ITEM_ATLAS_FILE = Path.of("textures/item_texture.json");
-
         private final String name;
-        private final Path mappingsPath;
-        private final Path packRootPath;
+        private final Path mappingsRoot;
+        private final Path packRoot;
         private final PackSerializer packSerializer;
         private final AssetResolver assetResolver;
         private @Nullable PackManifest manifest;
-        private UnaryOperator<Path> attachablesPath = resolve(ATTACHABLES_DIRECTORY);
-        private UnaryOperator<Path> geometryPath = resolve(GEOMETRY_DIRECTORY);
-        private UnaryOperator<Path> animationPath = resolve(ANIMATION_DIRECTORY);
-        private UnaryOperator<Path> renderControllersPath = resolve(RENDER_CONTROLLERS_DIRECTORY);
-        private UnaryOperator<Path> manifestPath = resolve(MANIFEST_FILE);
-        private UnaryOperator<Path> itemAtlasPath = resolve(ITEM_ATLAS_FILE);
         private @Nullable Path packZipFile = null;
         private @Nullable Path languageFolder = null;
         private @Nullable GeometryRenderer geometryRenderer = null;
         private Function<ProblemReporter.PathElement, ProblemReporter> reporter;
         private boolean reportSuccesses = false;
 
-        public Builder(String name, Path mappingsPath, Path packRootPath, PackSerializer packSerializer, AssetResolver assetResolver) {
+        public Builder(String name, Path mappingsRoot, Path packRoot, PackSerializer packSerializer, AssetResolver assetResolver) {
             this.name = name;
-            this.mappingsPath = mappingsPath;
-            this.packRootPath = packRootPath;
+            this.mappingsRoot = mappingsRoot;
+            this.packRoot = packRoot;
             this.reporter = ProblemReporter.Collector::new;
             this.packSerializer = packSerializer;
             this.assetResolver = assetResolver;
@@ -217,60 +228,6 @@ public class BedrockPack implements PackSerializer.Serializable {
 
         public Builder withManifest(@Nullable PackManifest manifest) {
             this.manifest = manifest;
-            return this;
-        }
-
-        public Builder withAttachablesPath(Path absolute) {
-            return withAttachablesPath(_ -> absolute);
-        }
-
-        public Builder withAttachablesPath(UnaryOperator<Path> path) {
-            attachablesPath = path;
-            return this;
-        }
-
-        public Builder withGeometryPath(Path absolute) {
-            return withGeometryPath(_ -> absolute);
-        }
-
-        public Builder withGeometryPath(UnaryOperator<Path> path) {
-            geometryPath = path;
-            return this;
-        }
-
-        public Builder withAnimationPath(Path absolute) {
-            return withAnimationPath(_ -> absolute);
-        }
-
-        public Builder withAnimationPath(UnaryOperator<Path> path) {
-            animationPath = path;
-            return this;
-        }
-
-        public Builder withRenderControllersPath(Path absolute) {
-            return withRenderControllersPath(_ -> absolute);
-        }
-
-        public Builder withRenderControllersPath(UnaryOperator<Path> path) {
-            renderControllersPath = path;
-            return this;
-        }
-
-        public Builder withManifestPath(Path absolute) {
-            return withManifestPath(_ -> absolute);
-        }
-
-        public Builder withManifestPath(UnaryOperator<Path> path) {
-            manifestPath = path;
-            return this;
-        }
-
-        public Builder withItemAtlasPath(Path absolute) {
-            return withItemAtlasPath(_ -> absolute);
-        }
-
-        public Builder withItemAtlasPath(UnaryOperator<Path> path) {
-            itemAtlasPath = path;
             return this;
         }
 
@@ -300,16 +257,9 @@ public class BedrockPack implements PackSerializer.Serializable {
         }
 
         public BedrockPack build() {
-            PackPaths paths = new PackPaths(mappingsPath, packRootPath, attachablesPath.apply(packRootPath),
-                    geometryPath.apply(packRootPath), animationPath.apply(packRootPath), renderControllersPath.apply(packRootPath),
-                    manifestPath.apply(packRootPath), itemAtlasPath.apply(packRootPath),
-                    Optional.ofNullable(packZipFile), Optional.ofNullable(languageFolder));
+            PackPaths paths = new PackPaths(mappingsRoot, packRoot, Optional.ofNullable(packZipFile), Optional.ofNullable(languageFolder));
             return new BedrockPack(name, Optional.ofNullable(manifest), paths, packSerializer, assetResolver, Optional.ofNullable(geometryRenderer),
-                    reporter.apply(() -> "Bedrock pack " + name + " "), reportSuccesses);
-        }
-
-        private static UnaryOperator<Path> resolve(Path child) {
-            return root -> root.resolve(child);
+                    reporter.apply(() -> "Bedrock pack " + name), reportSuccesses);
         }
 
         private static PackManifest defaultManifest(String name) {
@@ -321,5 +271,12 @@ public class BedrockPack implements PackSerializer.Serializable {
         NONE_MAPPED,
         MAPPED_SUCCESSFULLY,
         PROBLEMS_OCCURRED
+    }
+
+    public record MappingResults(int amountMapped, int problems) {
+
+        public MappingResult toSingleResult() {
+            return problems > 0 ? MappingResult.PROBLEMS_OCCURRED : amountMapped > 0 ? BedrockPack.MappingResult.MAPPED_SUCCESSFULLY : BedrockPack.MappingResult.NONE_MAPPED;
+        }
     }
 }

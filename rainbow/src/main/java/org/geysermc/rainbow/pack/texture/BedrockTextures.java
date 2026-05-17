@@ -1,7 +1,10 @@
-package org.geysermc.rainbow.pack;
+package org.geysermc.rainbow.pack.texture;
 
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
+import org.geysermc.rainbow.mapping.texture.BlockModelTextures;
+import org.geysermc.rainbow.pack.BedrockBlock;
+import org.geysermc.rainbow.pack.BedrockItem;
 
 import java.util.HashMap;
 import java.util.List;
@@ -32,8 +35,23 @@ public record BedrockTextures(Map<String, String> textures) {
     public static class Builder {
         private final Map<String, String> textures = new HashMap<>();
 
+        public Builder withBlockTextures(BedrockBlock block) {
+            if (!block.textures().cached()) {
+                block.textures().materials().ifLeft(this::withBlockMaterial);
+                block.textures().materials().ifRight(infos -> infos.values().forEach(this::withBlockMaterial));
+            }
+            return this;
+        }
+
+        private void withBlockMaterial(BlockModelTextures.MaterialInfo info) {
+            withTexture(info.texture().bedrockSafeName(), info.texture().bedrockSafeDestination());
+        }
+
         public Builder withItemTexture(BedrockItem item) {
-            return withTexture(item.textureName(), TEXTURES_FOLDER + item.textures().icon().getPath());
+            if (!item.textures().cached()) {
+                return withTexture(item.textures().icon().bedrockSafeName(), item.textures().icon().bedrockSafeDestination());
+            }
+            return this;
         }
 
         public Builder withTexture(String name, String texture) {

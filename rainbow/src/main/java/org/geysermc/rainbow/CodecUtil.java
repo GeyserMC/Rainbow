@@ -7,6 +7,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import java.io.IOException;
@@ -16,6 +17,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -31,6 +34,11 @@ public final class CodecUtil {
             }
             return DataResult.success(read);
         }).fieldOf(field).forGetter(_ -> value);
+    }
+
+    public static MapCodec<OptionalInt> optionalInt(String field) {
+        return Codec.INT.optionalFieldOf(field).xmap(optional -> optional.map(OptionalInt::of).orElseGet(OptionalInt::empty),
+                optionalInt -> optionalInt.isPresent() ? Optional.of(optionalInt.getAsInt()) : Optional.empty());
     }
 
     public static <T> T readOrCompute(Codec<T> codec, Path path, Supplier<T> supplier) throws IOException {

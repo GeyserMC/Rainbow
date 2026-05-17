@@ -7,7 +7,10 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.fabricmc.fabric.api.client.datagen.v1.provider.FabricModelProvider;
 import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricLanguageProvider;
+import net.minecraft.client.data.models.blockstates.BlockModelDefinitionGenerator;
 import net.minecraft.client.data.models.model.ModelInstance;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelDispatcher;
 import net.minecraft.client.renderer.item.ClientItem;
 import net.minecraft.client.resources.metadata.animation.AnimationMetadataSection;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
@@ -30,6 +33,8 @@ import net.minecraft.util.ProblemReporter;
 import net.minecraft.util.Util;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.equipment.EquipmentAsset;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.datagen.mixin.FabricLanguageProviderAccessor;
@@ -116,7 +121,7 @@ public abstract class RainbowDataProvider implements DataProvider {
                         Set<Item> sortedItemInfos = new TreeSet<>(Comparator.comparing(item -> item.builtInRegistryHolder().key().identifier()));
                         sortedItemInfos.addAll(providers.getItemInfos().keySet());
                         for (Item item : sortedItemInfos) {
-                            pack.map(getVanillaItem(item).builtInRegistryHolder(), getVanillaDataComponentPatch(item));
+                            pack.mapItem(getVanillaItem(item).builtInRegistryHolder(), getVanillaDataComponentPatch(item));
                         }
                         return pack;
                     }
@@ -160,6 +165,10 @@ public abstract class RainbowDataProvider implements DataProvider {
             return ((ModelProviderDataAccessor) models).rainbow$getItemInfos();
         }
 
+        private Map<Block, BlockModelDefinitionGenerator> getBlockDefinitionGenerators() {
+            return ((ModelProviderDataAccessor) models).rainbow$getBlockDefinitionGenerators();
+        }
+
         private Map<Identifier, ModelInstance> getModels() {
             return ((ModelProviderDataAccessor) models).rainbow$getModels();
         }
@@ -167,7 +176,7 @@ public abstract class RainbowDataProvider implements DataProvider {
 
     public record Paths(Path geyserMappingsPath, Path packPath, Path langPath) {
         // TODO reduce default duplication with PackManager in client
-        public static final Paths DEFAULT = new Paths(Path.of("geyser_mappings.json"), Path.of("pack"), Path.of("lang"));
+        public static final Paths DEFAULT = new Paths(Path.of("custom_mappings"), Path.of("pack"), Path.of("lang"));
 
         public Paths resolveFrom(Path root) {
             return new Paths(root.resolve(geyserMappingsPath), root.resolve(packPath), root.resolve(langPath));
@@ -204,6 +213,7 @@ public abstract class RainbowDataProvider implements DataProvider {
         private final ResourceManager resourceManager;
         private final Providers providers;
 
+        private final Map<BlockState, Optional<BlockStateModel.UnbakedRoot>> instantiatedBlockStateModelCache = new Object2ObjectOpenHashMap<>();
         private final Map<Identifier, Optional<ResolvedModel>> resolvedModelCache = new Object2ObjectOpenHashMap<>();
         private final Map<Identifier, ClientItem> itemInfos;
         private final Map<Identifier, ModelInstance> models;
@@ -230,6 +240,22 @@ public abstract class RainbowDataProvider implements DataProvider {
                     return existingKeys;
                 });
             }));
+        }
+
+        @Override
+        public Optional<BlockStateModel.UnbakedRoot> getBlockStateModel(BlockState state) {
+            Optional<BlockStateModel.UnbakedRoot> existing = instantiatedBlockStateModelCache.get(state);
+            if (existing != null) {
+                return existing;
+            }
+            BlockModelDefinitionGenerator generator = providers.getBlockDefinitionGenerators().get(state.getBlock());
+            if (generator != null) {
+                BlockStateModelDispatcher dispatcher = generator.create();
+                dispatcher.instantiate(state.getBlock().getStateDefinition(), () -> "").forEach((possibleState, root) -> instantiatedBlockStateModelCache.put(possibleState, Optional.of(root)));
+                return instantiatedBlockStateModelCache.get(state);
+            }
+            state.getBlock().getStateDefinition().getPossibleStates().forEach(possibleState -> instantiatedBlockStateModelCache.put(possibleState, Optional.empty()));
+            return Optional.empty();
         }
 
         @Override

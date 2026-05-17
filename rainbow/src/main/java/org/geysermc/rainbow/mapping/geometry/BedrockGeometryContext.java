@@ -30,7 +30,7 @@ public record BedrockGeometryContext(Optional<MappedGeometry> geometry,
                 .save(context);
     }
 
-    public static BedrockGeometryContext create(Identifier bedrockIdentifier, ResolvedModel model, Transformation definitionTransformation, ModelTextures textures, PackContext context) {
+    public static BedrockGeometryContext create(Identifier bedrockIdentifier, ResolvedModel model, Transformation definitionTransformation, ModelTextures<?> textures, PackContext context) {
         boolean isFlatBuiltin = isFlatBuiltin(model);
         if (isFlatBuiltin) {
             model = new FlatBuiltinItemModel(context.assetResolver(), model);
