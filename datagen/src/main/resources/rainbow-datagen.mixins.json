@@ -4,6 +4,7 @@
   "package": "org.geysermc.rainbow.datagen.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "BlockStateGeneratorCollectorAccessor",
     "ItemInfoCollectorAccessor",
     "ModelProviderMixin",
     "SimpleModelCollectorAccessor"
