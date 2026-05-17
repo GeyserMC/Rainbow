@@ -47,7 +47,7 @@ public interface PackSerializer {
         }
 
         default Serializable with(Collection<? extends Serializable> others) {
-            return with(context -> CompletableFuture.allOf(others.stream().map(serializable -> serializable.save(context)).toArray(CompletableFuture[]::new)));
+            return with(allOf(others));
         }
 
         static Serializable wrapOptional(Optional<? extends Serializable> optional) {
@@ -68,6 +68,10 @@ public interface PackSerializer {
 
         static <T> Serializable wrapOptionalCodec(Codec<T> codec, Optional<T> optional, BiFunction<PackPaths, T, Path> pathResolver) {
             return optional.map(object -> wrapCodec(codec, object, pathResolver)).orElseGet(Serializable::noop);
+        }
+
+        static Serializable allOf(Collection<? extends Serializable> serializables) {
+            return context -> CompletableFuture.allOf(serializables.stream().map(serializable -> serializable.save(context)).toArray(CompletableFuture[]::new));
         }
 
         static Serializable noop() {

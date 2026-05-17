@@ -9,6 +9,7 @@ import org.geysermc.rainbow.image.NativeImageUtil;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
+import org.geysermc.rainbow.pack.texture.BedrockTextures;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
@@ -69,6 +70,10 @@ public abstract class TextureHolder implements PackSerializer.Serializable {
     }
 
     public String bedrockSafeDestination() {
+        return BedrockTextures.TEXTURES_FOLDER + destination.getPath();
+    }
+
+    public String bedrockSafeName() {
         return Rainbow.bedrockSafeIdentifier(destination);
     }
 

@@ -102,20 +102,20 @@ public class BedrockBlockMapper {
         // We can't specify light emission per single model element, so we specify the highest value that is used across the model
         // FIXME this seem to be actual light on bedrock?
         builder.withLightEmission(getMaxLightEmission(geometry));
-        BlockModelTextures textures = context.blockTextureCache().load(model, () -> new BlockModelTextures(model.getTopTextureSlots(), context.assetResolver()));
+        BlockModelTextures textures = context.blockTextureCache().load(model, () -> BlockModelTextures.create(model.getTopTextureSlots(), context.assetResolver()));
 
         Optional<MappedGeometry> mappedGeometry = Optional.empty();
-        if (looksLikeFullBlockModel(model.getTopGeometry()) && textures.singleMaterial().isPresent()) {
-            builder.withFullBlockGeometry(GeyserBlockMapping.materials().withInstance("*", mapMaterial(textures.singleMaterial().get(), ambientOcclusion)));
+        if (looksLikeFullBlockModel(model.getTopGeometry()) && textures.isSingleMaterial()) {
+            builder.withFullBlockGeometry(GeyserBlockMapping.materials().withInstance("*", mapMaterial(textures.getSingleMaterial().orElseThrow().material(), ambientOcclusion)));
         /*} else if (looksLikeCrossBlockModel(model.getTopGeometry())) {
             builder.withCrossGeometry(GeyserBlockMapping.materials()
                     .withInstance("*", "FIXME", GeyserBlockMapping.MaterialInstances.Instance.RenderMethod.OPAQUE, true, ambientOcclusion));
         */} else {
             Identifier modelIdentifier = Rainbow.getModelIdentifier(model);
             mappedGeometry = Optional.of(context.geometryCache().mapGeometry(modelIdentifier, model, Transformation.IDENTITY, textures));
-            GeyserBlockMapping.MaterialInstances materials = textures.singleMaterial()
+            GeyserBlockMapping.MaterialInstances materials = textures.getSingleMaterial()
                     .map(material -> GeyserBlockMapping.materials()
-                            .withInstance("*", mapMaterial(material, ambientOcclusion))
+                            .withInstance("*", mapMaterial(material.material(), ambientOcclusion))
                             .build())
                     .orElseGet(() -> mapMaterials(geometry, model.getTopTextureSlots(), ambientOcclusion));
             builder.withGeometry(mappedGeometry.get().identifier(), materials);

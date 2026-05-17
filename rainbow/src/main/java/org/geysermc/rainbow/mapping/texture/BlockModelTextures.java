@@ -2,6 +2,7 @@ package org.geysermc.rainbow.mapping.texture;
 
 import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Pair;
+import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.client.resources.model.sprite.TextureSlots;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 public record BlockModelTextures(Either<MaterialInfo, Map<String, MaterialInfo>> materials, int width, int height, boolean cached) implements ModelTextures<BlockModelTextures> {
 
@@ -57,6 +59,14 @@ public record BlockModelTextures(Either<MaterialInfo, Map<String, MaterialInfo>>
         }
     }
 
+    public boolean isSingleMaterial() {
+        return materials.left().isPresent();
+    }
+
+    public Optional<MaterialInfo> getSingleMaterial() {
+        return materials.left();
+    }
+
     @Override
     public Optional<SpriteInfo> getSprite(String key) {
         return materials.map(material -> Optional.of(material.sprite),
@@ -78,8 +88,24 @@ public record BlockModelTextures(Either<MaterialInfo, Map<String, MaterialInfo>>
 
     public void addFlipbookTextures(BedrockFlipbookTextures.Builder builder) {
         if (!cached) {
-            
+            materials.map(info -> info.animation.stream().map(animation -> Pair.of(info.texture, animation)),
+                            map -> map.values().stream()
+                                    .flatMap(info -> info.animation.stream()
+                                            .map(animation -> Pair.of(info.texture, animation))))
+                    .map(BlockModelTextures::mapAnimationInfo)
+                    .forEach(builder::with);
         }
+    }
+
+    private static BedrockFlipbookTextures.FlipbookTexture mapAnimationInfo(Pair<TextureHolder, TextureResource.AnimationInfo> textureAndAnimation) {
+        TextureHolder texture = textureAndAnimation.getFirst();
+        TextureResource.AnimationInfo animation = textureAndAnimation.getSecond();
+        // Same hack as in ItemModelTextures, repeat frame for however long the time is
+        IntList frames = IntList.of(animation.frames().stream()
+                .flatMap(frame -> Stream.generate(frame::index).limit(frame.time()))
+                .mapToInt(i -> i)
+                .toArray());
+        return new BedrockFlipbookTextures.FlipbookTexture(texture.bedrockSafeName(), texture.bedrockSafeDestination(), 1, frames, animation.frameRowCount(), animation.interpolate());
     }
 
     @Override
@@ -87,22 +113,22 @@ public record BlockModelTextures(Either<MaterialInfo, Map<String, MaterialInfo>>
         if (!cached) {
             return PackSerializer.Serializable.noop()
                     .with(materials.map(MaterialInfo::texture,
-                            map -> map.values().stream()
+                            map -> PackSerializer.Serializable.allOf(map.values().stream()
                                     .map(MaterialInfo::texture)
-                                    .collect(PackSerializer.Serializable::noop, PackSerializer.Serializable::with, PackSerializer.Serializable::with)))
+                                    .toList())))
                     .save(context);
         }
         return PackSerializer.noop();
     }
 
-    public record MaterialInfo(TextureHolder texture, SpriteInfo sprite, Material material) {
+    public record MaterialInfo(TextureHolder texture, Optional<TextureResource.AnimationInfo> animation, SpriteInfo sprite, Material material) {
 
         private MaterialInfo(TextureResource texture, Material material) {
-            this(TextureHolder.createBuiltIn(material.sprite()), new SpriteInfo(texture), material);
+            this(TextureHolder.createBuiltIn(material.sprite()), texture.animation(), new SpriteInfo(texture), material);
         }
 
         private static MaterialInfo createMissing(Material material) {
-            return new MaterialInfo(TextureHolder.createNonExistent(material.sprite()), SpriteInfo.EMPTY, material);
+            return new MaterialInfo(TextureHolder.createNonExistent(material.sprite()), Optional.empty(), SpriteInfo.EMPTY, material);
         }
     }
 }

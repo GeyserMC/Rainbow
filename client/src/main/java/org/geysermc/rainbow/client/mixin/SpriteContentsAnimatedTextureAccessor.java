@@ -14,4 +14,7 @@ public interface SpriteContentsAnimatedTextureAccessor {
 
     @Accessor
     int getFrameRowSize();
+
+    @Accessor
+    boolean getInterpolateFrames();
 }

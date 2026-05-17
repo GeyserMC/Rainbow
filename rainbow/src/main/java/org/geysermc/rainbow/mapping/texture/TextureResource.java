@@ -47,12 +47,12 @@ public record TextureResource(NativeImage texture, Optional<AnimationInfo> anima
             }
         }
 
-        return new TextureResource(texture, Optional.of(new AnimationInfo(frameSize, Collections.unmodifiableList(frames), frameRowCount, totalFrameCount)));
+        return new TextureResource(texture, Optional.of(new AnimationInfo(frameSize, Collections.unmodifiableList(frames), frameRowCount, totalFrameCount, animation.interpolatedFrames())));
     }
 
-    public static TextureResource createAnimated(NativeImage texture, FrameSize frameSize, List<FrameInfo> frames, int frameRowCount) {
+    public static TextureResource createAnimated(NativeImage texture, FrameSize frameSize, List<FrameInfo> frames, int frameRowCount, boolean interpolate) {
         int frameColCount = texture.getHeight() / frameSize.height();
-        return new TextureResource(texture, Optional.of(new AnimationInfo(frameSize, frames, frameRowCount, frameRowCount * frameColCount)));
+        return new TextureResource(texture, Optional.of(new AnimationInfo(frameSize, frames, frameRowCount, frameRowCount * frameColCount, interpolate)));
     }
 
     public static TextureResource createNonAnimated(NativeImage texture) {
@@ -95,7 +95,7 @@ public record TextureResource(NativeImage texture, Optional<AnimationInfo> anima
         texture.close();
     }
 
-    public record AnimationInfo(FrameSize frameSize, List<FrameInfo> frames, int frameRowCount, int totalFrameCount) {
+    public record AnimationInfo(FrameSize frameSize, List<FrameInfo> frames, int frameRowCount, int totalFrameCount, boolean interpolate) {
 
         public FrameInfo frame(int index) {
             return frames.get(index);

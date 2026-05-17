@@ -42,7 +42,7 @@ public record BedrockTextures(Map<String, String> textures) {
         }
 
         private void withBlockMaterial(BlockModelTextures.MaterialInfo info) {
-            withTexture(info.texture().bedrockSafeDestination(), TEXTURES_FOLDER + info.texture().destination().getPath());
+            withTexture(info.texture().bedrockSafeName(), info.texture().bedrockSafeDestination());
         }
 
         public Builder withItemTexture(BedrockItem item) {

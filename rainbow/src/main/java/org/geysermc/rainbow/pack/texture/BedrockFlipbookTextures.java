@@ -26,7 +26,7 @@ public record BedrockFlipbookTextures(List<FlipbookTexture> textures) {
                 instance.group(
                         Codec.STRING.fieldOf("atlas_tile").forGetter(FlipbookTexture::name),
                         Codec.STRING.fieldOf("flipbook_texture").forGetter(FlipbookTexture::path),
-                        Codec.INT.fieldOf("ticks_per_frame").forGetter(FlipbookTexture::ticksPerFrame),
+                        Codec.INT.optionalFieldOf("ticks_per_frame", 1).forGetter(FlipbookTexture::ticksPerFrame),
                         INT_LIST_CODEC.fieldOf("frames").forGetter(FlipbookTexture::frames),
                         Codec.INT.optionalFieldOf("replicate", 1).forGetter(FlipbookTexture::replicate),
                         Codec.BOOL.optionalFieldOf("blend_frames", true).forGetter(FlipbookTexture::interpolate)

@@ -100,7 +100,7 @@ public class ClientAssetResolver implements AssetResolver {
                 accessor.getFrames().stream()
                         .map(frame -> new TextureResource.FrameInfo(frame.index(), frame.time()))
                         .toList(),
-                accessor.getFrameRowSize()));
+                accessor.getFrameRowSize(), accessor.getInterpolateFrames()));
     }
 
     @Override
