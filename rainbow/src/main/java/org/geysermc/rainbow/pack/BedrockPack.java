@@ -26,6 +26,7 @@ import org.geysermc.rainbow.mapping.BedrockItemMapper;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
+import org.geysermc.rainbow.mapping.PackStats;
 import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
 import org.geysermc.rainbow.definition.item.GeyserItemMappings;
 import org.geysermc.rainbow.pack.texture.BedrockFlipbookTextures;
@@ -180,6 +181,11 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
 
     public AssetCacheStats cacheStats() {
         return context.cacheStats();
+    }
+
+    public PackStats stats() {
+        return new PackStats(context.cacheStats(), context.mappings().blocks().size(), context.mappings().items().size(),
+                itemTextures.build().size(), terrainTextures.build().size(), flipbookTextures.build().size());
     }
 
     public int blockMappingsSize() {

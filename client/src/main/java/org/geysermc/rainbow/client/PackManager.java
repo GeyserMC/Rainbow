@@ -13,7 +13,7 @@ import org.geysermc.rainbow.client.mixin.SplashRendererAccessor;
 import org.geysermc.rainbow.client.render.MinecraftGeometryRenderer;
 import org.geysermc.rainbow.client.skull.CustomSkulls;
 import org.geysermc.rainbow.mapping.AssetCacheStats;
-import org.geysermc.rainbow.pack.BedrockItem;
+import org.geysermc.rainbow.mapping.PackStats;
 import org.geysermc.rainbow.pack.BedrockPack;
 
 import java.io.IOException;
@@ -22,10 +22,34 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Consumer;
 
 public final class PackManager {
+    private static final String REPORT_HEADER = """
+#### READ THIS FIRST ####
+What do I do now?
+
+In this folder, you'll find 4 important files/folders along with this one:
+
+- custom-skulls.yml: put this in Geyser's config folder. These are the exported player skulls. The file may already exist in Geyser's config folder, be careful with overwriting it!
+- geyser_mappings.json: put this in the "custom_mappings" folder in Geyser's config folder. These are the generated item mappings.
+- pack.zip: put this in the "packs" folder in Geyser's config folder. This is the generated bedrock resourcepack.
+- lang: put all files in this folder in the "locales/overrides" folder in Geyser's config folder. These are the exported custom translation strings.
+  - The folder can be empty or non-existent if no language files are found. This is usually not an issue!
+
+Once you have taken those steps, restart your server. If everything went right, bedrock players should download
+the generated pack and see your custom items.
+
+IF YOU EXPERIENCE ANY ISSUES, please go to our Discord (https://discord.gg/geysermc) for support.
+Use the #custom-resource-packs channel, and make sure to include this report file.
+
+You can also open an issue report over at our issue tracker (https://github.com/GeyserMC/Rainbow/issues).
+Again, be sure to include this report file, and please make sure your issue is not already reported!
+If it is, you can help out by adding details to the existing report.
+
+Below, you'll find some statistics about the generated pack, and a mapping report,
+which will list any models converted, and any problems that occurred during mapping.
+#########################""";
     private static final List<String> PACK_SUMMARY_COMMENTS = List.of("Use the custom item API v2 build!", "bugrock moment", "RORY",
             "use !!plshelp", "*message was deleted*", "welcome to the internet!", "beep beep. boop boop?", "FROG", "it is frog day", "it is cat day!",
             "eclipse will hear about this.", "you must now say the word 'frog' in the #general channel", "You Just Lost The Game", "you are now breathing manually",
@@ -92,74 +116,49 @@ public final class PackManager {
 
     public record RainbowPack(BedrockPack resources, CustomSkulls skulls) {}
 
+    // TODO: clean this up
     private static String createPackSummary(RainbowPack pack, ClientPackSerializer packSerializer) {
         String problems = ((ProblemReporter.Collector) pack.resources.getReporter()).getTreeReport();
         if (StringUtil.isBlank(problems)) {
             problems = "Well that's odd... there's nothing here!";
         }
 
-        Set<BedrockItem> bedrockItems = pack.resources.getBedrockItems();
-        long geometries = bedrockItems.stream().filter(item -> item.geometryContext().geometry().isPresent()).count();
-        long animations = bedrockItems.stream().filter(item -> item.geometryContext().animation().isPresent()).count();
-        AssetCacheStats cacheStats = pack.resources.cacheStats();
+        long attachables = pack.resources.getBedrockItems().stream().filter(item -> item.attachableContext().attachable().isPresent()).count();
+        PackStats stats = pack.resources.stats();
+        AssetCacheStats cacheStats = stats.cacheStats();
 
-        return """
-#### READ THIS FIRST ####
-What do I do now?
-
-In this folder, you'll find 4 important files/folders along with this one:
-
-- custom-skulls.yml: put this in Geyser's config folder. These are the exported player skulls. The file may already exist in Geyser's config folder, be careful with overwriting it!
-- geyser_mappings.json: put this in the "custom_mappings" folder in Geyser's config folder. These are the generated item mappings.
-- pack.zip: put this in the "packs" folder in Geyser's config folder. This is the generated bedrock resourcepack.
-- lang: put all files in this folder in the "locales/overrides" folder in Geyser's config folder. These are the exported custom translation strings.
-  - The folder can be empty or non-existent if no language files are found. This is usually not an issue!
-
-Once you have taken those steps, restart your server. If everything went right, bedrock players should download
-the generated pack and see your custom items.
-
-IF YOU EXPERIENCE ANY ISSUES, please go to our Discord (https://discord.gg/geysermc) for support.
-Use the #custom-resource-packs channel, and make sure to include this report file.
-
-You can also open an issue report over at our issue tracker (https://github.com/GeyserMC/Rainbow/issues).
-Again, be sure to include this report file, and please make sure your issue is not already reported!
-If it is, you can help out by adding details to the existing report.
-
-Below, you'll find some statistics about the generated pack, and a mapping report,
-which will list any models converted, and any problems that occurred during mapping.
-#########################
-
--- PACK GENERATION REPORT --
-// %s
-
-Version of Rainbow: %s
-
-Generated pack: %s
-Mappings written: %d
-
-Item texture atlas size: %d
-Geometries exported: %d
-Animations exported: %d
-
-JSON-files written: %d
-Textures exported: %d
-
-Username skulls exported: %d
-UUID skulls exported: %d
-Static texture skulls exported: %d
-
--- ASSET CACHE STATS --
-
-Geometry cache: %d written, %d cache hits
-Texture cache: %d written, %d cache hits
-
--- MAPPING TREE REPORT --
-%s
-""".formatted(randomSummaryComment(), RainbowClient.getVersion(), pack.resources.name(), pack.resources.itemMappingsSize(), pack.resources.getItemTextureAtlasSize(),
-                geometries, animations, packSerializer.jsonExported(), packSerializer.texturesExported(),
-                pack.skulls.usernames(), pack.skulls.uuids(), pack.skulls.textures(),
-                cacheStats.geometry().size(), cacheStats.geometry().hits(),
-                cacheStats.texture().size(), cacheStats.texture().hits(), problems);
+        StringBuilder report = new StringBuilder(REPORT_HEADER);
+        report.append("\n");
+        report.append("\n-- PACK GENERATION REPORT --");
+        report.append("\n// ").append(randomSummaryComment());
+        report.append('\n');
+        report.append("\nVersion of Rainbow: ").append(RainbowClient.getVersion());
+        report.append("\n");
+        report.append("\nGenerated pack: ").append(pack.resources.name());
+        report.append("\nBlock mappings written: ").append(stats.blockMappings());
+        report.append("\nItem mappings written: ").append(stats.itemMappings());
+        report.append("\n");
+        report.append("\nItem texture atlas size: ").append(stats.itemAtlas());
+        report.append("\nTerrain texture atlas size: ").append(stats.terrainAtlas());
+        report.append("\nFlipbook texture definitions: ").append(stats.flipbookTextures());
+        report.append("\n");
+        report.append("\nItem attachables exported: ").append(attachables);
+        report.append("\n");
+        report.append("\nJSON-files written: ").append(packSerializer.jsonExported());
+        report.append("\nTextures written: ").append(packSerializer.texturesExported());
+        report.append("\n");
+        report.append("\nUsername skulls exported: ").append(pack.skulls.usernames());
+        report.append("\nUUID skulls exported: ").append(pack.skulls.uuids());
+        report.append("\nStatic texture skulls exported: ").append(pack.skulls.textures());
+        report.append("\n");
+        report.append("\n-- ASSET CACHE STATS --");
+        report.append("\nGeometry cache: %d written, %d cache hits ".formatted(cacheStats.geometry().size(), cacheStats.geometry().hits()));
+        report.append("\nBlock texture cache: %d written, %d cache hits ".formatted(cacheStats.blockTexture().size(), cacheStats.blockTexture().hits()));
+        report.append("\nItem texture cache: %d written, %d cache hits ".formatted(cacheStats.itemTexture().size(), cacheStats.itemTexture().hits()));
+        report.append("\n");
+        report.append("\n-- PACK TREE REPORT --\n");
+        report.append(problems);
+        return report.toString();
     }
 
     private static String randomSummaryComment() {

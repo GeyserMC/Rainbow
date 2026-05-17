@@ -69,6 +69,6 @@ public final class PackContext {
     }
 
     public AssetCacheStats cacheStats() {
-        return new AssetCacheStats(geometryCache.stats(), itemTextureCache.stats());
+        return new AssetCacheStats(geometryCache.stats(), blockTextureCache.stats(), itemTextureCache.stats());
     }
 }
