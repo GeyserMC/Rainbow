@@ -22,7 +22,7 @@ To use Rainbow, you must install it on your Minecraft client. Rainbow adds a few
 you use them as follows:
 
 1. First, start a new pack by running `/rainbow create <name>`, replacing `<name>` with the name of your pack. Your resourcepack and Geyser mappings will be exported in the `.minecraft/rainbow/<name>` folder. Anything in here can be overwritten!
-2. Once you have created a pack, you can start mapping custom blocks, skulls, and items. Mapped custom content will be included in the exported resourcepack and Geyser mappings. There are 3 ways to map custom items:
+2. Once you have created a pack, you can start mapping custom blocks, skulls, and items. Mapped custom content will be included in the exported resourcepack and Geyser mappings. There are 5 ways to map custom content:
    - `/rainbow map block <target>` - maps the custom block at `<target>`, if any.
    - `/rainbow map item` - maps the custom item or skull you're currently holding in your hand, if any.
    - `/rainbow mapinventory` - scans your inventory for custom items or skulls, and maps all that are found.

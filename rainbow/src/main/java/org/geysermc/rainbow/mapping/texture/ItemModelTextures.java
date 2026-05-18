@@ -29,21 +29,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
 
-    TextureHolder icon();
+    IconRenderer icon();
 
-    default BedrockAttachable.Builder applyToAttachable(BedrockAttachable.Builder builder) {
-        return builder
-                .withTexture(BedrockAttachable.DisplaySlot.DEFAULT, icon())
-                .withRenderController(VanillaRenderControllers.ITEM_DEFAULT);
-    }
-
-    default boolean cached() {
-        return this instanceof CachedTexture;
-    }
+    BedrockAttachable.Builder applyToAttachable(BedrockAttachable.Builder builder);
 
     @Override
     default ItemModelTextures cachedCopy() {
@@ -53,7 +46,7 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
         return new CachedTexture(this);
     }
 
-    static ItemModelTextures load(ItemStackTemplate stack, ResolvedModel model, PackContext context) {
+    static ItemModelTextures load(ResolvedModel model, PackContext context) {
         Map<String, Material> materials = ModelTextures.getCleanMaterials(model.getTopTextureSlots());
 
         Identifier modelIdentifier = Rainbow.getModelIdentifier(model);
@@ -64,22 +57,23 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
                     .<ItemModelTextures>map(texture -> {
                         try (texture) {
                             return new SingleTexture(TextureHolder.createBuiltIn(singleMaterial.sprite()), texture,
-                                    createIcon(modelIdentifier, stack, materials, context), BedrockGeometryContext.isFlatBuiltin(model));
+                                    createIcon(modelIdentifier, materials, context), BedrockGeometryContext.isFlatBuiltin(model));
                         }
                     })
                     .orElseGet(() -> new MissingTexture(modelIdentifier));
         }
 
-        return StitchedTextures.stitchModelTextures(getStitchedIdentifier(modelIdentifier), materials, createIcon(modelIdentifier, stack, materials, context), context);
+        return StitchedTextures.stitchModelTextures(getStitchedIdentifier(modelIdentifier), materials, createIcon(modelIdentifier, materials, context), context);
     }
 
-    private static TextureHolder createIcon(Identifier identifier, ItemStackTemplate stack, Map<String, Material> materials, PackContext context) {
+    private static IconRenderer createIcon(Identifier identifier, Map<String, Material> materials, PackContext context) {
         // Fallback to trying layer0 when there is no renderer
         return context.geometryRenderer()
-                .map(renderer -> renderer.render(identifier.withSuffix("_icon"), stack))
+                .map(renderer -> IconRenderer.stackDependentIcon(
+                        (bedrockIdentifier, stack) -> renderer.render(bedrockIdentifier.withSuffix("_icon"), stack)))
                 .or(() -> Optional.ofNullable(materials.get("layer0"))
-                        .map(material -> TextureHolder.createBuiltIn(identifier, material.sprite())))
-                .orElseGet(() -> TextureHolder.createNonExistent(identifier));
+                        .map(material -> IconRenderer.sharedIcon(TextureHolder.createBuiltIn(identifier, material.sprite()))))
+                .orElseGet(() -> IconRenderer.sharedIcon(TextureHolder.createNonExistent(identifier)));
     }
 
     private static Identifier getStitchedIdentifier(Identifier identifier) {
@@ -104,8 +98,8 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
         }
 
         @Override
-        public TextureHolder icon() {
-            return delegate.icon();
+        public IconRenderer icon() {
+            return delegate.icon().copy();
         }
 
         @Override
@@ -124,10 +118,10 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
         }
     }
 
-    record MissingTexture(TextureHolder icon) implements ItemModelTextures {
+    record MissingTexture(IconRenderer icon) implements ItemModelTextures {
 
         public MissingTexture(Identifier icon) {
-            this(TextureHolder.createNonExistent(icon));
+            this(IconRenderer.sharedIcon(TextureHolder.createNonExistent(icon)));
         }
 
         @Override
@@ -151,14 +145,19 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
         }
 
         @Override
+        public BedrockAttachable.Builder applyToAttachable(BedrockAttachable.Builder builder) {
+            return builder;
+        }
+
+        @Override
         public CompletableFuture<?> save(PackSerializingContext context) {
-            return icon.save(context);
+            return PackSerializer.noop();
         }
     }
 
-    record SingleTexture(SpriteInfo sprite, TextureHolder texture, Optional<TextureResource.AnimationInfo> animation, TextureHolder iconTexture, boolean flatBuiltinModel) implements ItemModelTextures {
+    record SingleTexture(SpriteInfo sprite, TextureHolder texture, Optional<TextureResource.AnimationInfo> animation, IconRenderer iconRenderer, boolean flatBuiltinModel) implements ItemModelTextures {
 
-        public SingleTexture(TextureHolder texture, TextureResource openedTexture, TextureHolder icon, boolean flatBuiltinModel) {
+        public SingleTexture(TextureHolder texture, TextureResource openedTexture, IconRenderer icon, boolean flatBuiltinModel) {
             this(new SpriteInfo(0, 0, openedTexture.sizeOfFrame().width(), openedTexture.sizeOfFrame().height()), texture, openedTexture.animation(), icon, flatBuiltinModel);
         }
 
@@ -178,8 +177,9 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
         }
 
         @Override
-        public TextureHolder icon() {
-            return animation.isEmpty() && flatBuiltinModel ? texture : iconTexture;
+        public IconRenderer icon() {
+            // Save just the texture (usually layer0) when flat builtin, else save texture and custom icon
+            return animation.isEmpty() && flatBuiltinModel ? IconRenderer.sharedIcon(TextureHolder.createCopy(texture)) : iconRenderer;
         }
 
         @Override
@@ -195,31 +195,24 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
                     builder.withTexture("frame_" + frame, TextureHolder.bedrockSafeDestination(getFrameIdentifier(frame)));
                 }
                 return builder;
-            } else if (!flatBuiltinModel) {
-                // Not flat built-in, so modify attachable similar to StitchedTextures
-                return builder
-                        .withTexture(BedrockAttachable.DisplaySlot.DEFAULT, texture)
-                        .withRenderController(VanillaRenderControllers.ITEM_DEFAULT);
             }
-            return ItemModelTextures.super.applyToAttachable(builder);
+            // Not flat built-in, or attachable required somehow, so modify attachable similar to StitchedTextures
+            return builder
+                    .withTexture(BedrockAttachable.DisplaySlot.DEFAULT, texture)
+                    .withRenderController(VanillaRenderControllers.ITEM_DEFAULT);
         }
 
         @Override
         public CompletableFuture<?> save(PackSerializingContext context) {
             // If no animation, just save the texture
             if (animation.isEmpty()) {
-                // Save just the texture (usually layer0) when flat builtin, else save texture and custom icon
-                if (flatBuiltinModel) {
-                    return texture.save(context);
-                }
-                // Else, save icon and texture
                 // Please note that this can lead to a texture saving twice if a mapped block also uses this same texture
-                return iconTexture.with(texture).save(context);
+                return texture.save(context);
             }
 
             // Texture must exist at this point, else a missing texture would've been returned by the load function
             try (TextureResource openedTexture = texture.load(context.assetResolver(), context.reporter()).orElseThrow()) {
-                PackSerializer.Serializable serializableStack = iconTexture;
+                PackSerializer.Serializable serializableStack = PackSerializer.Serializable.noop();
 
                 for (int frame = 0; frame < animation.get().totalFrameCount(); frame++) {
                     int i = frame;
@@ -246,7 +239,7 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
         }
 
         private String getRenderControllerIdentifier() {
-            return BedrockRenderControllers.formatRenderControllerName(Rainbow.bedrockSafeIdentifier(iconTexture.destination()));
+            return BedrockRenderControllers.formatRenderControllerName(Rainbow.bedrockSafeIdentifier(texture.destination()));
         }
 
         private static List<String> createTextureReferenceArray(TextureResource.AnimationInfo animation) {
@@ -265,7 +258,7 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
         }
     }
 
-    record StitchedTextures(Map<String, SpriteInfo> sprites, TextureHolder stitched, int width, int height, TextureHolder iconTexture) implements ItemModelTextures {
+    record StitchedTextures(Map<String, SpriteInfo> sprites, TextureHolder stitched, int width, int height, IconRenderer iconRenderer) implements ItemModelTextures {
         // Not sure if 16384 should be the max supported texture size, but it seems to work well enough.
         // Max supported texture size seems to mostly be a driver thing, to not let the stitched texture get too big for uploading it to the GPU
         // This is not an issue for us
@@ -277,8 +270,8 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
         }
 
         @Override
-        public TextureHolder icon() {
-            return iconTexture;
+        public IconRenderer icon() {
+            return iconRenderer;
         }
 
         @Override
@@ -295,10 +288,10 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
 
         @Override
         public CompletableFuture<?> save(PackSerializingContext context) {
-            return iconTexture.with(stitched).save(context);
+            return stitched.save(context);
         }
 
-        private static StitchedTextures stitchModelTextures(Identifier stitchedTexturesIdentifier, Map<String, Material> materials, TextureHolder icon, PackContext context) {
+        private static StitchedTextures stitchModelTextures(Identifier stitchedTexturesIdentifier, Map<String, Material> materials, IconRenderer icon, PackContext context) {
             SpriteLoader.Preparations preparations = prepareStitching(materials.values().stream(), context);
 
             Map<String, SpriteInfo> sprites = new HashMap<>();
@@ -345,6 +338,52 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
                 }
             }
             return stitched;
+        }
+    }
+
+    interface IconRenderer {
+
+        TextureHolder create(Identifier bedrockIdentifier, ItemStackTemplate template);
+
+        IconRenderer copy();
+
+        static IconRenderer sharedIcon(TextureHolder icon) {
+            return new IconRenderer() {
+                @Override
+                public TextureHolder create(Identifier bedrockIdentifier, ItemStackTemplate template) {
+                    return icon;
+                }
+
+                @Override
+                public IconRenderer copy() {
+                    TextureHolder copy = TextureHolder.createCopy(icon);
+                    return new IconRenderer() {
+                        @Override
+                        public TextureHolder create(Identifier bedrockIdentifier, ItemStackTemplate template) {
+                            return copy;
+                        }
+
+                        @Override
+                        public IconRenderer copy() {
+                            return this;
+                        }
+                    };
+                }
+            };
+        }
+
+        static IconRenderer stackDependentIcon(BiFunction<Identifier, ItemStackTemplate, TextureHolder> renderer) {
+            return new IconRenderer() {
+                @Override
+                public TextureHolder create(Identifier bedrockIdentifier, ItemStackTemplate template) {
+                    return renderer.apply(bedrockIdentifier, template);
+                }
+
+                @Override
+                public IconRenderer copy() {
+                    return this;
+                }
+            };
         }
     }
 }

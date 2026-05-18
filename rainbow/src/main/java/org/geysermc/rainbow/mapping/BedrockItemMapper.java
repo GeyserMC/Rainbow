@@ -52,6 +52,7 @@ import org.geysermc.rainbow.definition.item.predicate.GeyserMatchPredicate;
 import org.geysermc.rainbow.definition.item.predicate.GeyserPredicate;
 import org.geysermc.rainbow.definition.item.predicate.GeyserRangeDispatchPredicate;
 import org.geysermc.rainbow.mapping.texture.ItemModelTextures;
+import org.geysermc.rainbow.mapping.texture.TextureHolder;
 import org.geysermc.rainbow.mixin.LateBoundIdMapperAccessor;
 import org.geysermc.rainbow.mixin.RangeSelectItemModelAccessor;
 import org.geysermc.rainbow.pack.BedrockItem;
@@ -260,7 +261,7 @@ public class BedrockItemMapper {
                             bedrockIdentifier = modelIdentifier;
                         }
 
-                        ItemModelTextures textures = packContext.itemTextureCache().load(itemModel, () -> ItemModelTextures.load(itemStack, itemModel, packContext));
+                        ItemModelTextures textures = packContext.itemTextureCache().load(itemModel, () -> ItemModelTextures.load(itemModel, packContext));
 
                         BedrockGeometryContext geometry = BedrockGeometryContext.create(bedrockIdentifier, itemModel, finaliseTransformation(model.transformation()), textures, packContext);
                         BedrockAttachableContext attachable = BedrockAttachableContext.create(bedrockIdentifier, itemStack, geometry, textures, packContext);
@@ -276,10 +277,11 @@ public class BedrockItemMapper {
         private void create(Identifier bedrockIdentifier, ItemModelTextures textures, BedrockGeometryContext geometry, BedrockAttachableContext attachable) {
             List<Identifier> tags = itemStack.is(ItemTags.TRIMMABLE_ARMOR) ? TRIMMABLE_ARMOR_TAGS : List.of();
 
+            TextureHolder icon = textures.icon().create(bedrockIdentifier, itemStack);
             GeyserBaseItemDefinition base = new GeyserBaseItemDefinition(bedrockIdentifier,
                     Optional.ofNullable(itemStack.components().split().added().get(DataComponents.ITEM_NAME)).map(Component::tryCollapseToString),
                     predicateStack,
-                    new GeyserBaseItemDefinition.BedrockOptions(Optional.of(textures.icon().bedrockSafeName()), true, geometry.handheld(), calculateProtectionValue(itemStack), tags),
+                    new GeyserBaseItemDefinition.BedrockOptions(Optional.of(icon.bedrockSafeName()), true, geometry.handheld(), calculateProtectionValue(itemStack), tags),
                     itemStack.components());
             try {
                 packContext.mappings().items().map(itemStack.item(), definitionCreator.apply(base));
@@ -288,7 +290,7 @@ public class BedrockItemMapper {
                 return;
             }
 
-            packContext.assetConsumer().acceptItem(new BedrockItem(bedrockIdentifier, textures, geometry, attachable));
+            packContext.assetConsumer().acceptItem(new BedrockItem(bedrockIdentifier, icon, textures, geometry, attachable));
         }
 
         public void report(String problem) {

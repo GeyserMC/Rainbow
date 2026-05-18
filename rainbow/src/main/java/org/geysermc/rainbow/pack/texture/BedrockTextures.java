@@ -48,8 +48,9 @@ public record BedrockTextures(Map<String, String> textures) {
         }
 
         public Builder withItemTexture(BedrockItem item) {
-            if (!item.textures().cached()) {
-                return withTexture(item.textures().icon().bedrockSafeName(), item.textures().icon().bedrockSafeDestination());
+            String iconName = item.icon().bedrockSafeName();
+            if (!textures.containsKey(iconName)) {
+                return withTexture(iconName, item.icon().bedrockSafeDestination());
             }
             return this;
         }
