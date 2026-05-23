@@ -15,7 +15,8 @@ public record BedrockItem(Identifier identifier, TextureHolder icon, ItemModelTe
 
     @Override
     public CompletableFuture<?> save(PackSerializingContext context) {
-        return textures
+        return icon
+                .with(textures)
                 .with(geometryContext)
                 .with(attachableContext)
                 .save(context);

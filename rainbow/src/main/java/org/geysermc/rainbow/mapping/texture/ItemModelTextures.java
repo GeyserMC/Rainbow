@@ -72,7 +72,7 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
                 .map(renderer -> IconRenderer.stackDependentIcon(
                         (bedrockIdentifier, stack) -> renderer.render(bedrockIdentifier.withSuffix("_icon"), stack)))
                 .or(() -> Optional.ofNullable(materials.get("layer0"))
-                        .map(material -> IconRenderer.sharedIcon(TextureHolder.createBuiltIn(identifier, material.sprite()))))
+                        .map(material -> IconRenderer.sharedIcon(TextureHolder.createBuiltIn(identifier.withSuffix("_icon"), material.sprite()))))
                 .orElseGet(() -> IconRenderer.sharedIcon(TextureHolder.createNonExistent(identifier)));
     }
 
@@ -179,7 +179,7 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
         @Override
         public IconRenderer icon() {
             // Save just the texture (usually layer0) when flat builtin, else save texture and custom icon
-            return animation.isEmpty() && flatBuiltinModel ? IconRenderer.sharedIcon(TextureHolder.createCopy(texture)) : iconRenderer;
+            return animation.isEmpty() && flatBuiltinModel ? IconRenderer.sharedIcon(texture.copy()) : iconRenderer;
         }
 
         @Override
@@ -356,7 +356,7 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
 
                 @Override
                 public IconRenderer copy() {
-                    TextureHolder copy = TextureHolder.createCopy(icon);
+                    TextureHolder copy = icon.copy();
                     return new IconRenderer() {
                         @Override
                         public TextureHolder create(Identifier bedrockIdentifier, ItemStackTemplate template) {

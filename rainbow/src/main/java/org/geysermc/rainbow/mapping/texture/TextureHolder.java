@@ -41,6 +41,10 @@ public abstract class TextureHolder implements PackSerializer.Serializable {
                 });
     }
 
+    public TextureHolder copy() {
+        return new CopyTextureHolder(destination);
+    }
+
     protected boolean shouldReportMissingWhenAbsent() {
         return true;
     }
@@ -59,10 +63,6 @@ public abstract class TextureHolder implements PackSerializer.Serializable {
 
     public static TextureHolder createNonExistent(Identifier destination) {
         return new MissingTextureHolder(destination);
-    }
-
-    public static TextureHolder createCopy(TextureHolder original) {
-        return new CopyTextureHolder(original.destination);
     }
 
     public Identifier destination() {

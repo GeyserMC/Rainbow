@@ -26,6 +26,11 @@ public class CopyTextureHolder extends TextureHolder {
     }
 
     @Override
+    public TextureHolder copy() {
+        return this;
+    }
+
+    @Override
     protected boolean shouldReportMissingWhenAbsent() {
         return false;
     }
