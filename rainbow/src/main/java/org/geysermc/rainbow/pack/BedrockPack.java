@@ -28,6 +28,7 @@ import org.geysermc.rainbow.mapping.PackSerializingContext;
 import org.geysermc.rainbow.mapping.PackStats;
 import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
 import org.geysermc.rainbow.definition.item.GeyserItemMappings;
+import org.geysermc.rainbow.pack.sound.BedrockSoundDefinitions;
 import org.geysermc.rainbow.pack.texture.BedrockFlipbookTextures;
 import org.geysermc.rainbow.pack.texture.BedrockTextureAtlas;
 import org.geysermc.rainbow.pack.texture.BedrockTextures;
@@ -55,6 +56,7 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
     private final BedrockTextures.Builder itemTextures = BedrockTextures.builder();
     private final BedrockTextures.Builder terrainTextures = BedrockTextures.builder();
     private final BedrockFlipbookTextures.Builder flipbookTextures = BedrockFlipbookTextures.builder();
+    private final BedrockSoundDefinitions soundDefinitions;
     private final Set<BedrockBlock> bedrockBlocks = new HashSet<>();
     private final Set<BedrockItem> bedrockItems = new HashSet<>();
     private final Set<Identifier> modelsMapped = new HashSet<>();
@@ -74,6 +76,8 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
         // Not reading existing item mappings/texture atlas for now since that doesn't work all that well yet
         this.context = new PackContext(new GeyserMappings(), paths, this, assetResolver, geometryRenderer, reportSuccesses);
         this.reporter = reporter;
+
+        this.soundDefinitions = BedrockSoundDefinitions.tryMapNonVanillaSounds(assetResolver.getSoundRegistrations());
     }
 
     public String name() {
@@ -172,6 +176,7 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
                 .with(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), PackPaths::itemAtlas)
                 .with(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.terrainAtlas(name, terrainTextures), PackPaths::terrainAtlas)
                 .with(BedrockFlipbookTextures.CODEC, flipbookTextures.build(), PackPaths::flipbookTextures)
+                .with(soundDefinitions)
                 .with(bedrockBlocks)
                 .with(bedrockItems)
                 .with(paths.languageOutput().map(languageFolder -> context -> LanguageUtil.saveLanguages(context, languageFolder)))
@@ -180,7 +185,7 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
 
     public PackStats stats() {
         return new PackStats(context.cacheStats(), context.mappings().blocks().size(), context.mappings().items().size(),
-                itemTextures.build().size(), terrainTextures.build().size(), flipbookTextures.build().size());
+                itemTextures.build().size(), terrainTextures.build().size(), flipbookTextures.build().size(), soundDefinitions.size());
     }
 
     public Set<BedrockItem> getBedrockItems() {

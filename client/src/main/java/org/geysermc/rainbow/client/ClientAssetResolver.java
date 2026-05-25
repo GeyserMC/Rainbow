@@ -15,6 +15,8 @@ import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.client.resources.model.ModelManager;
 import net.minecraft.client.resources.model.ResolvedModel;
 import net.minecraft.client.resources.model.sprite.AtlasManager;
+import net.minecraft.client.resources.sounds.Sound;
+import net.minecraft.client.resources.sounds.SoundEventRegistration;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.packs.resources.Resource;
@@ -24,6 +26,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.client.accessor.ResolvedModelAccessor;
+import org.geysermc.rainbow.client.accessor.SoundManagerAccessor;
 import org.geysermc.rainbow.client.mixin.EntityRenderDispatcherAccessor;
 import org.geysermc.rainbow.client.mixin.SpriteContentsAnimatedTextureAccessor;
 import org.geysermc.rainbow.client.mixin.SpriteContentsClientAccessor;
@@ -104,6 +107,11 @@ public class ClientAssetResolver implements AssetResolver {
     }
 
     @Override
+    public Optional<Resource> getSound(Identifier sound) {
+        return resourceManager.getResource(Sound.SOUND_LISTER.idToFile(sound));
+    }
+
+    @Override
     public Map<String, Map<String, String>> getForeignLanguages() {
         // Ideally we'd not load the language keys again each time, but it's not possible to make use
         // of MC's own language cache here, because MC only loads keys for en_us and the user's language, and,
@@ -142,5 +150,10 @@ public class ClientAssetResolver implements AssetResolver {
             });
         }
         return foreignLanguages;
+    }
+
+    @Override
+    public Map<String, Map<String, SoundEventRegistration>> getSoundRegistrations() {
+        return ((SoundManagerAccessor) Minecraft.getInstance().getSoundManager()).rainbow$getRawRegistrations();
     }
 }
