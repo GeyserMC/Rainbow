@@ -4,9 +4,12 @@ import com.google.common.hash.Hashing;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.serialization.Codec;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import net.fabricmc.fabric.api.client.datagen.v1.builder.SoundTypeBuilder;
 import net.fabricmc.fabric.api.client.datagen.v1.provider.FabricModelProvider;
+import net.fabricmc.fabric.api.client.datagen.v1.provider.FabricSoundsProvider;
 import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricLanguageProvider;
+import net.fabricmc.fabric.impl.datagen.client.SoundTypeBuilderImpl;
 import net.minecraft.client.data.models.blockstates.BlockModelDefinitionGenerator;
 import net.minecraft.client.data.models.model.ModelInstance;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
@@ -18,6 +21,8 @@ import net.minecraft.client.resources.model.ResolvedModel;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.client.resources.model.cuboid.CuboidModel;
 import net.minecraft.client.resources.model.cuboid.ItemModelGenerator;
+import net.minecraft.client.resources.sounds.Sound;
+import net.minecraft.client.resources.sounds.SoundEventRegistration;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentInitializers;
 import net.minecraft.core.component.DataComponentMap;
@@ -28,15 +33,18 @@ import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.util.Util;
+import net.minecraft.util.valueproviders.ConstantFloat;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.equipment.EquipmentAsset;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
+import org.geysermc.rainbow.datagen.accessor.SoundsProviderDataAccessor;
 import org.geysermc.rainbow.datagen.mixin.FabricLanguageProviderAccessor;
 import org.geysermc.rainbow.datagen.accessor.LanguageProviderDataAccessor;
 import org.geysermc.rainbow.datagen.accessor.ModelProviderDataAccessor;
@@ -60,6 +68,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 public abstract class RainbowDataProvider implements DataProvider {
     private static final Logger PROBLEM_LOGGER = LoggerFactory.getLogger(Rainbow.MOD_ID);
@@ -94,7 +103,7 @@ public abstract class RainbowDataProvider implements DataProvider {
 
     protected RainbowDataProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries, String packName,
                                   FabricModelProvider modelProvider) {
-        this(output, registries, packName, new Providers(modelProvider, Optional.empty(), Map.of()));
+        this(output, registries, packName, new Providers(modelProvider, Optional.empty(), Optional.empty(), Map.of()));
     }
 
     protected RainbowDataProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries, FabricModelProvider modelProvider) {
@@ -108,6 +117,8 @@ public abstract class RainbowDataProvider implements DataProvider {
                 .map(providers -> providers.stream()
                         .map(provider -> provider.run(output))
                         .collect(() -> CompletableFuture.completedFuture(null), CompletableFuture::allOf, CompletableFuture::allOf))
+                .orElseGet(() -> CompletableFuture.completedFuture(null));
+        CompletableFuture<?> sounds = providers.sounds.map(provider -> provider.run(output))
                 .orElseGet(() -> CompletableFuture.completedFuture(null));
 
         CompletableFuture<BedrockPack> bedrockPack = ClientPackLoader.openClientResources()
@@ -127,7 +138,7 @@ public abstract class RainbowDataProvider implements DataProvider {
                     }
                 }));
 
-        return CompletableFuture.allOf(models, languages, bedrockPack.thenCompose(BedrockPack::save));
+        return CompletableFuture.allOf(models, languages, sounds, bedrockPack.thenCompose(BedrockPack::save));
     }
 
     protected BedrockPack.Builder createBedrockPack(PackSerializer serializer, AssetResolver resolver) {
@@ -147,18 +158,22 @@ public abstract class RainbowDataProvider implements DataProvider {
     public static class Providers {
         private final FabricModelProvider models;
         private final Optional<List<FabricLanguageProvider>> languages;
+        private final Optional<FabricSoundsProvider> sounds;
         private final Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos;
 
         public Providers(FabricModelProvider models, Optional<List<FabricLanguageProvider>> languages,
+                         Optional<FabricSoundsProvider> sounds,
                          Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos) {
             this.models = models;
             this.languages = languages;
+            this.sounds = sounds;
             this.equipmentInfos = equipmentInfos;
         }
 
         public static Providers create(FabricModelProvider models, Optional<FabricLanguageProvider> languages,
+                                       Optional<FabricSoundsProvider> sounds,
                                        Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos) {
-            return new Providers(models, languages.map(List::of), equipmentInfos);
+            return new Providers(models, languages.map(List::of), sounds, equipmentInfos);
         }
 
         private Map<Item, ClientItem> getItemInfos() {
@@ -207,6 +222,18 @@ public abstract class RainbowDataProvider implements DataProvider {
                 }
             }, Util.backgroundExecutor().forName("PackSerializer-saveTexture"));
         }
+
+        @Override
+        public CompletableFuture<?> saveResource(Resource resource, Path path) {
+            return CompletableFuture.runAsync(() -> {
+                try (InputStream input = resource.open()) {
+                    byte[] bytes = input.readAllBytes();
+                    output.writeIfNeeded(path, bytes, Hashing.sha1().hashBytes(bytes));
+                } catch (IOException exception) {
+                    LOGGER.error("Failed to save resource to {}", path, exception);
+                }
+            }, Util.backgroundExecutor().forName("PackSerializer-saveResource"));
+        }
     }
 
     private static class DatagenResolver implements AssetResolver {
@@ -218,6 +245,7 @@ public abstract class RainbowDataProvider implements DataProvider {
         private final Map<Identifier, ClientItem> itemInfos;
         private final Map<Identifier, ModelInstance> models;
         private final Map<String, Map<String, String>> foreignLanguages;
+        private final Map<String, Map<String, SoundEventRegistration>> soundRegistrations;
 
         private DatagenResolver(ResourceManager resourceManager, Providers providers) {
             this.resourceManager = resourceManager;
@@ -240,6 +268,15 @@ public abstract class RainbowDataProvider implements DataProvider {
                     return existingKeys;
                 });
             }));
+
+            // Same as above, CompletableFuture should have been finished by now
+            soundRegistrations = providers.sounds.map(sounds -> ((SoundsProviderDataAccessor) sounds).rainbow$getData())
+                    .map(data -> data.entrySet().stream()
+                            .map(registrations -> Map.entry(registrations.getKey(), registrations.getValue().entrySet().stream()
+                                    .map(registration -> Map.entry(registration.getKey(), mapFabricToVanillaRegistration(registration.getValue())))
+                                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))))
+                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
+                    .orElseGet(Map::of);
         }
 
         @Override
@@ -315,8 +352,28 @@ public abstract class RainbowDataProvider implements DataProvider {
         }
 
         @Override
+        public Optional<Resource> getSound(Identifier sound) {
+            // TODO code duplication with ClientAssetResolver
+            return resourceManager.getResource(Sound.SOUND_LISTER.idToFile(sound));
+        }
+
+        @Override
         public Map<String, Map<String, String>> getForeignLanguages() {
             return foreignLanguages;
+        }
+
+        @Override
+        public Map<String, Map<String, SoundEventRegistration>> getSoundRegistrations() {
+            return soundRegistrations;
+        }
+
+        // Cursed? Yes. Works? Also yes
+        private static SoundEventRegistration mapFabricToVanillaRegistration(SoundTypeBuilderImpl.SoundType registration) {
+            return new SoundEventRegistration(registration.sounds().stream()
+                    .map(entry -> new Sound(entry.name(), ConstantFloat.of(entry.volume()), ConstantFloat.of(entry.pitch()),
+                            entry.weight(), entry.type() == SoundTypeBuilder.RegistrationType.FILE? Sound.Type.FILE : Sound.Type.SOUND_EVENT,
+                            entry.stream(), entry.preload(), entry.attenuationDistance()))
+                    .toList(), registration.replace(), registration.subtitle().orElse(null));
         }
     }
 }
