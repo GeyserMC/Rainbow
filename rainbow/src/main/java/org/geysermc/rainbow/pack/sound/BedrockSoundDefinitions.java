@@ -14,14 +14,15 @@ import net.minecraft.util.valueproviders.SampledFloat;
 import org.geysermc.rainbow.CodecUtil;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
+import org.geysermc.rainbow.pack.BedrockVersion;
 import org.geysermc.rainbow.pack.PackPaths;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 public record BedrockSoundDefinitions(Map<Identifier, SoundEventRegistration> definitions) implements PackSerializer.Serializable {
+    public static final BedrockVersion FORMAT_VERSION = BedrockVersion.of(1, 20, 20);
     public static final Codec<Sound> BEDROCK_SOUND_CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
                     Codec.STRING.fieldOf("name").forGetter(sound -> "sounds/" + sound.getLocation().getPath()),
@@ -45,7 +46,7 @@ public record BedrockSoundDefinitions(Map<Identifier, SoundEventRegistration> de
     );
     public static final Codec<BedrockSoundDefinitions> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
-                    CodecUtil.unitVerifyCodec(Codec.STRING, "format_version", "1.20.20"),
+                    CodecUtil.unitVerifyCodec(BedrockVersion.STRING_CODEC, "format_version", FORMAT_VERSION),
                     Codec.compoundList(Identifier.CODEC, BEDROCK_REGISTRATION_CODEC)
                             .xmap(pairs -> pairs.stream().collect(Pair.toMap()),
                                     registrations -> registrations.entrySet().stream().map(entry -> Pair.of(entry.getKey(), entry.getValue())).toList())
@@ -81,18 +82,33 @@ public record BedrockSoundDefinitions(Map<Identifier, SoundEventRegistration> de
         return Codec.FLOAT.optionalFieldOf(field, defaultValue).xmap(ConstantFloat::of, f -> f.sample(RandomSource.create(0L)));
     }
 
-    public static BedrockSoundDefinitions tryMapNonVanillaSounds(Map<String, Map<String, SoundEventRegistration>> availableRegistrations) {
-        Map<Identifier, SoundEventRegistration> definitions = new Object2ObjectOpenHashMap<>();
-        for (String namespace : availableRegistrations.keySet()) {
-            if (namespace.equals(Identifier.DEFAULT_NAMESPACE)) {
-                continue;
-            }
+    public static Builder builder() {
+        return new Builder();
+    }
 
-            Map<String, SoundEventRegistration> registrations = availableRegistrations.get(namespace);
+    public static class Builder {
+        private final Map<Identifier, SoundEventRegistration> definitions = new Object2ObjectOpenHashMap<>();
+
+        public Builder withRegistrations(String namespace, Map<String, SoundEventRegistration> registrations) {
             for (Map.Entry<String, SoundEventRegistration> registration : registrations.entrySet()) {
                 definitions.put(Identifier.fromNamespaceAndPath(namespace, registration.getKey()), registration.getValue());
             }
+            return this;
         }
-        return new BedrockSoundDefinitions(Collections.unmodifiableMap(definitions));
+
+        public Builder withRegistrations(Map<String, Map<String, SoundEventRegistration>> registrations) {
+            for (String namespace : registrations.keySet()) {
+                if (namespace.equals(Identifier.DEFAULT_NAMESPACE)) {
+                    continue;
+                }
+
+                withRegistrations(namespace, registrations.get(namespace));
+            }
+            return this;
+        }
+
+        public BedrockSoundDefinitions build() {
+            return new BedrockSoundDefinitions(Map.copyOf(definitions));
+        }
     }
 }

@@ -82,6 +82,21 @@ public class PackGeneratorCommand {
                                     }
                                 }))
                         )
+                        .then(ClientCommands.literal("sounds")
+                                .then(ClientCommands.argument("namespace", StringArgumentType.word())
+                                        .suggests(SoundNamespaceSuggestionProvider.INSTANCE)
+                                        .executes(context -> {
+                                            String namespace = StringArgumentType.getString(context, "namespace");
+                                            return runWithPack(packManager, (source, pack) -> {
+                                                if (pack.resources().mapSounds(namespace)) {
+                                                    source.sendFeedback(Component.translatable("commands.rainbow.mapped_sounds_of_namespace", namespace));
+                                                } else {
+                                                    source.sendError(Component.translatable("commands.rainbow.no_sounds_mapped"));
+                                                }
+                                            }).run(context);
+                                        })
+                                )
+                        )
                 )
                 .then(ClientCommands.literal("mapinventory")
                         .executes(runWithPack(packManager, (source, pack) -> {
@@ -145,6 +160,15 @@ public class PackGeneratorCommand {
                                 .executes(runWithPack(packManager, (source, _) -> {
                                     packMapper.setItemProvider(InventoryMapper.INSTANCE);
                                     source.sendFeedback(Component.translatable("commands.rainbow.automatic_inventory_mapping"));
+                                }))
+                        )
+                        .then(ClientCommands.literal("sounds")
+                                .executes(runWithPack(packManager, (source, pack) -> {
+                                    if (pack.resources().mapAllSounds()) {
+                                        source.sendFeedback(Component.translatable("commands.rainbow.mapped_all_sounds"));
+                                    } else {
+                                        source.sendError(Component.translatable("commands.rainbow.no_sounds_mapped"));
+                                    }
                                 }))
                         )
                         .then(ClientCommands.literal("stop")
