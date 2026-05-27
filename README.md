@@ -27,7 +27,9 @@ you use them as follows:
    - `/rainbow map item` - maps the custom item or skull you're currently holding in your hand, if any.
    - `/rainbow mapinventory` - scans your inventory for custom items or skulls, and maps all that are found.
    - `/rainbow auto blocks` - scans through all loaded resourcepacks for custom blocks created using block state overrides, and maps all that are found. This may shortly freeze your client.
-   - `/rainbow auto inventory` - scans all inventory menus and containers you open for custom items and skulls, and maps all that are found. This is handy for plugins that offer an inventory menu listing all custom items. Use `/rainbow auto stop` to stop the mapping of custom items.
+   - `/rainbow auto inventory` - scans all inventory menus and containers you open for custom items and skulls, and maps all that are found. This is handy for plugins that offer an inventory menu listing all custom items.
+     - Use `/rainbow auto stop` to stop the mapping of custom items.
+   - `/rainbow auto recipes` - scans through all known recipes for results that are custom items or skulls, and maps all that are found. This is handy for datapacks that contain recipes with custom items as result. You can use the vanilla `/recipe give @s *` command to give yourself all recipes, which helps Rainbow recognise custom items with this command.
 3. Once you have mapped all of your custom items, use `/rainbow finish` to finish the pack. Rainbow will then export the resourcepack and Geyser mappings it has created.
 
 When you've finished your pack, navigate to the `.minecraft/rainbow/<name>` folder. You can also click on the `Wrote pack to disk` in chat to open this folder.

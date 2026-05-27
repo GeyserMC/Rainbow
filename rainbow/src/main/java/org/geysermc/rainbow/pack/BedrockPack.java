@@ -114,15 +114,20 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
                 if (!customModelDataMapped.add(Pair.of(stack.item(), customModelInt))) {
                     return MappingResult.NONE_MAPPED;
                 }
-                BedrockItemMapper.tryMapStack(stack, customModelInt, mapReporter, context);
-            } else {
-                // Try to map the vanilla model, but ignore the first direct plain model if present - this is the vanilla case
-                Identifier vanillaModel = Objects.requireNonNull(stack.get(DataComponents.ITEM_MODEL));
-                if (!modelsMapped.add(vanillaModel)) {
-                    return MappingResult.NONE_MAPPED;
+
+                if (BedrockItemMapper.tryMapStack(stack, customModelInt, mapReporter, context)) {
+                    return mapReporter.problemsSeen() > 0 ? MappingResult.PROBLEMS_OCCURRED : MappingResult.MAPPED_SUCCESSFULLY;
                 }
-                BedrockItemMapper.tryMapStack(stack, vanillaModel, mapReporter, context, true);
+                // Fall through to mapping vanilla model if unable to map legacy custom model data - usually occurs when something *looks* like legacy custom model data, but actually isn't
+                // (looking at you, Tool Trims)
             }
+
+            // Try to map the vanilla model, but ignore the first direct plain model if present - this is the vanilla case
+            Identifier vanillaModel = Objects.requireNonNull(stack.get(DataComponents.ITEM_MODEL));
+            if (!modelsMapped.add(vanillaModel)) {
+                return MappingResult.NONE_MAPPED;
+            }
+            BedrockItemMapper.tryMapStack(stack, vanillaModel, mapReporter, context, true);
         } else {
             if (!modelsMapped.add(customModel)) {
                 return MappingResult.NONE_MAPPED;

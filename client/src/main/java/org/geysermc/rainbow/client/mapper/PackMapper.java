@@ -1,5 +1,6 @@
 package org.geysermc.rainbow.client.mapper;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
@@ -40,7 +41,7 @@ public class PackMapper {
                     player.sendSystemMessage(Component.translatable("chat.rainbow.mapped_skulls", results.skullsMapped));
                 }
                 if (results.problems > 0) {
-                    player.sendSystemMessage(Component.translatable("chat.rainbow.mapped_problems"));
+                    player.sendSystemMessage(Component.translatable("chat.rainbow.mapped_problems").withStyle(ChatFormatting.RED));
                 }
                 if (itemProvider.isDone()) {
                     player.sendSystemMessage(Component.translatable("chat.rainbow.automatic_mapping_finished"));
@@ -63,7 +64,10 @@ public class PackMapper {
         for (ItemStackTemplate stack : items) {
             switch (pack.resources().mapItem(stack)) {
                 case MAPPED_SUCCESSFULLY -> itemsMapped++;
-                case PROBLEMS_OCCURRED -> problems++;
+                case PROBLEMS_OCCURRED -> {
+                    itemsMapped++;
+                    problems++;
+                }
             }
         }
         return new MappingResults(itemsMapped, (int) skullsMapped, problems);

@@ -80,7 +80,7 @@ public class BedrockItemMapper {
                         () -> reporter.report(() -> "missing client item definition " + modelIdentifier));
     }
 
-    public static void tryMapStack(ItemStackTemplate stack, int customModelData, ProblemSuccessReporter reporter, PackContext context) {
+    public static boolean tryMapStack(ItemStackTemplate stack, int customModelData, ProblemSuccessReporter reporter, PackContext context) {
         Identifier itemModel = stack.get(DataComponents.ITEM_MODEL);
         assert itemModel != null;
         ItemModel.Unbaked vanillaModel = context.assetResolver().getClientItem(itemModel).map(ClientItem::model).orElseThrow();
@@ -102,13 +102,15 @@ public class BedrockItemMapper {
                     model.ifPresentOrElse(present -> mapItem(present, stack, childReporter,
                                     base -> new GeyserLegacyItemDefinition(base, customModelData), context, false),
                             () -> childReporter.report(() -> "custom model data index lookup returned -1, and no fallback is present"));
+                    return true;
                 } else {
                     childReporter.report(() -> "range_dispatch custom model data property index is not zero, unable to apply custom model data");
+                    return false;
                 }
-                return;
             }
         }
         childReporter.report(() -> "item model is not range_dispatch, unable to apply custom model data");
+        return false;
     }
 
     public static void mapItem(ItemModel.Unbaked model, ItemStackTemplate stack, ProblemSuccessReporter reporter,
