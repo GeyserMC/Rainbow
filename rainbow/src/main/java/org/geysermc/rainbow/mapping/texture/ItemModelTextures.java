@@ -50,30 +50,38 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
         Map<String, Material> materials = ModelTextures.getCleanMaterials(model.getTopTextureSlots());
 
         Identifier modelIdentifier = Rainbow.getModelIdentifier(model);
+        IconRenderer icon = createIcon(modelIdentifier, materials, context);
+        boolean isFlatBuiltin = BedrockGeometryContext.isFlatBuiltin(model);
 
         if (ModelTextures.usesSingleMaterial(materials)) {
             Material singleMaterial = materials.values().stream().findAny().orElseThrow();
             return context.assetResolver().getPossibleAtlasTextureSafely(singleMaterial.sprite())
                     .<ItemModelTextures>map(texture -> {
                         try (texture) {
-                            return new SingleTexture(TextureHolder.createBuiltIn(singleMaterial.sprite()), texture,
-                                    createIcon(modelIdentifier, materials, context), BedrockGeometryContext.isFlatBuiltin(model));
+                            return new SingleTexture(TextureHolder.createBuiltIn(singleMaterial.sprite()), texture, icon, isFlatBuiltin);
                         }
                     })
                     .orElseGet(() -> new MissingTexture(modelIdentifier));
+        } else if (isFlatBuiltin) {
+            // If using multiple textures and flat built-in, use the icon renderer to properly render an icon
+            return new FlatMultiTexture(icon);
         }
 
-        return StitchedTextures.stitchModelTextures(getStitchedIdentifier(modelIdentifier), materials, createIcon(modelIdentifier, materials, context), context);
+        return StitchedTextures.stitchModelTextures(getStitchedIdentifier(modelIdentifier), materials, icon, context);
     }
 
     private static IconRenderer createIcon(Identifier identifier, Map<String, Material> materials, PackContext context) {
         // Fallback to trying layer0 when there is no renderer
         return context.geometryRenderer()
                 .map(renderer -> IconRenderer.stackDependentIcon(
-                        (bedrockIdentifier, stack) -> renderer.render(bedrockIdentifier.withSuffix("_icon"), stack)))
+                        (bedrockIdentifier, stack) -> renderer.render(getIconIdentifier(bedrockIdentifier), stack)))
                 .or(() -> Optional.ofNullable(materials.get("layer0"))
-                        .map(material -> IconRenderer.sharedIcon(TextureHolder.createBuiltIn(identifier.withSuffix("_icon"), material.sprite()))))
+                        .map(material -> IconRenderer.sharedIcon(TextureHolder.createBuiltIn(getIconIdentifier(identifier), material.sprite()))))
                 .orElseGet(() -> IconRenderer.sharedIcon(TextureHolder.createNonExistent(identifier)));
+    }
+
+    private static Identifier getIconIdentifier(Identifier bedrockIdentifier) {
+        return bedrockIdentifier.withSuffix("_icon");
     }
 
     private static Identifier getStitchedIdentifier(Identifier identifier) {
@@ -258,7 +266,41 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
         }
     }
 
-    record StitchedTextures(Map<String, SpriteInfo> sprites, TextureHolder stitched, int width, int height, IconRenderer iconRenderer) implements ItemModelTextures {
+    record FlatMultiTexture(IconRenderer icon) implements ItemModelTextures {
+
+        @Override
+        public BedrockAttachable.Builder applyToAttachable(BedrockAttachable.Builder builder) {
+            return builder;
+        }
+
+        @Override
+        public int width() {
+            return 0;
+        }
+
+        @Override
+        public int height() {
+            return 0;
+        }
+
+        @Override
+        public Optional<SpriteInfo> getSprite(String key) {
+            // Unsupported - we shouldn't generate geometry for these
+            return Optional.empty();
+        }
+
+        @Override
+        public boolean requiresAttachable() {
+            return false;
+        }
+
+        @Override
+        public CompletableFuture<?> save(PackSerializingContext context) {
+            return PackSerializer.noop();
+        }
+    }
+
+    record StitchedTextures(Map<String, SpriteInfo> sprites, TextureHolder stitched, int width, int height, IconRenderer icon) implements ItemModelTextures {
         // Not sure if 16384 should be the max supported texture size, but it seems to work well enough.
         // Max supported texture size seems to mostly be a driver thing, to not let the stitched texture get too big for uploading it to the GPU
         // This is not an issue for us
@@ -267,11 +309,6 @@ public interface ItemModelTextures extends ModelTextures<ItemModelTextures> {
         @Override
         public Optional<SpriteInfo> getSprite(String key) {
             return Optional.ofNullable(sprites.get(ModelTextures.sanitizeMaterialReference(key)));
-        }
-
-        @Override
-        public IconRenderer icon() {
-            return iconRenderer;
         }
 
         @Override
