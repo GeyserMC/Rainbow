@@ -164,7 +164,7 @@ which will list any models converted, and any problems that occurred during mapp
 
     private static String randomSummaryComment() {
         if (RANDOM.nextDouble() < 0.5) {
-            SplashRenderer splash = Minecraft.getInstance().getSplashManager().getSplash();
+            SplashRenderer splash = Minecraft.getInstance().gui.splashManager().getSplash();
             if (splash == null) {
                 return "Undefined Undefined :(";
             }

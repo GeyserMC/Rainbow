@@ -1,6 +1,7 @@
 package org.geysermc.rainbow.client.render;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -61,10 +62,10 @@ public class RenderedTextureHolder extends TextureHolder {
         Lock lock = new ReentrantLock();
         Condition condition = lock.newCondition();
 
-        try (OversizedItemRenderer itemRenderer = new OversizedItemRenderer(Minecraft.getInstance().renderBuffers().bufferSource())) {
+        try (OversizedItemRenderer itemRenderer = new OversizedItemRenderer()) {
             //noinspection DataFlowIssue
             ((PictureInPictureCopyRenderer) itemRenderer).rainbow$allowTextureCopy();
-            itemRenderer.prepare(oversizedRenderState, new GuiRenderState(), 4);
+            itemRenderer.prepare(oversizedRenderState, new GuiRenderState(), Minecraft.getInstance().gameRenderer.featureRenderDispatcher(), 4);
             writeAsPNG(context.serializer(), context.paths().texturePath(this), ((PictureInPictureRendererAccessor) itemRenderer).getTexture(), lock, condition);
         }
 
@@ -91,7 +92,7 @@ public class RenderedTextureHolder extends TextureHolder {
         CommandEncoder commandEncoder = RenderSystem.getDevice().createCommandEncoder();
 
         Runnable writer = () -> {
-            try (GpuBuffer.MappedView mappedView = commandEncoder.mapBuffer(buffer, true, false)) {
+            try (GpuBufferSlice.MappedView mappedView = buffer.map(true, false)) {
                 RainbowIO.safeIO(() -> {
                     try (NativeImage image = new NativeImage(width, height, false)) {
                         for (int y = 0; y < height; y++) {

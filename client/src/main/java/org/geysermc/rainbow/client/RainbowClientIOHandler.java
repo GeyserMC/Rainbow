@@ -12,7 +12,7 @@ public class RainbowClientIOHandler implements RainbowIO.IOExceptionListener {
 
     @Override
     public void error(IOException exception) {
-        Minecraft.getInstance().getToastManager().addToast(new SystemToast(TOAST_ID,
+        Minecraft.getInstance().gui.toastManager().addToast(new SystemToast(TOAST_ID,
                 Component.translatable("toast.rainbow.io_exception.title"), Component.translatable("toast.rainbow.io_exception.description")));
     }
 }

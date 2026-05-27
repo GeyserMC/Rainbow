@@ -1,11 +1,11 @@
 [versions]
-minecraft-release = "26.1.2"
-minecraft-supported-base = "26.1"
-minecraft-supported-modrinth = "26.1,26.1.1,26.1.2"
+minecraft-release = "26.2-pre-1"
+minecraft-supported-base = "26.2-pre.1"
+minecraft-supported-modrinth = "26.2"
 
-fabric-loom = "1.16.1"
+fabric-loom = "1.16.2"
 fabric-loader = "0.19.2"
-fabric-api = "0.144.1+26.1"
+fabric-api = "0.149.2+26.2"
 
 minotaur = "2.9.0"
 
