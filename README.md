@@ -8,7 +8,7 @@ for use with Geyser's [custom block API](https://geysermc.org/wiki/geyser/custom
 [custom skulls API](https://geysermc.org/wiki/geyser/custom-skulls), and [custom item API (v2)](https://geysermc.org/wiki/geyser/custom-items). Rainbow is available for Minecraft 26.1.
 
 Rainbow is currently experimental, and capable of generating Geyser block/item mappings, a `custom-skulls.yml` file, and a bedrock resourcepack for
-somewhat simple blocks, 2D and 3D items. For a moderately complete list of Rainbow's capabilities, see further below.
+somewhat simple blocks, 2D and 3D items, and sounds. For a moderately complete list of Rainbow's capabilities, see further below.
 
 Rainbow works by detecting custom blocks (using block state overrides) from loaded resourcepacks, and custom items in your inventory, or a container/inventory menu you have opened.
 It analyses the components of detected items, and uses assets from loaded Java resourcepacks to gather information about block and item models, textures,
@@ -22,14 +22,16 @@ To use Rainbow, you must install it on your Minecraft client. Rainbow adds a few
 you use them as follows:
 
 1. First, start a new pack by running `/rainbow create <name>`, replacing `<name>` with the name of your pack. Your resourcepack and Geyser mappings will be exported in the `.minecraft/rainbow/<name>` folder. Anything in here can be overwritten!
-2. Once you have created a pack, you can start mapping custom blocks, skulls, and items. Mapped custom content will be included in the exported resourcepack and Geyser mappings. There are 5 ways to map custom content:
+2. Once you have created a pack, you can start mapping custom content. Mapped custom content will be included in the exported resourcepack and Geyser mappings. There are multiple ways to map custom content:
    - `/rainbow map block <target>` - maps the custom block at `<target>`, if any.
    - `/rainbow map item` - maps the custom item or skull you're currently holding in your hand, if any.
+   - `/rainbow map sound <namespace>` - maps all the custom sounds of the given namespace.
    - `/rainbow mapinventory` - scans your inventory for custom items or skulls, and maps all that are found.
    - `/rainbow auto blocks` - scans through all loaded resourcepacks for custom blocks created using block state overrides, and maps all that are found. This may shortly freeze your client.
    - `/rainbow auto inventory` - scans all inventory menus and containers you open for custom items and skulls, and maps all that are found. This is handy for plugins that offer an inventory menu listing all custom items.
      - Use `/rainbow auto stop` to stop the mapping of custom items.
    - `/rainbow auto recipes` - scans through all known recipes for results that are custom items or skulls, and maps all that are found. This is handy for datapacks that contain recipes with custom items as result. You can use the vanilla `/recipe give @s *` command to give yourself all recipes, which helps Rainbow recognise custom items with this command.
+   - `/rainbow auto sounds` - scans through all loaded resourcepacks for custom sounds, and maps all that are found.
 3. Once you have mapped all of your custom items, use `/rainbow finish` to finish the pack. Rainbow will then export the resourcepack and Geyser mappings it has created.
 
 When you've finished your pack, navigate to the `.minecraft/rainbow/<name>` folder. You can also click on the `Wrote pack to disk` in chat to open this folder.
@@ -43,7 +45,7 @@ In this folder, you'll find 5 important files/folders:
 - `report.txt`: you don't need to do anything with this file, but it contains information about generated assets and possible problems that occurred.
 
 Once you have taken these steps, restart your server. Bedrock players should then download the generated pack upon joining,
-and if everything went well, they should be able to see custom content!
+and if everything went well, they should be able to see (and hear) custom content!
 
 If you have any questions or run into any problems, please do feel free to ask for support in the Geyser Discord!
 
@@ -79,6 +81,7 @@ Rainbow is currently capable of the following:
     - Custom elytra items also work, but only visually, due to bedrock limitations.
   - 3D items, by converting the Java model to a bedrock one, and generating an attachable and animations for it, as well as rendering a custom GUI icon.
     - Is able to translate display transformations for the head, first-person and third-person item slots.
+  - Custom sounds.
 - Generating working animated (flipbook) textures for 2D items and 3D items that make use of a single texture only.
 - Exporting merged language files from loaded resourcepacks to a folder, for easy copying to Geyser's `locales/overrides` folder.
   - Files from different resourcepacks for the same language are merged together.

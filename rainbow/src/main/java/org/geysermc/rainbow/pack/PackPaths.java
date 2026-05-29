@@ -1,5 +1,6 @@
 package org.geysermc.rainbow.pack;
 
+import net.minecraft.client.resources.sounds.Sound;
 import net.minecraft.resources.Identifier;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.mapping.texture.TextureHolder;
@@ -21,6 +22,7 @@ public record PackPaths(Path mappingsRoot, Path packRoot, Optional<Path> zipOutp
     private static final Path ITEM_ATLAS = Path.of("textures/item_texture.json");
     private static final Path TERRAIN_ATLAS = Path.of("textures/terrain_texture.json");
     private static final Path FLIPBOOK_TEXTURES = Path.of("textures/flipbook_textures.json");
+    private static final Path SOUND_DEFINITIONS = Path.of("sounds/sound_definitions.json");
 
     public Path blockMappings() {
         return mappingsRoot.resolve(BLOCK_MAPPINGS);
@@ -51,6 +53,10 @@ public record PackPaths(Path mappingsRoot, Path packRoot, Optional<Path> zipOutp
         return packRoot.resolve(textureIdentifier.getPath());
     }
 
+    public Path sound(Sound sound) {
+        return packRoot.resolve(sound.getPath().getPath());
+    }
+
     public Path manifest() {
         return packRoot.resolve(MANIFEST);
     }
@@ -65,5 +71,9 @@ public record PackPaths(Path mappingsRoot, Path packRoot, Optional<Path> zipOutp
 
     public Path flipbookTextures() {
         return packRoot.resolve(FLIPBOOK_TEXTURES);
+    }
+
+    public Path soundDefinitions() {
+        return packRoot.resolve(SOUND_DEFINITIONS);
     }
 }

@@ -141,6 +141,7 @@ which will list any models converted, and any problems that occurred during mapp
         report.append("\nItem texture atlas size: ").append(stats.itemAtlas());
         report.append("\nTerrain texture atlas size: ").append(stats.terrainAtlas());
         report.append("\nFlipbook texture definitions: ").append(stats.flipbookTextures());
+        report.append("\nSound definitions: ").append(stats.soundDefinitions());
         report.append("\n");
         report.append("\nItem attachables exported: ").append(attachables);
         report.append("\n");

@@ -51,6 +51,6 @@ public interface ModelTextures<T extends ModelTextures<T>> extends PackAssetCach
     }
 
     private static boolean areAllMaterialsTheSame(Map<String, Material> materials) {
-        return materials.values().stream().distinct().count() <= 1L;
+        return materials.values().stream().distinct().count() == 1L;
     }
 }

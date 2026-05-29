@@ -1,6 +1,7 @@
 package org.geysermc.rainbow.mapping;
 
 import com.mojang.serialization.Codec;
+import net.minecraft.server.packs.resources.Resource;
 import org.geysermc.rainbow.pack.PackPaths;
 import org.jspecify.annotations.Nullable;
 
@@ -16,6 +17,8 @@ public interface PackSerializer {
     <T> CompletableFuture<?> saveJson(Codec<T> codec, T object, Path path);
 
     CompletableFuture<?> saveTexture(byte[] texture, Path path);
+
+    CompletableFuture<?> saveResource(Resource resource, Path path);
 
     @FunctionalInterface
     interface Serializable {
