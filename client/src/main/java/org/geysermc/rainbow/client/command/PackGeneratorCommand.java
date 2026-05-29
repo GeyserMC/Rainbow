@@ -21,6 +21,7 @@ import net.minecraft.world.phys.Vec3;
 import org.geysermc.rainbow.client.PackManager;
 import org.geysermc.rainbow.client.mapper.InventoryMapper;
 import org.geysermc.rainbow.client.mapper.PackMapper;
+import org.geysermc.rainbow.client.mapper.RecipeMapper;
 import org.geysermc.rainbow.pack.BedrockPack;
 
 import java.nio.file.Path;
@@ -112,7 +113,7 @@ public class PackGeneratorCommand {
                                 if (results.itemsMapped() > 0) {
                                     source.sendFeedback(Component.translatable("commands.rainbow.mapped_items_from_inventory", results.itemsMapped()));
                                     if (results.problems() > 0) {
-                                        source.sendFeedback(Component.translatable("chat.rainbow.mapped_problems"));
+                                        source.sendError(Component.translatable("chat.rainbow.mapped_problems"));
                                     }
                                 }
                                 if (results.skullsMapped() > 0) {
@@ -150,7 +151,7 @@ public class PackGeneratorCommand {
                                         case MAPPED_SUCCESSFULLY, PROBLEMS_OCCURRED -> {
                                             source.sendFeedback(Component.translatable("commands.rainbow.mapped_blocks", results.amountMapped()));
                                             if (results.problems() > 0) {
-                                                source.sendFeedback(Component.translatable("chat.rainbow.mapped_problems"));
+                                                source.sendError(Component.translatable("chat.rainbow.mapped_problems"));
                                             }
                                         }
                                     }
@@ -160,6 +161,12 @@ public class PackGeneratorCommand {
                                 .executes(runWithPack(packManager, (source, _) -> {
                                     packMapper.setItemProvider(InventoryMapper.INSTANCE);
                                     source.sendFeedback(Component.translatable("commands.rainbow.automatic_inventory_mapping"));
+                                }))
+                        )
+                        .then(ClientCommands.literal("recipes")
+                                .executes(runWithPack(packManager, (source, _) -> {
+                                    source.sendFeedback(Component.translatable("commands.rainbow.automatic_recipe_mapping"));
+                                    packMapper.setItemProvider(RecipeMapper.INSTANCE);
                                 }))
                         )
                         .then(ClientCommands.literal("sounds")

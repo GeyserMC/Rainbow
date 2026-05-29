@@ -2,6 +2,7 @@ package org.geysermc.rainbow.mapping;
 
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.renderer.item.ClientItem;
+import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.client.resources.model.ResolvedModel;
 import net.minecraft.client.resources.sounds.SoundEventRegistration;
@@ -32,6 +33,9 @@ public interface AssetResolver {
     Optional<Resource> getSound(Identifier sound);
 
     default Optional<TextureResource> getPossibleAtlasTextureSafely(Identifier identifier) {
+        if (identifier.equals(MissingTextureAtlasSprite.getLocation())) {
+            return Optional.empty();
+        }
         // Vanilla behaviour: when baking a Material, check item atlas first, then block atlas
         // (see ModelManager, MaterialBaker)
         return getTexture(AtlasIds.ITEMS, identifier)
