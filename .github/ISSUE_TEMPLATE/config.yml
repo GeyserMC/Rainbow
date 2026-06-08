@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Usage Guide
+    url: https://github.com/GeyserMC/Rainbow#usage
+    about: Check the usage guide if you're unsure how to use Rainbow.
+  - name: Get help on the GeyserMC Discord server
+    url: https://discord.gg/geysermc
+    about: If your issue seems like it could possibly be an easy fix, please hop on our Discord.

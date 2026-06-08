@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest an idea or request a feature to be implemented in Rainbow
+type: Feature
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this feature request for Rainbow! Please fill out the following form to your best ability to help us understand your feature request and significantly improve the chance of getting added.
+        For anything else than a feature request, please use the `#custom-resource-packs` channel on [our Discord server](https://discord.gg/geysermc).
+  - type: textarea
+    attributes:
+      label: What feature do you want to see added?
+      description: A clear and concise description of your feature request.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Are there any alternatives?
+      description: List any alternatives you might have tried
+    validations:
+      required: true
