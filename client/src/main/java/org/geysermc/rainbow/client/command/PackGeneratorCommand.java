@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.geysermc.rainbow.client.PackManager;
 import org.geysermc.rainbow.client.mapper.InventoryMapper;
+import org.geysermc.rainbow.client.mapper.ItemDisplayMapper;
 import org.geysermc.rainbow.client.mapper.PackMapper;
 import org.geysermc.rainbow.client.mapper.RecipeMapper;
 import org.geysermc.rainbow.pack.BedrockPack;
@@ -161,6 +162,12 @@ public class PackGeneratorCommand {
                                 .executes(runWithPack(packManager, (source, _) -> {
                                     packMapper.setItemProvider(InventoryMapper.INSTANCE);
                                     source.sendFeedback(Component.translatable("commands.rainbow.automatic_inventory_mapping"));
+                                }))
+                        )
+                        .then(ClientCommands.literal("item_display")
+                                .executes(runWithPack(packManager, (source, _) -> {
+                                    packMapper.setItemProvider(ItemDisplayMapper.INSTANCE);
+                                    source.sendFeedback(Component.literal("item display auto mapping activated"));
                                 }))
                         )
                         .then(ClientCommands.literal("recipes")
