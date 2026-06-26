@@ -75,7 +75,7 @@ skin-hashes:
                                 return partialProfile.id()
                                         .map(uuids::add)
                                         .or(() -> partialProfile.name().map(usernames::add))
-                                        .orElseThrow();
+                                        .orElse(false);
                             }
                         }))
                 .orElseThrow();
