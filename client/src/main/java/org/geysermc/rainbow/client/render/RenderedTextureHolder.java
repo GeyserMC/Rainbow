@@ -86,7 +86,7 @@ public class RenderedTextureHolder extends TextureHolder {
 
         int width = texture.getWidth(0);
         int height = texture.getHeight(0);
-        int bufferSize = texture.getFormat().pixelSize() * width * height;
+        int bufferSize = texture.getFormat().blockSize() * width * height;
 
         GpuBuffer buffer = RenderSystem.getDevice().createBuffer(() -> "Texture output buffer", GpuBuffer.USAGE_COPY_DST | GpuBuffer.USAGE_MAP_READ, bufferSize);
         CommandEncoder commandEncoder = RenderSystem.getDevice().createCommandEncoder();
@@ -97,7 +97,7 @@ public class RenderedTextureHolder extends TextureHolder {
                     try (NativeImage image = new NativeImage(width, height, false)) {
                         for (int y = 0; y < height; y++) {
                             for (int x = 0; x < width; x++) {
-                                int colour = mappedView.data().getInt((x + y * width) * texture.getFormat().pixelSize());
+                                int colour = mappedView.data().getInt((x + y * width) * texture.getFormat().blockSize());
                                 image.setPixelABGR(x, height - y - 1, colour);
                             }
                         }
