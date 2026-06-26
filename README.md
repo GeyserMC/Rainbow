@@ -1,6 +1,6 @@
 # Rainbow
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/GeyserMC/Rainbow/blob/master/LICENSE)
+[![License: LGPL-3.0-or-later](https://img.shields.io/github/license/GeyserMC/Rainbow)](https://github.com/GeyserMC/Rainbow/blob/master/LICENSE)
 [![Discord](https://img.shields.io/discord/613163671870242838.svg?color=%237289da&label=discord)](https://discord.gg/geysermc)
 
 Rainbow is a client-side Minecraft mod for the Fabric modloader to generate Geyser block/item mappings, locale overrides, and bedrock resourcepacks

@@ -1,0 +1,6 @@
+<component name="CopyrightManager">
+  <copyright>
+    <option name="notice" value="Copyright (c) &amp;#36;originalComment.match(&quot;Copyright \(c\) (\d+)&quot;, 1, &quot;-&quot;, &quot;&amp;#36;today.year&quot;)&amp;#36;today.year GeyserMC. https://geysermc.org&#10; &#10;This file is part of Rainbow.&#10; &#10;Rainbow is free software: you can redistribute it and/or modify it under the terms of the&#10;GNU Lesser General Public License as published by the Free Software Foundation, either&#10;version 3 of the License, or (at your option) any later version.&#10;&#10;Rainbow is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; &#10;without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR &#10;PURPOSE. See the GNU Lesser General Public License for more details.&#10;&#10;You should have received a copy of the GNU Lesser General Public License along with &#10;Rainbow. If not, see &lt;https://www.gnu.org/licenses/&gt;." />
+    <option name="myName" value="Rainbow" />
+  </copyright>
+</component>
