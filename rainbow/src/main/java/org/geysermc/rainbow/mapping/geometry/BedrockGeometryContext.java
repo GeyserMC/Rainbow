@@ -37,7 +37,7 @@ public record BedrockGeometryContext(Optional<MappedGeometry> geometry,
         }
 
         ResolvedModel parentModel = model.parent();
-        boolean handheld = parentModel != null && HANDHELD_MODELS.contains(Rainbow.getModelIdentifier(model));
+        boolean handheld = parentModel != null && HANDHELD_MODELS.contains(Rainbow.getModelIdentifier(parentModel));
 
         Optional<MappedGeometry> geometry = Optional.empty();
         Optional<BedrockAnimationContext> animation = Optional.empty();
