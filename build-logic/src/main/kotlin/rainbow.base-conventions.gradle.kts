@@ -2,16 +2,16 @@ plugins {
     id("net.fabricmc.fabric-loom")
 }
 
-version = properties["mod_version"]!! as String
-group = properties["maven_group"]!! as String
+// Needed because these properties STILL aren't lazy
+version = StringProvider(providers.gradleProperty("mod_version"))
+group = StringProvider(providers.gradleProperty("maven_group"))
 
-val archivesBaseName = properties["archives_base_name"]!! as String
 val targetJavaVersion = 25
 
 val fmjVersion = projectVersion(project)
 
 base {
-    archivesName = archivesBaseName
+    archivesName = "rainbow"
 }
 
 repositories {}
@@ -33,7 +33,7 @@ tasks {
         filesMatching("fabric.mod.json") {
             expand(
                 mapOf(
-                    "version" to fmjVersion,
+                    "version" to fmjVersion.get(),
                     "minecraft_version" to libs.versions.minecraft.supported.base.get(),
                     "loader_version" to libs.versions.fabric.loader.get()
                 )
@@ -43,10 +43,10 @@ tasks {
 
     jar {
         from(rootDir.resolve("LICENSE")) {
-            rename { "${it}_${archivesBaseName}" }
+            rename { "${it}_${base.archivesName}" }
         }
         from(rootDir.resolve("LICENSE.LESSER")) {
-            rename { "${it}_${archivesBaseName}" }
+            rename { "${it}_${base.archivesName}" }
         }
     }
 
@@ -67,7 +67,7 @@ java {
 loom {
     runs {
         named("server") {
-            runDir = "run-server"
+            runDirectory = project.file("run-server")
         }
     }
 }

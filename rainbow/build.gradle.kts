@@ -8,3 +8,7 @@ loom {
 
     runs.clear()
 }
+
+tasks.withType<Jar> {
+    archiveAppendix = "core"
+}

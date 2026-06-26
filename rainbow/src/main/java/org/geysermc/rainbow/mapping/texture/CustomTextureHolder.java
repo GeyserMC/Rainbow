@@ -20,8 +20,6 @@ package org.geysermc.rainbow.mapping.texture;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
-import org.geysermc.rainbow.RainbowIO;
-import org.geysermc.rainbow.image.NativeImageUtil;
 import org.geysermc.rainbow.mapping.AssetResolver;
 
 import java.util.Optional;

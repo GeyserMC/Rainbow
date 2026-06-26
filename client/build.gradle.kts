@@ -30,6 +30,10 @@ tasks {
     named("build") {
         dependsOn(copyJarTask)
     }
+
+    withType<Jar> {
+        archiveAppendix = "client"
+    }
 }
 
 modrinth {
