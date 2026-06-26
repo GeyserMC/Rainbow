@@ -11,9 +11,12 @@ import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.client.mixin.SplashRendererAccessor;
 import org.geysermc.rainbow.client.render.MinecraftGeometryRenderer;
-import org.geysermc.rainbow.mapping.AssetCacheStats;
-import org.geysermc.rainbow.mapping.PackStats;
+import org.geysermc.rainbow.client.stats.PackStatGroup;
+import org.geysermc.rainbow.client.stats.PackStatGroups;
 import org.geysermc.rainbow.pack.BedrockPack;
+import org.geysermc.rainbow.stats.PackStatKey;
+import org.geysermc.rainbow.stats.PackStatKeys;
+import org.geysermc.rainbow.stats.PackStats;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -118,8 +121,7 @@ which will list any models converted, and any problems that occurred during mapp
         }
 
         long attachables = pack.getBedrockItems().stream().filter(item -> item.attachableContext().attachable().isPresent()).count();
-        PackStats stats = pack.stats();
-        AssetCacheStats cacheStats = stats.cacheStats();
+        PackStats stats = pack.collectStats();
 
         StringBuilder report = new StringBuilder(REPORT_HEADER);
         report.append("\n");
@@ -129,32 +131,34 @@ which will list any models converted, and any problems that occurred during mapp
         report.append("\nVersion of Rainbow: ").append(RainbowClient.getVersion());
         report.append("\n");
         report.append("\nGenerated pack: ").append(pack.name());
-        report.append("\nBlock mappings written: ").append(stats.blockMappings());
-        report.append("\nItem mappings written: ").append(stats.itemMappings());
-        report.append("\nWaypoint style mappings written: ").append(stats.waypointStyleMappings());
+        appendPackStatGroup(report, stats, PackStatGroups.MAPPINGS);
         report.append("\n");
-        report.append("\nItem texture atlas size: ").append(stats.itemAtlas());
-        report.append("\nTerrain texture atlas size: ").append(stats.terrainAtlas());
-        report.append("\nFlipbook texture definitions: ").append(stats.flipbookTextures());
-        report.append("\nSound definitions: ").append(stats.soundDefinitions());
+        appendPackStatGroup(report, stats, PackStatGroups.ATLASES);
         report.append("\n");
         report.append("\nItem attachables exported: ").append(attachables);
+        appendPackStat(report, stats, PackStatKeys.ATTACHABLES);
         report.append("\n");
         report.append("\nJSON-files written: ").append(packSerializer.jsonExported());
         report.append("\nTextures written: ").append(packSerializer.texturesExported());
         report.append("\n");
-        report.append("\nUsername skulls exported: ").append("TODO");//.append(pack.skulls.usernames());
-        report.append("\nUUID skulls exported: ").append("TODO");//.append(pack.skulls.uuids());
-        report.append("\nStatic texture skulls exported: ").append("TODO");//.append(pack.skulls.textures());
+        appendPackStatGroup(report, stats, PackStatGroups.SKULLS);
         report.append("\n");
         report.append("\n-- ASSET CACHE STATS --");
-        report.append("\nGeometry cache: %d written, %d cache hits ".formatted(cacheStats.geometry().size(), cacheStats.geometry().hits()));
-        report.append("\nBlock texture cache: %d written, %d cache hits ".formatted(cacheStats.blockTexture().size(), cacheStats.blockTexture().hits()));
-        report.append("\nItem texture cache: %d written, %d cache hits ".formatted(cacheStats.itemTexture().size(), cacheStats.itemTexture().hits()));
+        appendPackStatGroup(report, stats, PackStatGroups.ASSET_CACHE);
         report.append("\n");
         report.append("\n-- PACK TREE REPORT --\n");
         report.append(problems);
         return report.toString();
+    }
+
+    private static void appendPackStat(StringBuilder builder, PackStats stats, PackStatKey key) {
+        builder.append("\n").append(key.toString(stats));
+    }
+
+    private static void appendPackStatGroup(StringBuilder builder, PackStats stats, PackStatGroup group) {
+        for (PackStatKey key : group.keys()) {
+            appendPackStat(builder, stats, key);
+        }
     }
 
     private static String randomSummaryComment() {

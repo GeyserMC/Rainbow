@@ -3,15 +3,21 @@ package org.geysermc.rainbow.pack.texture;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.geysermc.rainbow.stats.PackStats;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public record BedrockFlipbookTextures(List<FlipbookTexture> textures) {
+public record BedrockFlipbookTextures(List<FlipbookTexture> textures) implements PackStats.Holder {
     public static final Codec<BedrockFlipbookTextures> CODEC = FlipbookTexture.CODEC.listOf().xmap(BedrockFlipbookTextures::new, BedrockFlipbookTextures::textures);
 
     public int size() {
         return textures.size();
+    }
+
+    @Override
+    public int stat() {
+        return size();
     }
 
     public static Builder builder() {

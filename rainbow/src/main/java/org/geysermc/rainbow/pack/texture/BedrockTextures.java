@@ -5,12 +5,13 @@ import com.mojang.serialization.Codec;
 import org.geysermc.rainbow.mapping.texture.BlockModelTextures;
 import org.geysermc.rainbow.pack.BedrockBlock;
 import org.geysermc.rainbow.pack.BedrockItem;
+import org.geysermc.rainbow.stats.PackStats;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public record BedrockTextures(Map<String, String> textures) {
+public record BedrockTextures(Map<String, String> textures) implements PackStats.Holder {
     public static final Codec<BedrockTextures> CODEC =
             Codec.compoundList(Codec.STRING, Codec.compoundList(Codec.STRING, Codec.STRING))
                     .xmap(pairs -> pairs.stream().map(pair -> Pair.of(pair.getFirst(), pair.getSecond().getFirst().getSecond())).collect(Pair.toMap()),
@@ -26,6 +27,11 @@ public record BedrockTextures(Map<String, String> textures) {
 
     public int size() {
         return textures.size();
+    }
+
+    @Override
+    public int stat() {
+        return size();
     }
 
     public static Builder builder() {

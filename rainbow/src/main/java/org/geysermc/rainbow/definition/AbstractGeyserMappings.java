@@ -4,12 +4,13 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import org.geysermc.rainbow.CodecUtil;
+import org.geysermc.rainbow.stats.PackStats;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.function.Function;
 
-public abstract class AbstractGeyserMappings<K, V> {
+public abstract class AbstractGeyserMappings<K, V> implements PackStats.Holder {
     private final Map<K, V> mappings = new Object2ObjectOpenHashMap<>();
 
     protected AbstractGeyserMappings() {}
@@ -39,5 +40,10 @@ public abstract class AbstractGeyserMappings<K, V> {
 
     public int size() {
         return mappings.size();
+    }
+
+    @Override
+    public int stat() {
+        return size();
     }
 }

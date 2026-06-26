@@ -8,8 +8,13 @@ import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.mapping.PackAssetCache;
 import org.geysermc.rainbow.mapping.texture.ModelTextures;
 import org.geysermc.rainbow.pack.geometry.BedrockGeometry;
+import org.geysermc.rainbow.stats.PackStatKeys;
 
 public class MappedGeometryCache extends PackAssetCache<MappedGeometryCache.Key, MappedGeometry> {
+
+    public MappedGeometryCache() {
+        super(PackStatKeys.GEOMETRY_CACHE);
+    }
 
     public MappedGeometry mapGeometry(Identifier bedrockIdentifier, ResolvedModel model, Transformation transformation, ModelTextures<?> textures) {
         return getOrCompute(new Key(model, transformation), () -> {

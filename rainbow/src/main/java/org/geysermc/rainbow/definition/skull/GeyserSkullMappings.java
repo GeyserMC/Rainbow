@@ -13,8 +13,10 @@ import org.geysermc.rainbow.mixin.ResolvableProfileAccessor;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public final class GeyserSkullMappings extends AbstractGeyserMappings<GeyserSkullMappings.SkullTextureType, List<String>> {
     public static final Codec<GeyserSkullMappings> CODEC = createCodec("skulls", 1, SkullTextureType.CODEC, Codec.STRING.listOf(), GeyserSkullMappings::new);
@@ -60,6 +62,15 @@ public final class GeyserSkullMappings extends AbstractGeyserMappings<GeyserSkul
         }
         textures.add(texture);
         return true;
+    }
+
+    @Override
+    public int size() {
+        return Arrays.stream(SkullTextureType.values()).mapToInt(this::size).sum();
+    }
+
+    public int size(SkullTextureType type) {
+        return Objects.requireNonNullElseGet(mappings().get(type), List::of).size();
     }
 
     private static @Nullable Property getTexture(GameProfile profile) {

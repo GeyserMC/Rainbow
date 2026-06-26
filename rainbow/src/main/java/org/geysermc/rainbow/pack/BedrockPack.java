@@ -33,13 +33,14 @@ import org.geysermc.rainbow.mapping.BedrockWaypointStyleMapper;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
-import org.geysermc.rainbow.mapping.PackStats;
 import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
 import org.geysermc.rainbow.definition.item.GeyserItemMappings;
 import org.geysermc.rainbow.pack.sound.BedrockSoundDefinitions;
 import org.geysermc.rainbow.pack.texture.BedrockFlipbookTextures;
 import org.geysermc.rainbow.pack.texture.BedrockTextureAtlas;
 import org.geysermc.rainbow.pack.texture.BedrockTextures;
+import org.geysermc.rainbow.stats.PackStatKeys;
+import org.geysermc.rainbow.stats.PackStats;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
@@ -182,20 +183,6 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
         return true;
     }
 
-    public CompletableFuture<?> save() {
-        CompletableFuture<?> baseSerialization = save(createSerializingContext());
-        if (reporter instanceof AutoCloseable closeable) {
-            try {
-                closeable.close();
-            } catch (Exception ignored) {}
-        }
-
-        if (paths.zipOutput().isPresent()) {
-            return baseSerialization.thenAcceptAsync(_ -> RainbowIO.safeIO(() -> CodecUtil.tryZipDirectory(paths.packRoot(), paths.zipOutput().get())));
-        }
-        return baseSerialization;
-    }
-
     @Override
     public void acceptBlock(BedrockBlock block) {
         terrainTextures.withBlockTextures(block);
@@ -212,6 +199,20 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
     @Override
     public void acceptWaypointStyle(BedrockWaypointStyle style) {
         bedrockWaypointStyles.add(style);
+    }
+
+    public CompletableFuture<?> save() {
+        CompletableFuture<?> baseSerialization = save(createSerializingContext());
+        if (reporter instanceof AutoCloseable closeable) {
+            try {
+                closeable.close();
+            } catch (Exception ignored) {}
+        }
+
+        if (paths.zipOutput().isPresent()) {
+            return baseSerialization.thenAcceptAsync(_ -> RainbowIO.safeIO(() -> CodecUtil.tryZipDirectory(paths.packRoot(), paths.zipOutput().get())));
+        }
+        return baseSerialization;
     }
 
     @Override
@@ -232,10 +233,21 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
                 .save(serializingContext);
     }
 
-    public PackStats stats() {
-        return new PackStats(context.cacheStats(), context.mappings().blocks().size(), context.mappings().items().size(),
-                context.mappings().waypointStyles().size(),
-                itemTextures.build().size(), terrainTextures.build().size(), flipbookTextures.build().size(), soundDefinitions.build().size());
+    public PackStats collectStats() {
+        return PackStats.collector()
+                .collect(context.mappings())
+                .collect(PackStatKeys.ITEM_TEXTURE_ATLAS_SIZE, itemTextures.build())
+                .collect(PackStatKeys.TERRAIN_TEXTURE_ATLAS_SIZE, terrainTextures.build())
+                .collect(PackStatKeys.FLIPBOOK_TEXTURE_ATLAS_SIZE, flipbookTextures.build())
+                .collect(PackStatKeys.SOUND_DEFINITIONS, soundDefinitions.build())
+                .collect(PackStatKeys.ATTACHABLES, (int) bedrockItems.stream().filter(item -> item.attachableContext().attachable().isPresent()).count())
+                .collect(PackStatKeys.USERNAME_SKULLS, context.mappings().skulls().size(GeyserSkullMappings.SkullTextureType.USERNAME))
+                .collect(PackStatKeys.UUID_SKULLS, context.mappings().skulls().size(GeyserSkullMappings.SkullTextureType.UUID))
+                .collect(PackStatKeys.STATIC_PROFILE_SKULLS, context.mappings().skulls().size(GeyserSkullMappings.SkullTextureType.PROFILE))
+                .collect(context.geometryCache())
+                .collect(context.blockTextureCache())
+                .collect(context.itemTextureCache())
+                .finish();
     }
 
     public Set<BedrockItem> getBedrockItems() {

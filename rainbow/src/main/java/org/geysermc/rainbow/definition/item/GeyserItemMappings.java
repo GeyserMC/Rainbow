@@ -8,6 +8,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import org.geysermc.rainbow.CodecUtil;
+import org.geysermc.rainbow.stats.PackStats;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,7 +18,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
-public final class GeyserItemMappings {
+public final class GeyserItemMappings implements PackStats.Holder {
     private static final Codec<Map<Holder<Item>, Collection<GeyserItemMapping>>> MAPPINGS_CODEC = Codec.unboundedMap(Item.CODEC, GeyserItemMapping.MODEL_SAFE_CODEC.listOf().xmap(Function.identity(), ArrayList::new));
 
     public static final Codec<GeyserItemMappings> CODEC = RecordCodecBuilder.create(instance ->
@@ -73,6 +74,10 @@ public final class GeyserItemMappings {
         }
     }
 
+    public Map<Holder<Item>, Collection<GeyserItemMapping>> mappings() {
+        return mappings.asMap();
+    }
+
     public int size() {
         int totalSize = 0;
         for (GeyserItemMapping mapping : mappings.values()) {
@@ -85,7 +90,8 @@ public final class GeyserItemMappings {
         return totalSize;
     }
 
-    public Map<Holder<Item>, Collection<GeyserItemMapping>> mappings() {
-        return mappings.asMap();
+    @Override
+    public int stat() {
+        return size();
     }
 }

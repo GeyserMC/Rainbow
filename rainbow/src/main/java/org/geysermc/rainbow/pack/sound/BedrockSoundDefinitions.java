@@ -17,12 +17,13 @@ import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
 import org.geysermc.rainbow.pack.BedrockVersion;
 import org.geysermc.rainbow.pack.PackPaths;
+import org.geysermc.rainbow.stats.PackStats;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-public record BedrockSoundDefinitions(Map<Identifier, SoundEventRegistration> definitions) implements PackSerializer.Serializable {
+public record BedrockSoundDefinitions(Map<Identifier, SoundEventRegistration> definitions) implements PackSerializer.Serializable, PackStats.Holder {
     public static final BedrockVersion FORMAT_VERSION = BedrockVersion.of(1, 20, 20);
     public static final Codec<Sound> BEDROCK_SOUND_CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
@@ -57,6 +58,11 @@ public record BedrockSoundDefinitions(Map<Identifier, SoundEventRegistration> de
 
     public int size() {
         return definitions.size();
+    }
+
+    @Override
+    public int stat() {
+        return size();
     }
 
     public Stream<Sound> flatten() {
