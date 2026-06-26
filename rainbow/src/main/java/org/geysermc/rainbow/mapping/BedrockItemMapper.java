@@ -134,7 +134,7 @@ public class BedrockItemMapper {
         switch (model) {
             case CuboidItemModelWrapper.Unbaked modelWrapper -> {
                 if (context.ignorePlainModel) {
-                    context.report("ignoring plain model as requested by context");
+                    context.reportSuccess("ignoring plain model as requested by context");
                 } else {
                     mapBlockModelWrapper(modelWrapper, context.child("plain model " + modelWrapper.model()));
                 }
@@ -424,6 +424,10 @@ public class BedrockItemMapper {
 
         public void report(String problem) {
             reporter.report(() -> problem);
+        }
+
+        public void reportSuccess(String success) {
+            reporter.reportSuccess(() -> success);
         }
 
         private Optional<Transformation> addTransformation(Optional<Transformation> optionalChild) {
