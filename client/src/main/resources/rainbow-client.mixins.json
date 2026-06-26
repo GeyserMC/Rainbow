@@ -12,7 +12,8 @@
     "SoundManagerMixin",
     "SplashRendererAccessor",
     "SpriteContentsAnimatedTextureAccessor",
-    "SpriteContentsClientAccessor"
+    "SpriteContentsClientAccessor",
+    "WaypointStyleManagerAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

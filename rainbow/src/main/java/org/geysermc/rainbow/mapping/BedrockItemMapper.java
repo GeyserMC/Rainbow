@@ -41,6 +41,7 @@ import net.minecraft.world.item.equipment.trim.TrimMaterial;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ArrayUtils;
 import org.geysermc.rainbow.ProblemSuccessReporter;
+import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.mapping.attachable.BedrockAttachableContext;
 import org.geysermc.rainbow.mapping.geometry.BedrockGeometryContext;
 import org.geysermc.rainbow.definition.item.GeyserBaseItemDefinition;
@@ -257,7 +258,7 @@ public class BedrockItemMapper {
             packContext.assetResolver().getResolvedModel(modelIdentifier)
                     .ifPresentOrElse(itemModel -> {
                         Identifier bedrockIdentifier;
-                        if (modelIdentifier.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
+                        if (Rainbow.isVanilla(modelIdentifier)) {
                             bedrockIdentifier = Identifier.fromNamespaceAndPath("geyser_mc", modelIdentifier.getPath());
                         } else {
                             bedrockIdentifier = modelIdentifier;

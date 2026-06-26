@@ -13,6 +13,7 @@ public record PackPaths(Path mappingsRoot, Path packRoot, Optional<Path> zipOutp
     private static final Path BLOCK_MAPPINGS = Path.of("geyser_block_mappings.json");
     private static final Path ITEM_MAPPINGS = Path.of("geyser_item_mappings.json");
     private static final Path SKULL_MAPPINGS = Path.of("geyser_skull_mappings.json");
+    private static final Path WAYPOINT_STYLE_MAPPINGS = Path.of("geyser_waypoint_style_mappings.json");
 
     private static final Path ANIMATION_DIRECTORY = Path.of("animations");
     private static final Path ATTACHABLES_DIRECTORY = Path.of("attachables");
@@ -35,6 +36,10 @@ public record PackPaths(Path mappingsRoot, Path packRoot, Optional<Path> zipOutp
 
     public Path skullMappings() {
         return mappingsRoot.resolve(SKULL_MAPPINGS);
+    }
+
+    public Path waypointStyleMappings() {
+        return mappingsRoot.resolve(WAYPOINT_STYLE_MAPPINGS);
     }
 
     public Path animation(String identifier) {

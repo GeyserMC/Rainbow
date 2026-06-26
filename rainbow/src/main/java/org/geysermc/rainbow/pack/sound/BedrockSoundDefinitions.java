@@ -12,6 +12,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.ConstantFloat;
 import net.minecraft.util.valueproviders.SampledFloat;
 import org.geysermc.rainbow.CodecUtil;
+import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
 import org.geysermc.rainbow.pack.BedrockVersion;
@@ -98,7 +99,7 @@ public record BedrockSoundDefinitions(Map<Identifier, SoundEventRegistration> de
 
         public Builder withRegistrations(Map<String, Map<String, SoundEventRegistration>> registrations) {
             for (String namespace : registrations.keySet()) {
-                if (namespace.equals(Identifier.DEFAULT_NAMESPACE)) {
+                if (Rainbow.isVanilla(namespace)) {
                     continue;
                 }
 

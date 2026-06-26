@@ -3,6 +3,7 @@ package org.geysermc.rainbow;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.resources.model.ResolvedModel;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import org.slf4j.Logger;
 
 public class Rainbow {
@@ -30,5 +31,17 @@ public class Rainbow {
     public static Identifier getModelIdentifier(ResolvedModel model) {
         // debugName() returns the resource location of the model as a string
         return Identifier.parse(model.debugName());
+    }
+
+    public static boolean isVanilla(String namespace) {
+        return namespace.equals(Identifier.DEFAULT_NAMESPACE);
+    }
+
+    public static boolean isVanilla(Identifier identifier) {
+        return isVanilla(identifier.getNamespace());
+    }
+
+    public static boolean isVanilla(ResourceKey<?> key) {
+        return isVanilla(key.identifier());
     }
 }

@@ -7,6 +7,7 @@ import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStackTemplate;
@@ -14,17 +15,21 @@ import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.item.component.ResolvableProfile;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.waypoints.WaypointStyleAsset;
 import org.geysermc.rainbow.CodecUtil;
 import org.geysermc.rainbow.PackConstants;
 import org.geysermc.rainbow.ProblemSuccessReporter;
+import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.definition.GeyserMappings;
 import org.geysermc.rainbow.definition.block.GeyserBlockMappings;
 import org.geysermc.rainbow.definition.skull.GeyserSkullMappings;
+import org.geysermc.rainbow.definition.waypoint.GeyserWaypointStyleMappings;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.BedrockAssetConsumer;
 import org.geysermc.rainbow.mapping.BedrockBlockMapper;
 import org.geysermc.rainbow.mapping.BedrockItemMapper;
+import org.geysermc.rainbow.mapping.BedrockWaypointStyleMapper;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
@@ -63,6 +68,7 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
     private final BedrockSoundDefinitions.Builder soundDefinitions = BedrockSoundDefinitions.builder();
     private final Set<BedrockBlock> bedrockBlocks = new HashSet<>();
     private final Set<BedrockItem> bedrockItems = new HashSet<>();
+    private final Set<BedrockWaypointStyle> bedrockWaypointStyles = new HashSet<>();
     private final Set<Identifier> modelsMapped = new HashSet<>();
     private final Set<Pair<Holder<Item>, Integer>> customModelDataMapped = new HashSet<>();
 
@@ -91,7 +97,7 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
         ProblemSuccessReporter mapReporter = new ProblemSuccessReporter(reporter);
         for (Block block : BuiltInRegistries.BLOCK) {
             Identifier identifier = BuiltInRegistries.BLOCK.getKey(block);
-            if (identifier.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
+            if (Rainbow.isVanilla(identifier)) {
                 BedrockBlockMapper.tryMapBlock(block, mapReporter, context);
             }
         }
@@ -152,6 +158,12 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
         return context.mappings().skulls().withProfile(profile) ? MappingResult.MAPPED_SUCCESSFULLY : MappingResult.NONE_MAPPED;
     }
 
+    public MappingResult mapWaypointStyle(ResourceKey<WaypointStyleAsset> key) {
+        ProblemSuccessReporter mapReporter = new ProblemSuccessReporter(reporter);
+        BedrockWaypointStyleMapper.tryMapWaypointStyle(key, mapReporter, context);
+        return mapReporter.problemsSeen() > 0 ? MappingResult.PROBLEMS_OCCURRED : MappingResult.MAPPED_SUCCESSFULLY;
+    }
+
     public boolean mapSounds(String namespace) {
         Map<String, SoundEventRegistration> sounds = context.assetResolver().getSoundRegistrations().get(namespace);
         if (sounds == null) {
@@ -198,10 +210,16 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
     }
 
     @Override
+    public void acceptWaypointStyle(BedrockWaypointStyle style) {
+        bedrockWaypointStyles.add(style);
+    }
+
+    @Override
     public CompletableFuture<?> save(PackSerializingContext serializingContext) {
         return PackSerializer.Serializable.wrapCodec(GeyserBlockMappings.CODEC, context.mappings().blocks(), PackPaths::blockMappings)
                 .with(GeyserItemMappings.CODEC, context.mappings().items(), PackPaths::itemMappings)
                 .with(GeyserSkullMappings.CODEC, context.mappings().skulls(), PackPaths::skullMappings)
+                .with(GeyserWaypointStyleMappings.CODEC, context.mappings().waypointStyles(), PackPaths::waypointStyleMappings)
                 .with(PackManifest.CODEC, manifest, PackPaths::manifest)
                 .with(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), PackPaths::itemAtlas)
                 .with(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.terrainAtlas(name, terrainTextures), PackPaths::terrainAtlas)
@@ -209,12 +227,14 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
                 .with(soundDefinitions.build())
                 .with(bedrockBlocks)
                 .with(bedrockItems)
+                .with(bedrockWaypointStyles)
                 .with(paths.languageOutput().map(languageFolder -> context -> LanguageUtil.saveLanguages(context, languageFolder)))
                 .save(serializingContext);
     }
 
     public PackStats stats() {
         return new PackStats(context.cacheStats(), context.mappings().blocks().size(), context.mappings().items().size(),
+                context.mappings().waypointStyles().size(),
                 itemTextures.build().size(), terrainTextures.build().size(), flipbookTextures.build().size(), soundDefinitions.build().size());
     }
 

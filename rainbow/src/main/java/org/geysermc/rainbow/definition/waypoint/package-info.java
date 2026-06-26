@@ -1,4 +1,4 @@
 @NullMarked
-package org.geysermc.rainbow.client.skull;
+package org.geysermc.rainbow.definition.waypoint;
 
 import org.jspecify.annotations.NullMarked;

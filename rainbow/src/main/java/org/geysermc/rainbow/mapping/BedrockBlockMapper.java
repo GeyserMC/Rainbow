@@ -87,7 +87,7 @@ public class BedrockBlockMapper {
                 Identifier stateModel = stateVariant.modelLocation();
 
                 // If not including vanilla, only map variants that don't use a vanilla block model
-                if (includeVanilla || !stateModel.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
+                if (includeVanilla || !Rainbow.isVanilla(stateModel)) {
                     context.assetResolver().getResolvedModel(stateModel)
                             .ifPresentOrElse(model -> {
                                 if (ModelTextures.hasNoMaterials(model.getTopTextureSlots())) {

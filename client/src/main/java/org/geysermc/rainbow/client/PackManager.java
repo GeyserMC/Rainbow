@@ -131,6 +131,7 @@ which will list any models converted, and any problems that occurred during mapp
         report.append("\nGenerated pack: ").append(pack.name());
         report.append("\nBlock mappings written: ").append(stats.blockMappings());
         report.append("\nItem mappings written: ").append(stats.itemMappings());
+        report.append("\nWaypoint style mappings written: ").append(stats.waypointStyleMappings());
         report.append("\n");
         report.append("\nItem texture atlas size: ").append(stats.itemAtlas());
         report.append("\nTerrain texture atlas size: ").append(stats.terrainAtlas());
