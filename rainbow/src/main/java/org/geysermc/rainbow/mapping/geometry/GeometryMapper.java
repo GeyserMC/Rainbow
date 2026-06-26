@@ -161,6 +161,6 @@ public class GeometryMapper {
     }
 
     public static String getMeaningfulMaterialInstanceName(Direction face, String texture, int elementIndex) {
-        return texture + "_" + face.getName() + "_" + elementIndex;
+        return ModelTextures.sanitizeMaterialReference(texture) + "_" + face.getName() + "_" + elementIndex;
     }
 }
