@@ -6,35 +6,23 @@ import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.item.component.ResolvableProfile;
-import org.geysermc.rainbow.CodecUtil;
+import org.geysermc.rainbow.definition.AbstractGeyserMappings;
 import org.geysermc.rainbow.mixin.ResolvableProfileAccessor;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
-public final class GeyserSkullMappings {
-    public static final Codec<GeyserSkullMappings> CODEC = RecordCodecBuilder.create(instance ->
-            instance.group(
-                    CodecUtil.unitVerifyCodec(Codec.INT, "format_version", 1),
-                    Codec.unboundedMap(SkullTextureType.CODEC, ExtraCodecs.NON_EMPTY_STRING.listOf()).fieldOf("skulls").forGetter(GeyserSkullMappings::mappings)
-            ).apply(instance, (_, mappings) -> new GeyserSkullMappings(mappings))
-    );
-
-    private final Map<SkullTextureType, List<String>> mappings = new EnumMap<>(SkullTextureType.class);
+public final class GeyserSkullMappings extends AbstractGeyserMappings<GeyserSkullMappings.SkullTextureType, List<String>> {
+    public static final Codec<GeyserSkullMappings> CODEC = createCodec("skulls", 1, SkullTextureType.CODEC, Codec.STRING.listOf(), GeyserSkullMappings::new);
 
     public GeyserSkullMappings() {}
 
     private GeyserSkullMappings(Map<SkullTextureType, List<String>> mappings) {
-        this.mappings.putAll(mappings);
+        super(mappings);
     }
 
     public boolean withProfile(ResolvableProfile profile) {
@@ -63,23 +51,15 @@ public final class GeyserSkullMappings {
     }
 
     private boolean withTexture(SkullTextureType type, String texture) {
-        List<String> textures = mappings.get(type);
+        List<String> textures = mappings().get(type);
         if (textures == null) {
             textures = new ArrayList<>();
-            mappings.put(type, textures);
+            map(type, textures);
         } else if (textures.contains(texture)) {
             return false;
         }
         textures.add(texture);
         return true;
-    }
-
-    public Map<SkullTextureType, List<String>> mappings() {
-        return Collections.unmodifiableMap(mappings);
-    }
-
-    public int size(SkullTextureType type) {
-        return Objects.requireNonNullElseGet(mappings.get(type), List::of).size();
     }
 
     private static @Nullable Property getTexture(GameProfile profile) {

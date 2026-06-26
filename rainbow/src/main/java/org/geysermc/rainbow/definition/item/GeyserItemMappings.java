@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
-public class GeyserItemMappings {
+public final class GeyserItemMappings {
     private static final Codec<Map<Holder<Item>, Collection<GeyserItemMapping>>> MAPPINGS_CODEC = Codec.unboundedMap(Item.CODEC, GeyserItemMapping.MODEL_SAFE_CODEC.listOf().xmap(Function.identity(), ArrayList::new));
 
     public static final Codec<GeyserItemMappings> CODEC = RecordCodecBuilder.create(instance ->

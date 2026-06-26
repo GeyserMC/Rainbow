@@ -18,7 +18,6 @@ public class SoundNamespaceSuggestionProvider implements SuggestionProvider<Fabr
 
     @Override
     public CompletableFuture<Suggestions> getSuggestions(CommandContext<FabricClientCommandSource> context, SuggestionsBuilder builder) {
-
         return SharedSuggestionProvider.suggest(((SoundManagerAccessor) context.getSource().getClient().getSoundManager()).rainbow$getRawRegistrations().keySet().stream()
                 .filter(namespace -> !Rainbow.isVanilla(namespace)), builder);
     }

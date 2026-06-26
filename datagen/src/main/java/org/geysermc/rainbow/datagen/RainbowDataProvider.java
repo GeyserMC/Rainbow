@@ -15,6 +15,7 @@ import net.minecraft.client.data.models.model.ModelInstance;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelDispatcher;
 import net.minecraft.client.renderer.item.ClientItem;
+import net.minecraft.client.resources.WaypointStyle;
 import net.minecraft.client.resources.metadata.animation.AnimationMetadataSection;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.client.resources.model.ResolvedModel;
@@ -42,6 +43,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.equipment.EquipmentAsset;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.waypoints.WaypointStyleAsset;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.datagen.accessor.SoundsProviderDataAccessor;
@@ -103,7 +105,7 @@ public abstract class RainbowDataProvider implements DataProvider {
 
     protected RainbowDataProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries, String packName,
                                   FabricModelProvider modelProvider) {
-        this(output, registries, packName, new Providers(modelProvider, Optional.empty(), Optional.empty(), Map.of()));
+        this(output, registries, packName, new Providers(modelProvider, Optional.empty(), Optional.empty(), Map.of(), Map.of()));
     }
 
     protected RainbowDataProvider(FabricPackOutput output, CompletableFuture<HolderLookup.Provider> registries, FabricModelProvider modelProvider) {
@@ -160,20 +162,24 @@ public abstract class RainbowDataProvider implements DataProvider {
         private final Optional<List<FabricLanguageProvider>> languages;
         private final Optional<FabricSoundsProvider> sounds;
         private final Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos;
+        private final Map<ResourceKey<WaypointStyleAsset>, WaypointStyle> waypointStyles;
 
         public Providers(FabricModelProvider models, Optional<List<FabricLanguageProvider>> languages,
                          Optional<FabricSoundsProvider> sounds,
-                         Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos) {
+                         Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos,
+                         Map<ResourceKey<WaypointStyleAsset>, WaypointStyle> waypointStyles) {
             this.models = models;
             this.languages = languages;
             this.sounds = sounds;
             this.equipmentInfos = equipmentInfos;
+            this.waypointStyles = waypointStyles;
         }
 
         public static Providers create(FabricModelProvider models, Optional<FabricLanguageProvider> languages,
                                        Optional<FabricSoundsProvider> sounds,
-                                       Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos) {
-            return new Providers(models, languages.map(List::of), sounds, equipmentInfos);
+                                       Map<ResourceKey<EquipmentAsset>, EquipmentClientInfo> equipmentInfos,
+                                       Map<ResourceKey<WaypointStyleAsset>, WaypointStyle> waypointStyles) {
+            return new Providers(models, languages.map(List::of), sounds, equipmentInfos, waypointStyles);
         }
 
         private Map<Item, ClientItem> getItemInfos() {
@@ -336,6 +342,11 @@ public abstract class RainbowDataProvider implements DataProvider {
         @Override
         public Optional<EquipmentClientInfo> getEquipmentInfo(ResourceKey<EquipmentAsset> key) {
             return Optional.ofNullable(providers.equipmentInfos.get(key));
+        }
+
+        @Override
+        public Optional<WaypointStyle> getWaypointStyle(ResourceKey<WaypointStyleAsset> key) {
+            return Optional.ofNullable(providers.waypointStyles.get(key));
         }
 
         @Override
