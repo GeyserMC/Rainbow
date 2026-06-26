@@ -51,18 +51,18 @@ public class PackMapper {
         }
     }
 
-    public MappingResults mapItems(PackManager.RainbowPack pack, Collection<ItemStackTemplate> items) {
+    public MappingResults mapItems(BedrockPack pack, Collection<ItemStackTemplate> items) {
         long skullsMapped = items.stream()
                 .filter(stack -> {
                     ResolvableProfile profile = stack.get(DataComponents.PROFILE);
-                    return profile != null && pack.skulls().withProfile(profile);
+                    return profile != null && pack.mapSkull(profile) == BedrockPack.MappingResult.MAPPED_SUCCESSFULLY;
                 })
                 .count();
 
         int itemsMapped = 0;
         int problems = 0;
         for (ItemStackTemplate stack : items) {
-            switch (pack.resources().mapItem(stack)) {
+            switch (pack.mapItem(stack)) {
                 case MAPPED_SUCCESSFULLY -> itemsMapped++;
                 case PROBLEMS_OCCURRED -> {
                     itemsMapped++;

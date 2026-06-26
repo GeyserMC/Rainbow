@@ -1,4 +1,4 @@
-package org.geysermc.rainbow.client.mixin;
+package org.geysermc.rainbow.mixin;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Either;

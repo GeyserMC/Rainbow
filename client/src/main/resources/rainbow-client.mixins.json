@@ -9,15 +9,12 @@
     "ModelManagerMixin",
     "PictureInPictureRendererAccessor",
     "PictureInPictureRendererMixin",
+    "SoundManagerMixin",
     "SplashRendererAccessor",
     "SpriteContentsAnimatedTextureAccessor",
     "SpriteContentsClientAccessor"
   ],
   "injectors": {
     "defaultRequire": 1
-  },
-  "mixins": [
-    "ResolvableProfileAccessor",
-    "SoundManagerMixin"
-  ]
+  }
 }

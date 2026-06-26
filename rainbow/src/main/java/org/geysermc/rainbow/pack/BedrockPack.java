@@ -11,6 +11,7 @@ import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.CustomModelData;
+import net.minecraft.world.item.component.ResolvableProfile;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.geysermc.rainbow.CodecUtil;
@@ -19,6 +20,7 @@ import org.geysermc.rainbow.ProblemSuccessReporter;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.definition.GeyserMappings;
 import org.geysermc.rainbow.definition.block.GeyserBlockMappings;
+import org.geysermc.rainbow.definition.skull.GeyserSkullMappings;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.BedrockAssetConsumer;
 import org.geysermc.rainbow.mapping.BedrockBlockMapper;
@@ -146,6 +148,10 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
         return mapItem(new ItemStackTemplate(item, 1, patch));
     }
 
+    public MappingResult mapSkull(ResolvableProfile profile) {
+        return context.mappings().skulls().withProfile(profile) ? MappingResult.MAPPED_SUCCESSFULLY : MappingResult.NONE_MAPPED;
+    }
+
     public boolean mapSounds(String namespace) {
         Map<String, SoundEventRegistration> sounds = context.assetResolver().getSoundRegistrations().get(namespace);
         if (sounds == null) {
@@ -195,6 +201,7 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
     public CompletableFuture<?> save(PackSerializingContext serializingContext) {
         return PackSerializer.Serializable.wrapCodec(GeyserBlockMappings.CODEC, context.mappings().blocks(), PackPaths::blockMappings)
                 .with(GeyserItemMappings.CODEC, context.mappings().items(), PackPaths::itemMappings)
+                .with(GeyserSkullMappings.CODEC, context.mappings().skulls(), PackPaths::skullMappings)
                 .with(PackManifest.CODEC, manifest, PackPaths::manifest)
                 .with(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), PackPaths::itemAtlas)
                 .with(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.terrainAtlas(name, terrainTextures), PackPaths::terrainAtlas)

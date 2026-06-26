@@ -60,7 +60,7 @@ public class PackGeneratorCommand {
                                             BlockPos pos = clientCoordinatesToBlockPos(context.getSource(), context.getArgument("target", Coordinates.class));
                                             BlockState state = context.getSource().getLevel().getBlockState(pos);
                                             return runWithPack(packManager, (source, pack) -> {
-                                                switch (pack.resources().mapBlockStateExplicitly(state)) {
+                                                switch (pack.mapBlockStateExplicitly(state)) {
                                                     case NONE_MAPPED -> source.sendError(Component.translatable("commands.rainbow.no_block_mapped"));
                                                     case PROBLEMS_OCCURRED -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_target_block_problems"));
                                                     case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_target_block"));
@@ -89,7 +89,7 @@ public class PackGeneratorCommand {
                                         .executes(context -> {
                                             String namespace = StringArgumentType.getString(context, "namespace");
                                             return runWithPack(packManager, (source, pack) -> {
-                                                if (pack.resources().mapSounds(namespace)) {
+                                                if (pack.mapSounds(namespace)) {
                                                     source.sendFeedback(Component.translatable("commands.rainbow.mapped_sounds_of_namespace", namespace));
                                                 } else {
                                                     source.sendError(Component.translatable("commands.rainbow.no_sounds_mapped"));
@@ -145,7 +145,7 @@ public class PackGeneratorCommand {
                          */
                         .then(ClientCommands.literal("blocks")
                                 .executes(runWithPack(packManager, (source, pack) -> {
-                                    BedrockPack.MappingResults results = pack.resources().tryMapAllVanillaBlocks();
+                                    BedrockPack.MappingResults results = pack.tryMapAllVanillaBlocks();
                                     switch (results.toSingleResult()) {
                                         case NONE_MAPPED -> source.sendFeedback(Component.translatable("commands.rainbow.no_blocks_mapped"));
                                         case MAPPED_SUCCESSFULLY, PROBLEMS_OCCURRED -> {
@@ -171,7 +171,7 @@ public class PackGeneratorCommand {
                         )
                         .then(ClientCommands.literal("sounds")
                                 .executes(runWithPack(packManager, (source, pack) -> {
-                                    if (pack.resources().mapAllSounds()) {
+                                    if (pack.mapAllSounds()) {
                                         source.sendFeedback(Component.translatable("commands.rainbow.mapped_all_sounds"));
                                     } else {
                                         source.sendError(Component.translatable("commands.rainbow.no_sounds_mapped"));
@@ -200,7 +200,7 @@ public class PackGeneratorCommand {
         );
     }
 
-    private static Command<FabricClientCommandSource> runWithPack(PackManager manager, BiConsumer<FabricClientCommandSource, PackManager.RainbowPack> executor) {
+    private static Command<FabricClientCommandSource> runWithPack(PackManager manager, BiConsumer<FabricClientCommandSource, BedrockPack> executor) {
         return context -> {
             manager.runOrElse(pack -> executor.accept(context.getSource(), pack),
                     () -> context.getSource().sendError(NO_PACK_CREATED));

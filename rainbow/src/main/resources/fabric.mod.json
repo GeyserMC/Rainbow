@@ -17,6 +17,7 @@
   "mixins": [
     "rainbow.mixins.json"
   ],
+  "accessWidener": "rainbow.accesswidener",
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric-api": "*",

@@ -4,5 +4,7 @@ plugins {
 }
 
 loom {
+    accessWidenerPath = file("src/main/resources/rainbow.accesswidener")
+
     runs.clear()
 }
