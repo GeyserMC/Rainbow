@@ -83,7 +83,7 @@ public class PackGeneratorCommand {
                                             BlockPos pos = clientCoordinatesToBlockPos(context.getSource(), context.getArgument("target", Coordinates.class));
                                             BlockState state = context.getSource().getLevel().getBlockState(pos);
                                             return runWithPack(packManager, (source, pack) -> {
-                                                switch (pack.mapBlockStateExplicitly(state)) {
+                                                switch (pack.resources().mapBlockStateExplicitly(state)) {
                                                     case NONE_MAPPED -> source.sendError(Component.translatable("commands.rainbow.no_block_mapped"));
                                                     case PROBLEMS_OCCURRED -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_target_block_problems"));
                                                     case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_target_block"));
@@ -112,7 +112,7 @@ public class PackGeneratorCommand {
                                         .executes(context -> {
                                             String namespace = StringArgumentType.getString(context, "namespace");
                                             return runWithPack(packManager, (source, pack) -> {
-                                                if (pack.mapSounds(namespace)) {
+                                                if (pack.resources().mapSounds(namespace)) {
                                                     source.sendFeedback(Component.translatable("commands.rainbow.mapped_sounds_of_namespace", namespace));
                                                 } else {
                                                     source.sendError(Component.translatable("commands.rainbow.no_sounds_mapped"));
@@ -128,7 +128,7 @@ public class PackGeneratorCommand {
                                             //noinspection unchecked
                                             ResourceKey<WaypointStyleAsset> key = (ResourceKey<WaypointStyleAsset>) context.getArgument("style", ResourceKey.class);
                                             return runWithPack(packManager, (source, pack) -> {
-                                                switch (pack.mapWaypointStyle(key)) {
+                                                switch (pack.resources().mapWaypointStyle(key)) {
                                                     case PROBLEMS_OCCURRED -> source.sendError(Component.translatable("commands.rainbow.mapped_waypoint_style_problems", key.identifier()));
                                                     case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_waypoint_style", key.identifier()));
                                                 }
@@ -183,7 +183,7 @@ public class PackGeneratorCommand {
                          */
                         .then(ClientCommands.literal("blocks")
                                 .executes(runWithPack(packManager, (source, pack) -> {
-                                    BedrockPack.MappingResults results = pack.tryMapAllVanillaBlocks();
+                                    BedrockPack.MappingResults results = pack.resources().tryMapAllVanillaBlocks();
                                     switch (results.toSingleResult()) {
                                         case NONE_MAPPED -> source.sendFeedback(Component.translatable("commands.rainbow.no_blocks_mapped"));
                                         case MAPPED_SUCCESSFULLY, PROBLEMS_OCCURRED -> {
@@ -209,7 +209,7 @@ public class PackGeneratorCommand {
                         )
                         .then(ClientCommands.literal("sounds")
                                 .executes(runWithPack(packManager, (source, pack) -> {
-                                    if (pack.mapAllSounds()) {
+                                    if (pack.resources().mapAllSounds()) {
                                         source.sendFeedback(Component.translatable("commands.rainbow.mapped_all_sounds"));
                                     } else {
                                         source.sendError(Component.translatable("commands.rainbow.no_sounds_mapped"));
@@ -220,7 +220,7 @@ public class PackGeneratorCommand {
                                 .executes(runWithPack(packManager, (source, pack) -> {
                                     long mapped = ((WaypointStyleManagerAccessor) source.getClient().gui.hud.getWaypointStyles()).getWaypointStyles().keySet().stream()
                                             .filter(key -> !Rainbow.isVanilla(key))
-                                            .map(pack::mapWaypointStyle)
+                                            .map(pack.resources()::mapWaypointStyle)
                                             .filter(result -> result == BedrockPack.MappingResult.MAPPED_SUCCESSFULLY)
                                             .count();
                                     source.sendFeedback(Component.translatable("commands.rainbow.mapped_waypoint_styles", mapped));
@@ -248,7 +248,7 @@ public class PackGeneratorCommand {
         );
     }
 
-    private static Command<FabricClientCommandSource> runWithPack(PackManager manager, BiConsumer<FabricClientCommandSource, BedrockPack> executor) {
+    private static Command<FabricClientCommandSource> runWithPack(PackManager manager, BiConsumer<FabricClientCommandSource, PackManager.RainbowPack> executor) {
         return context -> {
             manager.runOrElse(pack -> executor.accept(context.getSource(), pack),
                     () -> context.getSource().sendError(NO_PACK_CREATED));
