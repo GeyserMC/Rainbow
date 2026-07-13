@@ -29,6 +29,7 @@ import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.CustomModelData;
+import net.minecraft.world.item.component.ResolvableProfile;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.waypoints.WaypointStyleAsset;
@@ -39,6 +40,7 @@ import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.definition.GeyserMappings;
 import org.geysermc.rainbow.definition.block.GeyserBlockMappings;
+import org.geysermc.rainbow.definition.skull.GeyserSkullMappings;
 import org.geysermc.rainbow.definition.waypoint.GeyserWaypointStyleMappings;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.BedrockAssetConsumer;
@@ -170,6 +172,10 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
         return mapItem(new ItemStackTemplate(item, 1, patch));
     }
 
+    public MappingResult mapSkull(ResolvableProfile profile) {
+        return context.mappings().skulls().withProfile(profile) ? MappingResult.MAPPED_SUCCESSFULLY : MappingResult.NONE_MAPPED;
+    }
+
     public MappingResult mapWaypointStyle(ResourceKey<WaypointStyleAsset> key) {
         ProblemSuccessReporter mapReporter = new ProblemSuccessReporter(reporter);
         BedrockWaypointStyleMapper.tryMapWaypointStyle(key, mapReporter, context);
@@ -230,6 +236,7 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
     public CompletableFuture<?> save(PackSerializingContext serializingContext) {
         return PackSerializer.Serializable.wrapCodec(GeyserBlockMappings.CODEC, context.mappings().blocks(), PackPaths::blockMappings)
                 .with(GeyserItemMappings.CODEC, context.mappings().items(), PackPaths::itemMappings)
+                .with(GeyserSkullMappings.CODEC, context.mappings().skulls(), PackPaths::skullMappings)
                 .with(GeyserWaypointStyleMappings.CODEC, context.mappings().waypointStyles(), PackPaths::waypointStyleMappings)
                 .with(PackManifest.CODEC, manifest, PackPaths::manifest)
                 .with(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), PackPaths::itemAtlas)
@@ -251,6 +258,9 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
                 .collect(PackStatKeys.FLIPBOOK_TEXTURE_ATLAS_SIZE, flipbookTextures.build())
                 .collect(PackStatKeys.SOUND_DEFINITIONS, soundDefinitions.build())
                 .collect(PackStatKeys.ATTACHABLES, (int) bedrockItems.stream().filter(item -> item.attachableContext().attachable().isPresent()).count())
+                .collect(PackStatKeys.USERNAME_SKULLS, context.mappings().skulls().size(GeyserSkullMappings.SkullTextureType.USERNAME))
+                .collect(PackStatKeys.UUID_SKULLS, context.mappings().skulls().size(GeyserSkullMappings.SkullTextureType.UUID))
+                .collect(PackStatKeys.STATIC_PROFILE_SKULLS, context.mappings().skulls().size(GeyserSkullMappings.SkullTextureType.PROFILE))
                 .collect(context.geometryCache())
                 .collect(context.blockTextureCache())
                 .collect(context.itemTextureCache())
