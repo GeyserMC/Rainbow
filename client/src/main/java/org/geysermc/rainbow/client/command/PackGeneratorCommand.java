@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2026 GeyserMC. https://geysermc.org
+ *
+ * This file is part of Rainbow.
+ *
+ * Rainbow is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * Rainbow is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with
+ * Rainbow. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package org.geysermc.rainbow.client.command;
 
 import com.mojang.brigadier.Command;
@@ -6,6 +23,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.ChatFormatting;
+import net.minecraft.commands.arguments.ResourceKeyArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.commands.arguments.coordinates.Coordinates;
 import net.minecraft.commands.arguments.coordinates.LocalCoordinates;
@@ -14,14 +32,19 @@ import net.minecraft.commands.arguments.coordinates.WorldCoordinates;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.waypoints.WaypointStyleAsset;
+import net.minecraft.world.waypoints.WaypointStyleAssets;
+import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.client.PackManager;
 import org.geysermc.rainbow.client.mapper.InventoryMapper;
 import org.geysermc.rainbow.client.mapper.PackMapper;
 import org.geysermc.rainbow.client.mapper.RecipeMapper;
+import org.geysermc.rainbow.client.mixin.WaypointStyleManagerAccessor;
 import org.geysermc.rainbow.pack.BedrockPack;
 
 import java.nio.file.Path;
@@ -93,6 +116,21 @@ public class PackGeneratorCommand {
                                                     source.sendFeedback(Component.translatable("commands.rainbow.mapped_sounds_of_namespace", namespace));
                                                 } else {
                                                     source.sendError(Component.translatable("commands.rainbow.no_sounds_mapped"));
+                                                }
+                                            }).run(context);
+                                        })
+                                )
+                        )
+                        .then(ClientCommands.literal("waypoint")
+                                .then(ClientCommands.argument("style", ResourceKeyArgument.key(WaypointStyleAssets.ROOT_ID))
+                                        .suggests(WaypointStyleSuggestionProvider.INSTANCE)
+                                        .executes(context -> {
+                                            //noinspection unchecked
+                                            ResourceKey<WaypointStyleAsset> key = (ResourceKey<WaypointStyleAsset>) context.getArgument("style", ResourceKey.class);
+                                            return runWithPack(packManager, (source, pack) -> {
+                                                switch (pack.resources().mapWaypointStyle(key)) {
+                                                    case PROBLEMS_OCCURRED -> source.sendError(Component.translatable("commands.rainbow.mapped_waypoint_style_problems", key.identifier()));
+                                                    case MAPPED_SUCCESSFULLY -> source.sendFeedback(Component.translatable("commands.rainbow.mapped_waypoint_style", key.identifier()));
                                                 }
                                             }).run(context);
                                         })
@@ -176,6 +214,16 @@ public class PackGeneratorCommand {
                                     } else {
                                         source.sendError(Component.translatable("commands.rainbow.no_sounds_mapped"));
                                     }
+                                }))
+                        )
+                        .then(ClientCommands.literal("waypoints")
+                                .executes(runWithPack(packManager, (source, pack) -> {
+                                    long mapped = ((WaypointStyleManagerAccessor) source.getClient().gui.hud.getWaypointStyles()).getWaypointStyles().keySet().stream()
+                                            .filter(key -> !Rainbow.isVanilla(key))
+                                            .map(pack.resources()::mapWaypointStyle)
+                                            .filter(result -> result == BedrockPack.MappingResult.MAPPED_SUCCESSFULLY)
+                                            .count();
+                                    source.sendFeedback(Component.translatable("commands.rainbow.mapped_waypoint_styles", mapped));
                                 }))
                         )
                         .then(ClientCommands.literal("stop")

@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2026 GeyserMC. https://geysermc.org
+ *
+ * This file is part of Rainbow.
+ *
+ * Rainbow is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * Rainbow is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with
+ * Rainbow. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package org.geysermc.rainbow.client;
 
 import com.google.gson.JsonParser;
@@ -9,6 +26,8 @@ import net.minecraft.client.renderer.item.ClientItem;
 import net.minecraft.client.renderer.texture.SpriteContents;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.WaypointStyle;
+import net.minecraft.client.resources.WaypointStyleManager;
 import net.minecraft.client.resources.metadata.animation.FrameSize;
 import net.minecraft.client.resources.model.EquipmentAssetManager;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
@@ -23,6 +42,7 @@ import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.item.equipment.EquipmentAsset;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.waypoints.WaypointStyleAsset;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.client.accessor.ResolvedModelAccessor;
@@ -30,6 +50,7 @@ import org.geysermc.rainbow.client.accessor.SoundManagerAccessor;
 import org.geysermc.rainbow.client.mixin.EntityRenderDispatcherAccessor;
 import org.geysermc.rainbow.client.mixin.SpriteContentsAnimatedTextureAccessor;
 import org.geysermc.rainbow.client.mixin.SpriteContentsClientAccessor;
+import org.geysermc.rainbow.client.mixin.WaypointStyleManagerAccessor;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.texture.TextureResource;
 import org.geysermc.rainbow.mixin.SpriteContentsAccessor;
@@ -44,12 +65,14 @@ import java.util.stream.Collectors;
 public class ClientAssetResolver implements AssetResolver {
     private final ModelManager modelManager;
     private final EquipmentAssetManager equipmentAssetManager;
+    private final WaypointStyleManager waypointStyleManager;
     private final ResourceManager resourceManager;
     private final AtlasManager atlasManager;
 
     public ClientAssetResolver(Minecraft minecraft) {
         modelManager = minecraft.getModelManager();
         equipmentAssetManager = ((EntityRenderDispatcherAccessor) minecraft.getEntityRenderDispatcher()).getEquipmentAssets();
+        waypointStyleManager = minecraft.gui.hud.getWaypointStyles();
         resourceManager = minecraft.getResourceManager();
         atlasManager = minecraft.getAtlasManager();
     }
@@ -72,6 +95,15 @@ public class ClientAssetResolver implements AssetResolver {
     @Override
     public Optional<EquipmentClientInfo> getEquipmentInfo(ResourceKey<EquipmentAsset> key) {
         return Optional.of(equipmentAssetManager.get(key));
+    }
+
+    @Override
+    public Optional<WaypointStyle> getWaypointStyle(ResourceKey<WaypointStyleAsset> key) {
+        WaypointStyle style = waypointStyleManager.get(key);
+        if (style == WaypointStyleManagerAccessor.getMissing()) {
+            return Optional.empty();
+        }
+        return Optional.of(style);
     }
 
     @Override

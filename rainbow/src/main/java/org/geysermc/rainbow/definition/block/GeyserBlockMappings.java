@@ -1,42 +1,50 @@
+/*
+ * Copyright (c) 2026 GeyserMC. https://geysermc.org
+ *
+ * This file is part of Rainbow.
+ *
+ * Rainbow is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * Rainbow is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with
+ * Rainbow. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package org.geysermc.rainbow.definition.block;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import org.geysermc.rainbow.CodecUtil;
+import org.geysermc.rainbow.definition.AbstractGeyserMappings;
 
-import java.util.Collections;
 import java.util.Map;
 
-public class GeyserBlockMappings {
+public final class GeyserBlockMappings extends AbstractGeyserMappings<Holder<Block>, GeyserBlockMapping> {
     // Inspired by Item.CODEC
     private static final Codec<Holder<Block>> BLOCK_CODEC = BuiltInRegistries.BLOCK
             .holderByNameCodec()
             .validate(block -> block.is(Blocks.AIR.builtInRegistryHolder()) ? DataResult.error(() -> "Block must not be minecraft:air") : DataResult.success(block));
-    public static final Codec<GeyserBlockMappings> CODEC = RecordCodecBuilder.create(instance ->
-            instance.group(
-                    CodecUtil.unitVerifyCodec(Codec.INT, "format_version", 1),
-                    Codec.unboundedMap(BLOCK_CODEC, GeyserBlockMapping.CODEC).fieldOf("blocks").forGetter(GeyserBlockMappings::mappings)
-            ).apply(instance, (_, mappings) -> new GeyserBlockMappings(mappings))
-    );
-
-    private final Map<Holder<Block>, GeyserBlockMapping> mappings = new Object2ObjectOpenHashMap<>();
+    public static final Codec<GeyserBlockMappings> CODEC = createCodec("blocks", 1, BLOCK_CODEC, GeyserBlockMapping.CODEC, GeyserBlockMappings::new);
 
     public GeyserBlockMappings() {}
 
     private GeyserBlockMappings(Map<Holder<Block>, GeyserBlockMapping> mappings) {
-        this.mappings.putAll(mappings);
+        super(mappings);
     }
 
     public void map(Holder<Block> block, GeyserBlockMapping.Builder mapping) {
         map(block, mapping.build());
     }
 
+    @Override
     public void map(Holder<Block> block, GeyserBlockMapping mapping) {
         if (block.value().getStateDefinition().isSingletonState() && (mapping.base().isEmpty() || !mapping.stateOverrides().isEmpty())) {
             throw new IllegalArgumentException("mapping must have a base and must not have state overrides because the base block only has a single state");
@@ -46,25 +54,22 @@ public class GeyserBlockMappings {
             throw new IllegalArgumentException("mapping must have at least a single state override, as onlyOverrideStates is set to true");
         }
 
-        GeyserBlockMapping existing = mappings.get(block);
+        GeyserBlockMapping existing = mappings().get(block);
         if (existing != null) {
             if (existing.onlyOverrideStates() && mapping.onlyOverrideStates()) {
-                mappings.put(block, existing.mergeStateOverrides(mapping));
+                super.map(block, existing.mergeStateOverrides(mapping));
             } else {
                 throw new IllegalStateException("tried to register existing mapping for block " + block + ", and was unable to merge");
             }
         } else {
-            mappings.put(block, mapping);
+            super.map(block, mapping);
         }
     }
 
+    @Override
     public int size() {
-        return mappings.values().stream()
+        return mappings().values().stream()
                 .mapToInt(mapping -> (mapping.base().isPresent() ? 1 : 0) + mapping.stateOverrides().size())
                 .sum();
-    }
-
-    public Map<Holder<Block>, GeyserBlockMapping> mappings() {
-        return Collections.unmodifiableMap(mappings);
     }
 }

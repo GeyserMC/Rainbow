@@ -1,6 +1,24 @@
+/*
+ * Copyright (c) 2026 GeyserMC. https://geysermc.org
+ *
+ * This file is part of Rainbow.
+ *
+ * Rainbow is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * Rainbow is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with
+ * Rainbow. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package org.geysermc.rainbow.client.render;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -61,10 +79,10 @@ public class RenderedTextureHolder extends TextureHolder {
         Lock lock = new ReentrantLock();
         Condition condition = lock.newCondition();
 
-        try (OversizedItemRenderer itemRenderer = new OversizedItemRenderer(Minecraft.getInstance().renderBuffers().bufferSource())) {
+        try (OversizedItemRenderer itemRenderer = new OversizedItemRenderer()) {
             //noinspection DataFlowIssue
             ((PictureInPictureCopyRenderer) itemRenderer).rainbow$allowTextureCopy();
-            itemRenderer.prepare(oversizedRenderState, new GuiRenderState(), 4);
+            itemRenderer.prepare(oversizedRenderState, new GuiRenderState(), Minecraft.getInstance().gameRenderer.featureRenderDispatcher(), 4);
             writeAsPNG(context.serializer(), context.paths().texturePath(this), ((PictureInPictureRendererAccessor) itemRenderer).getTexture(), lock, condition);
         }
 
@@ -85,18 +103,18 @@ public class RenderedTextureHolder extends TextureHolder {
 
         int width = texture.getWidth(0);
         int height = texture.getHeight(0);
-        int bufferSize = texture.getFormat().pixelSize() * width * height;
+        int bufferSize = texture.getFormat().blockSize() * width * height;
 
         GpuBuffer buffer = RenderSystem.getDevice().createBuffer(() -> "Texture output buffer", GpuBuffer.USAGE_COPY_DST | GpuBuffer.USAGE_MAP_READ, bufferSize);
         CommandEncoder commandEncoder = RenderSystem.getDevice().createCommandEncoder();
 
         Runnable writer = () -> {
-            try (GpuBuffer.MappedView mappedView = commandEncoder.mapBuffer(buffer, true, false)) {
+            try (GpuBufferSlice.MappedView mappedView = buffer.map(true, false)) {
                 RainbowIO.safeIO(() -> {
                     try (NativeImage image = new NativeImage(width, height, false)) {
                         for (int y = 0; y < height; y++) {
                             for (int x = 0; x < width; x++) {
-                                int colour = mappedView.data().getInt((x + y * width) * texture.getFormat().pixelSize());
+                                int colour = mappedView.data().getInt((x + y * width) * texture.getFormat().blockSize());
                                 image.setPixelABGR(x, height - y - 1, colour);
                             }
                         }

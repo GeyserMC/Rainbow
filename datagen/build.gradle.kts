@@ -11,3 +11,7 @@ loom {
     accessWidenerPath = file("src/main/resources/rainbow-datagen.accesswidener")
     runs.clear()
 }
+
+tasks.withType<Jar> {
+    archiveAppendix = "datagen"
+}

@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2026 GeyserMC. https://geysermc.org
+ *
+ * This file is part of Rainbow.
+ *
+ * Rainbow is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * Rainbow is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with
+ * Rainbow. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package org.geysermc.rainbow.pack.sound;
 
 import com.mojang.datafixers.util.Pair;
@@ -12,16 +29,18 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.ConstantFloat;
 import net.minecraft.util.valueproviders.SampledFloat;
 import org.geysermc.rainbow.CodecUtil;
+import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
 import org.geysermc.rainbow.pack.BedrockVersion;
 import org.geysermc.rainbow.pack.PackPaths;
+import org.geysermc.rainbow.stats.PackStats;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-public record BedrockSoundDefinitions(Map<Identifier, SoundEventRegistration> definitions) implements PackSerializer.Serializable {
+public record BedrockSoundDefinitions(Map<Identifier, SoundEventRegistration> definitions) implements PackSerializer.Serializable, PackStats.Holder {
     public static final BedrockVersion FORMAT_VERSION = BedrockVersion.of(1, 20, 20);
     public static final Codec<Sound> BEDROCK_SOUND_CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
@@ -56,6 +75,11 @@ public record BedrockSoundDefinitions(Map<Identifier, SoundEventRegistration> de
 
     public int size() {
         return definitions.size();
+    }
+
+    @Override
+    public int stat() {
+        return size();
     }
 
     public Stream<Sound> flatten() {
@@ -98,7 +122,7 @@ public record BedrockSoundDefinitions(Map<Identifier, SoundEventRegistration> de
 
         public Builder withRegistrations(Map<String, Map<String, SoundEventRegistration>> registrations) {
             for (String namespace : registrations.keySet()) {
-                if (namespace.equals(Identifier.DEFAULT_NAMESPACE)) {
+                if (Rainbow.isVanilla(namespace)) {
                     continue;
                 }
 

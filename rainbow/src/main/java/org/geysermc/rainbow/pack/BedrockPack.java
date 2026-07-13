@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2026 GeyserMC. https://geysermc.org
+ *
+ * This file is part of Rainbow.
+ *
+ * Rainbow is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * Rainbow is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with
+ * Rainbow. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package org.geysermc.rainbow.pack;
 
 import com.mojang.datafixers.util.Pair;
@@ -7,32 +24,38 @@ import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.waypoints.WaypointStyleAsset;
 import org.geysermc.rainbow.CodecUtil;
 import org.geysermc.rainbow.PackConstants;
 import org.geysermc.rainbow.ProblemSuccessReporter;
+import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.definition.GeyserMappings;
 import org.geysermc.rainbow.definition.block.GeyserBlockMappings;
+import org.geysermc.rainbow.definition.waypoint.GeyserWaypointStyleMappings;
 import org.geysermc.rainbow.mapping.AssetResolver;
 import org.geysermc.rainbow.mapping.BedrockAssetConsumer;
 import org.geysermc.rainbow.mapping.BedrockBlockMapper;
 import org.geysermc.rainbow.mapping.BedrockItemMapper;
+import org.geysermc.rainbow.mapping.BedrockWaypointStyleMapper;
 import org.geysermc.rainbow.mapping.PackContext;
 import org.geysermc.rainbow.mapping.PackSerializer;
 import org.geysermc.rainbow.mapping.PackSerializingContext;
-import org.geysermc.rainbow.mapping.PackStats;
 import org.geysermc.rainbow.mapping.geometry.GeometryRenderer;
 import org.geysermc.rainbow.definition.item.GeyserItemMappings;
 import org.geysermc.rainbow.pack.sound.BedrockSoundDefinitions;
 import org.geysermc.rainbow.pack.texture.BedrockFlipbookTextures;
 import org.geysermc.rainbow.pack.texture.BedrockTextureAtlas;
 import org.geysermc.rainbow.pack.texture.BedrockTextures;
+import org.geysermc.rainbow.stats.PackStatKeys;
+import org.geysermc.rainbow.stats.PackStats;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
@@ -61,6 +84,7 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
     private final BedrockSoundDefinitions.Builder soundDefinitions = BedrockSoundDefinitions.builder();
     private final Set<BedrockBlock> bedrockBlocks = new HashSet<>();
     private final Set<BedrockItem> bedrockItems = new HashSet<>();
+    private final Set<BedrockWaypointStyle> bedrockWaypointStyles = new HashSet<>();
     private final Set<Identifier> modelsMapped = new HashSet<>();
     private final Set<Pair<Holder<Item>, Integer>> customModelDataMapped = new HashSet<>();
 
@@ -89,7 +113,7 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
         ProblemSuccessReporter mapReporter = new ProblemSuccessReporter(reporter);
         for (Block block : BuiltInRegistries.BLOCK) {
             Identifier identifier = BuiltInRegistries.BLOCK.getKey(block);
-            if (identifier.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
+            if (Rainbow.isVanilla(identifier)) {
                 BedrockBlockMapper.tryMapBlock(block, mapReporter, context);
             }
         }
@@ -146,6 +170,12 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
         return mapItem(new ItemStackTemplate(item, 1, patch));
     }
 
+    public MappingResult mapWaypointStyle(ResourceKey<WaypointStyleAsset> key) {
+        ProblemSuccessReporter mapReporter = new ProblemSuccessReporter(reporter);
+        BedrockWaypointStyleMapper.tryMapWaypointStyle(key, mapReporter, context);
+        return mapReporter.problemsSeen() > 0 ? MappingResult.PROBLEMS_OCCURRED : MappingResult.MAPPED_SUCCESSFULLY;
+    }
+
     public boolean mapSounds(String namespace) {
         Map<String, SoundEventRegistration> sounds = context.assetResolver().getSoundRegistrations().get(namespace);
         if (sounds == null) {
@@ -164,6 +194,24 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
         return true;
     }
 
+    @Override
+    public void acceptBlock(BedrockBlock block) {
+        terrainTextures.withBlockTextures(block);
+        block.textures().addFlipbookTextures(flipbookTextures);
+        bedrockBlocks.add(block);
+    }
+
+    @Override
+    public void acceptItem(BedrockItem item) {
+        itemTextures.withItemTexture(item);
+        bedrockItems.add(item);
+    }
+
+    @Override
+    public void acceptWaypointStyle(BedrockWaypointStyle style) {
+        bedrockWaypointStyles.add(style);
+    }
+
     public CompletableFuture<?> save() {
         CompletableFuture<?> baseSerialization = save(createSerializingContext());
         if (reporter instanceof AutoCloseable closeable) {
@@ -179,22 +227,10 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
     }
 
     @Override
-    public void acceptBlock(BedrockBlock block) {
-        terrainTextures.withBlockTextures(block);
-        block.textures().addFlipbookTextures(flipbookTextures);
-        bedrockBlocks.add(block);
-    }
-
-    @Override
-    public void acceptItem(BedrockItem item) {
-        itemTextures.withItemTexture(item);
-        bedrockItems.add(item);
-    }
-
-    @Override
     public CompletableFuture<?> save(PackSerializingContext serializingContext) {
         return PackSerializer.Serializable.wrapCodec(GeyserBlockMappings.CODEC, context.mappings().blocks(), PackPaths::blockMappings)
                 .with(GeyserItemMappings.CODEC, context.mappings().items(), PackPaths::itemMappings)
+                .with(GeyserWaypointStyleMappings.CODEC, context.mappings().waypointStyles(), PackPaths::waypointStyleMappings)
                 .with(PackManifest.CODEC, manifest, PackPaths::manifest)
                 .with(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.itemAtlas(name, itemTextures), PackPaths::itemAtlas)
                 .with(BedrockTextureAtlas.CODEC, BedrockTextureAtlas.terrainAtlas(name, terrainTextures), PackPaths::terrainAtlas)
@@ -202,13 +238,23 @@ public class BedrockPack implements BedrockAssetConsumer, PackSerializer.Seriali
                 .with(soundDefinitions.build())
                 .with(bedrockBlocks)
                 .with(bedrockItems)
+                .with(bedrockWaypointStyles)
                 .with(paths.languageOutput().map(languageFolder -> context -> LanguageUtil.saveLanguages(context, languageFolder)))
                 .save(serializingContext);
     }
 
-    public PackStats stats() {
-        return new PackStats(context.cacheStats(), context.mappings().blocks().size(), context.mappings().items().size(),
-                itemTextures.build().size(), terrainTextures.build().size(), flipbookTextures.build().size(), soundDefinitions.build().size());
+    public PackStats collectStats() {
+        return PackStats.collector()
+                .collect(context.mappings())
+                .collect(PackStatKeys.ITEM_TEXTURE_ATLAS_SIZE, itemTextures.build())
+                .collect(PackStatKeys.TERRAIN_TEXTURE_ATLAS_SIZE, terrainTextures.build())
+                .collect(PackStatKeys.FLIPBOOK_TEXTURE_ATLAS_SIZE, flipbookTextures.build())
+                .collect(PackStatKeys.SOUND_DEFINITIONS, soundDefinitions.build())
+                .collect(PackStatKeys.ATTACHABLES, (int) bedrockItems.stream().filter(item -> item.attachableContext().attachable().isPresent()).count())
+                .collect(context.geometryCache())
+                .collect(context.blockTextureCache())
+                .collect(context.itemTextureCache())
+                .finish();
     }
 
     public Set<BedrockItem> getBedrockItems() {

@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2026 GeyserMC. https://geysermc.org
+ *
+ * This file is part of Rainbow.
+ *
+ * Rainbow is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * Rainbow is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with
+ * Rainbow. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package org.geysermc.rainbow.definition.item;
 
 import com.google.common.collect.Multimap;
@@ -8,6 +25,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import org.geysermc.rainbow.CodecUtil;
+import org.geysermc.rainbow.stats.PackStats;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,7 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
-public class GeyserItemMappings {
+public final class GeyserItemMappings implements PackStats.Holder {
     private static final Codec<Map<Holder<Item>, Collection<GeyserItemMapping>>> MAPPINGS_CODEC = Codec.unboundedMap(Item.CODEC, GeyserItemMapping.MODEL_SAFE_CODEC.listOf().xmap(Function.identity(), ArrayList::new));
 
     public static final Codec<GeyserItemMappings> CODEC = RecordCodecBuilder.create(instance ->
@@ -73,6 +91,10 @@ public class GeyserItemMappings {
         }
     }
 
+    public Map<Holder<Item>, Collection<GeyserItemMapping>> mappings() {
+        return mappings.asMap();
+    }
+
     public int size() {
         int totalSize = 0;
         for (GeyserItemMapping mapping : mappings.values()) {
@@ -85,7 +107,8 @@ public class GeyserItemMappings {
         return totalSize;
     }
 
-    public Map<Holder<Item>, Collection<GeyserItemMapping>> mappings() {
-        return mappings.asMap();
+    @Override
+    public int stat() {
+        return size();
     }
 }

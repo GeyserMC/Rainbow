@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2026 GeyserMC. https://geysermc.org
+ *
+ * This file is part of Rainbow.
+ *
+ * Rainbow is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * Rainbow is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with
+ * Rainbow. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package org.geysermc.rainbow.mapping;
 
 import com.mojang.math.Transformation;
@@ -25,6 +42,8 @@ import net.minecraft.client.renderer.item.properties.select.ContextDimension;
 import net.minecraft.client.renderer.item.properties.select.DisplayContext;
 import net.minecraft.client.renderer.item.properties.select.SelectItemModelProperties;
 import net.minecraft.client.renderer.item.properties.select.TrimMaterialProperty;
+import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -36,11 +55,15 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.ChargedProjectiles;
+import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.equipment.trim.TrimMaterial;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ArrayUtils;
 import org.geysermc.rainbow.ProblemSuccessReporter;
+import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.mapping.attachable.BedrockAttachableContext;
 import org.geysermc.rainbow.mapping.geometry.BedrockGeometryContext;
 import org.geysermc.rainbow.definition.item.GeyserBaseItemDefinition;
@@ -56,10 +79,15 @@ import org.geysermc.rainbow.mapping.texture.TextureHolder;
 import org.geysermc.rainbow.mixin.LateBoundIdMapperAccessor;
 import org.geysermc.rainbow.mixin.RangeSelectItemModelAccessor;
 import org.geysermc.rainbow.pack.BedrockItem;
+import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
 public class BedrockItemMapper {
@@ -123,7 +151,7 @@ public class BedrockItemMapper {
         switch (model) {
             case CuboidItemModelWrapper.Unbaked modelWrapper -> {
                 if (context.ignorePlainModel) {
-                    context.report("ignoring plain model as requested by context");
+                    context.reportSuccess("ignoring plain model as requested by context");
                 } else {
                     mapBlockModelWrapper(modelWrapper, context.child("plain model " + modelWrapper.model()));
                 }
@@ -142,11 +170,11 @@ public class BedrockItemMapper {
     private static void mapConditionalModel(ConditionalItemModel.Unbaked model, MappingContext context) {
         ConditionalItemModelProperty property = model.property();
         GeyserConditionPredicate.Property predicateProperty = switch (property) {
-            case Broken ignored -> GeyserConditionPredicate.BROKEN;
-            case Damaged ignored -> GeyserConditionPredicate.DAMAGED;
+            case Broken _ -> GeyserConditionPredicate.BROKEN;
+            case Damaged _ -> GeyserConditionPredicate.DAMAGED;
             case CustomModelDataProperty customModelData -> new GeyserConditionPredicate.CustomModelData(customModelData.index());
             case HasComponent hasComponent -> new GeyserConditionPredicate.HasComponent(hasComponent.componentType()); // ignoreDefault property not a thing, we should look into that in Geyser! TODO
-            case FishingRodCast ignored -> GeyserConditionPredicate.FISHING_ROD_CAST;
+            case FishingRodCast _ -> GeyserConditionPredicate.FISHING_ROD_CAST;
             default -> null;
         };
         ItemModel.Unbaked onTrue = model.onTrue();
@@ -154,12 +182,24 @@ public class BedrockItemMapper {
 
         if (predicateProperty == null) {
             context.report("unsupported conditional model property " + getId(ConditionalItemModelProperties.ID_MAPPER, property.type()) + ", only mapping on_false");
-            mapItem(onFalse, context.child("condition on_false (unsupported property)"));
+            mapItem(onFalse, context.child("condition on_false (unsupported property)", model.transformation()));
             return;
         }
 
-        mapItem(onTrue, context.with(new GeyserConditionPredicate(predicateProperty, true), model.transformation(), "condition on true "));
-        mapItem(onFalse, context.with(new GeyserConditionPredicate(predicateProperty, false), model.transformation(), "condition on false "));
+        mapItem(onTrue, context.child("condition on_true", child -> {
+            switch (property) {
+                case Broken _ -> child.withComponent(DataComponents.DAMAGE, context.itemStack.getOrDefault(DataComponents.MAX_DAMAGE, 1) - 1);
+                case Damaged _ -> child.withComponent(DataComponents.DAMAGE, 1);
+                case CustomModelDataProperty customModelData -> child.mergeComponent(DataComponents.CUSTOM_MODEL_DATA, mergeCustomModelDataFlag(true, customModelData.index()));
+                default -> {}
+            }
+            return child
+                    .withPredicate(new GeyserConditionPredicate(predicateProperty, true))
+                    .withTransformation(model.transformation());
+        }));
+        mapItem(onFalse, context.child("condition on_false", child -> child
+                .withPredicate(new GeyserConditionPredicate(predicateProperty, false))
+                .withTransformation(model.transformation())));
     }
 
     private static void mapRangeSelectModel(RangeSelectItemModel.Unbaked model, MappingContext context) {
@@ -168,8 +208,8 @@ public class BedrockItemMapper {
             case BundleFullness ignored -> GeyserRangeDispatchPredicate.BUNDLE_FULLNESS;
             case Count count -> new GeyserRangeDispatchPredicate.Count(count.normalize());
             // Mojang, why? :(
-            case net.minecraft.client.renderer.item.properties.numeric.CustomModelDataProperty customModelData -> new GeyserRangeDispatchPredicate.CustomModelData(customModelData.index());
-            case Damage damage -> new GeyserRangeDispatchPredicate.Damage(damage.normalize());
+            case net.minecraft.client.renderer.item.properties.numeric.CustomModelDataProperty customModelData -> new GeyserRangeDispatchPredicate.CustomModelData(customModelData.index()); // TODO set component in stack
+            case Damage damage -> new GeyserRangeDispatchPredicate.Damage(damage.normalize()); // TODO set component in stack
             default -> null;
         };
 
@@ -177,11 +217,13 @@ public class BedrockItemMapper {
             context.report("unsupported range dispatch model property " + getId(RangeSelectItemModelProperties.ID_MAPPER, property.type()) + ", only mapping fallback, if it is present");
         } else {
             for (RangeSelectItemModel.Entry entry : model.entries()) {
-                mapItem(entry.model(), context.with(new GeyserRangeDispatchPredicate(predicateProperty, entry.threshold(), model.scale()), model.transformation(), "threshold " + entry.threshold()));
+                mapItem(entry.model(), context.child("threshold " + entry.threshold(), child -> child
+                        .withPredicate(new GeyserRangeDispatchPredicate(predicateProperty, entry.threshold(), model.scale()))
+                        .withTransformation(model.transformation())));
             }
         }
 
-        model.fallback().ifPresent(fallback -> mapItem(fallback, context.with(model.transformation(), "range dispatch fallback")));
+        model.fallback().ifPresent(fallback -> mapItem(fallback, context.child("range dispatch fallback", model.transformation())));
     }
 
     @SuppressWarnings("unchecked")
@@ -195,6 +237,21 @@ public class BedrockItemMapper {
             case net.minecraft.client.renderer.item.properties.select.CustomModelDataProperty customModelData -> string -> new GeyserMatchPredicate.CustomModelData((String) string, customModelData.index());
             default -> null;
         };
+        // TODO: make this cleaner
+        // Can't translate trim material to a property since we'd need a pattern and registry context
+        Function<Object, UnaryOperator<MappingContext.ChildBuilder>> componentSetter = switch (unbakedSwitch.property()) {
+            case Charge _ -> chargeType -> child -> {
+                CrossbowItem.ChargeType type = (CrossbowItem.ChargeType) chargeType;
+                return switch (type) {
+                    case NONE -> child.withoutComponent(DataComponents.CHARGED_PROJECTILES);
+                    case ARROW -> child.withComponent(DataComponents.CHARGED_PROJECTILES, new ChargedProjectiles(List.of(new ItemStackTemplate(Items.ARROW))));
+                    case ROCKET -> child.withComponent(DataComponents.CHARGED_PROJECTILES, new ChargedProjectiles(List.of(new ItemStackTemplate(Items.FIREWORK_ROCKET))));
+                };
+            };
+            case net.minecraft.client.renderer.item.properties.select.CustomModelDataProperty customModelData -> string ->
+                    child -> child.mergeComponent(DataComponents.CUSTOM_MODEL_DATA, mergeCustomModelDataString((String) string, customModelData.index()));
+            default -> _ -> UnaryOperator.identity();
+        };
 
         List<? extends SelectItemModel.SwitchCase<?>> cases = unbakedSwitch.cases();
 
@@ -203,22 +260,60 @@ public class BedrockItemMapper {
                 context.report("unsupported select model property display_context, only mapping \"gui\" case, if it exists");
                 for (SelectItemModel.SwitchCase<?> switchCase : cases) {
                     if (switchCase.values().contains(ItemDisplayContext.GUI)) {
-                        mapItem(switchCase.model(), context.with(model.transformation(), "select GUI display_context case (unsupported property) "));
+                        mapItem(switchCase.model(), context.child("select GUI display_context case (unsupported property) ", model.transformation()));
                         return;
                     }
                 }
             }
             context.report("unsupported select model property " + getId(SelectItemModelProperties.ID_MAPPER, unbakedSwitch.property().type()) + ", only mapping fallback, if present");
-            model.fallback().ifPresent(fallback -> mapItem(fallback, context.with(model.transformation(), "select fallback case (unsupported property) ")));
+            model.fallback().ifPresent(fallback -> mapItem(fallback, context.child("select fallback case (unsupported property) ", model.transformation())));
             return;
         }
 
         cases.forEach(switchCase -> {
             switchCase.values().forEach(value -> {
-                mapItem(switchCase.model(), context.with(new GeyserMatchPredicate(dataConstructor.apply(value)), model.transformation(), "select case " + value + " "));
+                mapItem(switchCase.model(), context.child("select case " + value + " ", child -> componentSetter.apply(value).apply(child)
+                        .withPredicate(new GeyserMatchPredicate(dataConstructor.apply(value)))
+                        .withTransformation(model.transformation())));
             });
         });
-        model.fallback().ifPresent(fallback -> mapItem(fallback, context.with(model.transformation(), "select fallback case ")));
+        model.fallback().ifPresent(fallback -> mapItem(fallback, context.child("select fallback case ", model.transformation())));
+    }
+
+    private static Function<@Nullable CustomModelData, CustomModelData> mergeCustomModelDataFloat(float f, int index) {
+        return mergeCustomModelData(CustomModelData::floats, f, index, 0.0F,
+                (data, floats) -> new CustomModelData(floats, data.flags(), data.strings(), data.colors()));
+    }
+
+    private static Function<@Nullable CustomModelData, CustomModelData> mergeCustomModelDataFlag(boolean flag, int index) {
+        return mergeCustomModelData(CustomModelData::flags, flag, index, false,
+                (data, flags) -> new CustomModelData(data.floats(), flags, data.strings(), data.colors()));
+    }
+
+    private static Function<@Nullable CustomModelData, CustomModelData> mergeCustomModelDataString(String string, int index) {
+        return mergeCustomModelData(CustomModelData::strings, string, index, "",
+                (data, strings) -> new CustomModelData(data.floats(), data.flags(), strings, data.colors()));
+    }
+
+    private static <T> Function<@Nullable CustomModelData, CustomModelData> mergeCustomModelData(Function<CustomModelData, List<T>> getter, T value, int index, T filler,
+                                                                           BiFunction<CustomModelData, List<T>, CustomModelData> constructor) {
+        return data -> {
+            if (data == null) {
+                data = CustomModelData.EMPTY;
+            }
+            List<T> existing = new ArrayList<>(getter.apply(data));
+            if (existing.size() > index) {
+                existing.set(index, value);
+            } else if (existing.size() == index) {
+                existing.add(value);
+            } else {
+                for (int i = 0; i < index - existing.size(); i++) {
+                    existing.add(filler);
+                }
+                existing.add(value);
+            }
+            return constructor.apply(data, Collections.unmodifiableList(existing));
+        };
     }
 
     private record MappingContext(List<GeyserPredicate> predicateStack, Optional<Transformation> transformationStack,
@@ -231,20 +326,69 @@ public class BedrockItemMapper {
             this(List.of(), Optional.empty(), stack, reporter, definitionCreator, packContext, ignorePlainModel);
         }
 
-        // Only copy ignorePlainModel when there is not a predicate
-        public MappingContext with(GeyserPredicate predicate, Optional<Transformation> transformation, String childName) {
-            return new MappingContext(Stream.concat(predicateStack.stream(), Stream.of(predicate)).toList(), addTransformation(transformation), itemStack,
-                    reporter.forChild(() -> childName), definitionCreator, packContext, false);
+        public MappingContext child(String childName, UnaryOperator<ChildBuilder> builder) {
+            return builder.apply(new ChildBuilder(childName, this)).build();
         }
 
-        public MappingContext with(Optional<Transformation> transformation, String childName) {
-            return new MappingContext(predicateStack, addTransformation(transformation), itemStack,
-                    reporter.forChild(() -> childName), definitionCreator, packContext, ignorePlainModel);
+        public MappingContext child(String childName, Optional<Transformation> transformation) {
+            return child(childName, child -> child.withTransformation(transformation));
         }
 
         public MappingContext child(String childName)  {
-            return new MappingContext(predicateStack, transformationStack, itemStack,
-                    reporter.forChild(() -> childName), definitionCreator, packContext, ignorePlainModel);
+            return child(childName, UnaryOperator.identity());
+        }
+
+        public static class ChildBuilder {
+            private final String name;
+            private final MappingContext base;
+            private final List<GeyserPredicate> predicateStack;
+            private Optional<Transformation> transformationStack;
+            private final DataComponentPatch.Builder componentPatch = DataComponentPatch.builder();
+
+            private ChildBuilder(String name, MappingContext context) {
+                this.name = name;
+                this.base = context;
+                this.predicateStack = new ArrayList<>(context.predicateStack);
+                this.transformationStack = context.transformationStack;
+
+                DataComponentPatch.SplitResult splitStack = context.itemStack.components().split();
+                splitStack.added().forEach(componentPatch::set);
+                splitStack.removed().forEach(componentPatch::remove);
+            }
+
+            public ChildBuilder withPredicate(GeyserPredicate predicate) {
+                predicateStack.add(predicate);
+                return this;
+            }
+
+            public ChildBuilder withTransformation(Optional<Transformation> transformation) {
+                transformationStack = addTransformation(transformation);
+                return this;
+            }
+
+            public <T> ChildBuilder withComponent(DataComponentType<T> type, T value) {
+                componentPatch.set(type, value);
+                return this;
+            }
+
+            public <T> ChildBuilder mergeComponent(DataComponentType<T> type, Function<@Nullable T, T> merger) {
+                return withComponent(type, merger.apply(componentPatch.build().get(base.itemStack, type)));
+            }
+
+            public ChildBuilder withoutComponent(DataComponentType<?> type) {
+                componentPatch.remove(type);
+                return this;
+            }
+
+            private MappingContext build() {
+                // Only copy ignorePlainModel when there is not a predicate
+                return new MappingContext(Collections.unmodifiableList(predicateStack), transformationStack, new ItemStackTemplate(base.itemStack.item(), base.itemStack.count(), componentPatch.build()),
+                        base.reporter.forChild(() -> name), base.definitionCreator, base.packContext, base.ignorePlainModel && predicateStack.isEmpty());
+            }
+
+            private Optional<Transformation> addTransformation(Optional<Transformation> optionalChild) {
+                return optionalChild.flatMap(child -> transformationStack.map(parent -> parent.compose(child)).or(() -> optionalChild));
+            }
         }
 
         public Transformation finaliseTransformation(Optional<Transformation> finalTransformation) {
@@ -257,7 +401,7 @@ public class BedrockItemMapper {
             packContext.assetResolver().getResolvedModel(modelIdentifier)
                     .ifPresentOrElse(itemModel -> {
                         Identifier bedrockIdentifier;
-                        if (modelIdentifier.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
+                        if (Rainbow.isVanilla(modelIdentifier)) {
                             bedrockIdentifier = Identifier.fromNamespaceAndPath("geyser_mc", modelIdentifier.getPath());
                         } else {
                             bedrockIdentifier = modelIdentifier;
@@ -297,6 +441,10 @@ public class BedrockItemMapper {
 
         public void report(String problem) {
             reporter.report(() -> problem);
+        }
+
+        public void reportSuccess(String success) {
+            reporter.reportSuccess(() -> success);
         }
 
         private Optional<Transformation> addTransformation(Optional<Transformation> optionalChild) {

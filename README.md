@@ -1,14 +1,13 @@
 # Rainbow
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/GeyserMC/Rainbow/blob/master/LICENSE)
+[![License: LGPL-3.0-or-later](https://img.shields.io/github/license/GeyserMC/Rainbow)](https://github.com/GeyserMC/Rainbow/blob/master/LICENSE)
 [![Discord](https://img.shields.io/discord/613163671870242838.svg?color=%237289da&label=discord)](https://discord.gg/geysermc)
 
 Rainbow is a client-side Minecraft mod for the Fabric modloader to generate Geyser block/item mappings, locale overrides, and bedrock resourcepacks
-for use with Geyser's [custom block API](https://geysermc.org/wiki/geyser/custom-blocks),
-[custom skulls API](https://geysermc.org/wiki/geyser/custom-skulls), and [custom item API (v2)](https://geysermc.org/wiki/geyser/custom-items). Rainbow is available for Minecraft 26.1.
+for use with Geyser's custom content APIs. Rainbow is available for Minecraft 26.2.
 
-Rainbow is currently experimental, and capable of generating Geyser block/item mappings, a `custom-skulls.yml` file, and a bedrock resourcepack for
-somewhat simple blocks, 2D and 3D items, and sounds. For a moderately complete list of Rainbow's capabilities, see further below.
+Rainbow is currently experimental, and capable of generating Geyser block/item/skull/waypoint style mappings, and a bedrock resourcepack for
+somewhat simple blocks, 2D and 3D items, sounds, and waypoint styles. For a moderately complete list of Rainbow's capabilities, see further below.
 
 Rainbow works by detecting custom blocks (using block state overrides) from loaded resourcepacks, and custom items in your inventory, or a container/inventory menu you have opened.
 It analyses the components of detected items, and uses assets from loaded Java resourcepacks to gather information about block and item models, textures,
@@ -26,18 +25,19 @@ you use them as follows:
    - `/rainbow map block <target>` - maps the custom block at `<target>`, if any.
    - `/rainbow map item` - maps the custom item or skull you're currently holding in your hand, if any.
    - `/rainbow map sound <namespace>` - maps all the custom sounds of the given namespace.
+   - `/rainbow map waypoint <waypoint style>` - maps the given waypoint style, if it exists.
    - `/rainbow mapinventory` - scans your inventory for custom items or skulls, and maps all that are found.
    - `/rainbow auto blocks` - scans through all loaded resourcepacks for custom blocks created using block state overrides, and maps all that are found. This may shortly freeze your client.
    - `/rainbow auto inventory` - scans all inventory menus and containers you open for custom items and skulls, and maps all that are found. This is handy for plugins that offer an inventory menu listing all custom items.
      - Use `/rainbow auto stop` to stop the mapping of custom items.
    - `/rainbow auto recipes` - scans through all known recipes for results that are custom items or skulls, and maps all that are found. This is handy for datapacks that contain recipes with custom items as result. You can use the vanilla `/recipe give @s *` command to give yourself all recipes, which helps Rainbow recognise custom items with this command.
    - `/rainbow auto sounds` - scans through all loaded resourcepacks for custom sounds, and maps all that are found.
+   - `/rainbow auto waypoints` - scans through all loaded resourcepacks for custom waypoint styles, and maps all that are found.
 3. Once you have mapped all of your custom items, use `/rainbow finish` to finish the pack. Rainbow will then export the resourcepack and Geyser mappings it has created.
 
 When you've finished your pack, navigate to the `.minecraft/rainbow/<name>` folder. You can also click on the `Wrote pack to disk` in chat to open this folder.
-In this folder, you'll find 5 important files/folders:
+In this folder, you'll find 4 important files/folders:
 
-- `custom-skulls.yml`: put this in Geyser's config folder. These are the exported player skulls. The file may already exist in Geyser's config folder, be careful with overwriting it!
 - `custom_mappings`: you need to put the files in here in the `custom_mappings` folder in Geyser's config folder. These are the generated Geyser mappings.
 - `pack.zip`: you need to put this file in the `packs` folder in Geyser's config folder.
 - `lang`: you need to put all files in this folder in the `locales/overrides` folder in Geyser's config folder.
@@ -76,6 +76,8 @@ Rainbow is currently capable of the following:
       - For the `display_context` property, the `gui` case is mapped, if present.
   - Also includes detecting if an item should be displayed handheld by looking at the item's model.
   - Also is able to detect and map items using the "legacy" `custom_model_data` range-dispatch style, and map them to Geyser's `legacy` item mappings.
+- Generating Geyser skull mappings for custom player heads.
+- Generating Geyser waypoint style mappings for custom waypoint styles (locator bar icons).
 - Generating a simple bedrock resourcepack for blocks and simple 2D items, as well as:
   - Simple custom armour items, by analysing an item's `minecraft:equippable` component and loaded equipment assets.
     - Custom elytra items also work, but only visually, due to bedrock limitations.

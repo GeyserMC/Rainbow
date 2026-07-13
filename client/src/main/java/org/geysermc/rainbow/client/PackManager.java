@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2026 GeyserMC. https://geysermc.org
+ *
+ * This file is part of Rainbow.
+ *
+ * Rainbow is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * Rainbow is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with
+ * Rainbow. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package org.geysermc.rainbow.client;
 
 import net.fabricmc.loader.api.FabricLoader;
@@ -12,9 +29,12 @@ import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.client.mixin.SplashRendererAccessor;
 import org.geysermc.rainbow.client.render.MinecraftGeometryRenderer;
 import org.geysermc.rainbow.client.skull.CustomSkulls;
-import org.geysermc.rainbow.mapping.AssetCacheStats;
-import org.geysermc.rainbow.mapping.PackStats;
+import org.geysermc.rainbow.client.stats.PackStatGroup;
+import org.geysermc.rainbow.client.stats.PackStatGroups;
 import org.geysermc.rainbow.pack.BedrockPack;
+import org.geysermc.rainbow.stats.PackStatKey;
+import org.geysermc.rainbow.stats.PackStatKeys;
+import org.geysermc.rainbow.stats.PackStats;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -56,7 +76,8 @@ which will list any models converted, and any problems that occurred during mapp
             "you are now blinking manually", "you're eligible for a free hug token! <3", "don't mind me!", "hissss", "Gayser and Floodgayte, my favourite plugins.",
             "meow", "we'll be done here soon™", "got anything else to say?", "we're done now!", "this will be fixed by v6053", "expect it to be done within 180 business days!",
             "any colour you like", "someone tell Mojang about this", "you can't unbake baked models, so we'll store the unbaked models", "soon fully datagen ready",
-            "packconverter when", "codecs ftw");
+            "packconverter when", "codecs ftw", "skull mappings >>> custom-skulls.yml",
+            "now with the ultimate, greatest custom content ever, which everybody asked for: custom waypoints", "unable to handle the merge");
     private static final RandomSource RANDOM = RandomSource.create();
 
     private static final Path EXPORT_DIRECTORY = FabricLoader.getInstance().getGameDir().resolve(Rainbow.MOD_ID);
@@ -124,8 +145,7 @@ which will list any models converted, and any problems that occurred during mapp
         }
 
         long attachables = pack.resources.getBedrockItems().stream().filter(item -> item.attachableContext().attachable().isPresent()).count();
-        PackStats stats = pack.resources.stats();
-        AssetCacheStats cacheStats = stats.cacheStats();
+        PackStats stats = pack.resources.collectStats();
 
         StringBuilder report = new StringBuilder(REPORT_HEADER);
         report.append("\n");
@@ -135,15 +155,12 @@ which will list any models converted, and any problems that occurred during mapp
         report.append("\nVersion of Rainbow: ").append(RainbowClient.getVersion());
         report.append("\n");
         report.append("\nGenerated pack: ").append(pack.resources.name());
-        report.append("\nBlock mappings written: ").append(stats.blockMappings());
-        report.append("\nItem mappings written: ").append(stats.itemMappings());
+        appendPackStatGroup(report, stats, PackStatGroups.MAPPINGS);
         report.append("\n");
-        report.append("\nItem texture atlas size: ").append(stats.itemAtlas());
-        report.append("\nTerrain texture atlas size: ").append(stats.terrainAtlas());
-        report.append("\nFlipbook texture definitions: ").append(stats.flipbookTextures());
-        report.append("\nSound definitions: ").append(stats.soundDefinitions());
+        appendPackStatGroup(report, stats, PackStatGroups.ATLASES);
         report.append("\n");
         report.append("\nItem attachables exported: ").append(attachables);
+        appendPackStat(report, stats, PackStatKeys.ATTACHABLES);
         report.append("\n");
         report.append("\nJSON-files written: ").append(packSerializer.jsonExported());
         report.append("\nTextures written: ").append(packSerializer.texturesExported());
@@ -153,18 +170,26 @@ which will list any models converted, and any problems that occurred during mapp
         report.append("\nStatic texture skulls exported: ").append(pack.skulls.textures());
         report.append("\n");
         report.append("\n-- ASSET CACHE STATS --");
-        report.append("\nGeometry cache: %d written, %d cache hits ".formatted(cacheStats.geometry().size(), cacheStats.geometry().hits()));
-        report.append("\nBlock texture cache: %d written, %d cache hits ".formatted(cacheStats.blockTexture().size(), cacheStats.blockTexture().hits()));
-        report.append("\nItem texture cache: %d written, %d cache hits ".formatted(cacheStats.itemTexture().size(), cacheStats.itemTexture().hits()));
+        appendPackStatGroup(report, stats, PackStatGroups.ASSET_CACHE);
         report.append("\n");
         report.append("\n-- PACK TREE REPORT --\n");
         report.append(problems);
         return report.toString();
     }
 
+    private static void appendPackStat(StringBuilder builder, PackStats stats, PackStatKey key) {
+        builder.append("\n").append(key.toString(stats));
+    }
+
+    private static void appendPackStatGroup(StringBuilder builder, PackStats stats, PackStatGroup group) {
+        for (PackStatKey key : group.keys()) {
+            appendPackStat(builder, stats, key);
+        }
+    }
+
     private static String randomSummaryComment() {
         if (RANDOM.nextDouble() < 0.5) {
-            SplashRenderer splash = Minecraft.getInstance().getSplashManager().getSplash();
+            SplashRenderer splash = Minecraft.getInstance().gui.splashManager().getSplash();
             if (splash == null) {
                 return "Undefined Undefined :(";
             }
