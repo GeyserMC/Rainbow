@@ -42,6 +42,7 @@ import net.minecraft.world.waypoints.WaypointStyleAssets;
 import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.client.PackManager;
 import org.geysermc.rainbow.client.mapper.InventoryMapper;
+import org.geysermc.rainbow.client.mapper.ItemDisplayMapper;
 import org.geysermc.rainbow.client.mapper.PackMapper;
 import org.geysermc.rainbow.client.mapper.RecipeMapper;
 import org.geysermc.rainbow.client.mixin.WaypointStyleManagerAccessor;
@@ -199,6 +200,12 @@ public class PackGeneratorCommand {
                                 .executes(runWithPack(packManager, (source, _) -> {
                                     packMapper.setItemProvider(InventoryMapper.INSTANCE);
                                     source.sendFeedback(Component.translatable("commands.rainbow.automatic_inventory_mapping"));
+                                }))
+                        )
+                        .then(ClientCommands.literal("item_display")
+                                .executes(runWithPack(packManager, (source, _) -> {
+                                    packMapper.setItemProvider(ItemDisplayMapper.INSTANCE);
+                                    source.sendFeedback(Component.literal("item display auto mapping activated"));
                                 }))
                         )
                         .then(ClientCommands.literal("recipes")
