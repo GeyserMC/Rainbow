@@ -28,7 +28,6 @@ import org.geysermc.rainbow.Rainbow;
 import org.geysermc.rainbow.RainbowIO;
 import org.geysermc.rainbow.client.mixin.SplashRendererAccessor;
 import org.geysermc.rainbow.client.render.MinecraftGeometryRenderer;
-import org.geysermc.rainbow.client.skull.CustomSkulls;
 import org.geysermc.rainbow.client.stats.PackStatGroup;
 import org.geysermc.rainbow.client.stats.PackStatGroups;
 import org.geysermc.rainbow.pack.BedrockPack;
@@ -49,9 +48,8 @@ public final class PackManager {
 #### READ THIS FIRST ####
 What do I do now?
 
-In this folder, you'll find 4 important files/folders along with this one:
+In this folder, you'll find 3 important files/folders along with this one:
 
-- custom-skulls.yml: put this in Geyser's config folder. These are the exported player skulls. The file may already exist in Geyser's config folder, be careful with overwriting it!
 - custom_mappings: you need to put the files in here in the `custom_mappings` folder in Geyser's config folder. These are the generated Geyser mappings.
 - pack.zip: put this in the "packs" folder in Geyser's config folder. This is the generated bedrock resourcepack.
 - lang: put all files in this folder in the "locales/overrides" folder in Geyser's config folder. These are the exported custom translation strings.
@@ -85,15 +83,14 @@ which will list any models converted, and any problems that occurred during mapp
     private static final Path MAPPINGS_DIRECTORY = Path.of("custom_mappings");
     private static final Path PACK_ZIP_FILE = Path.of("pack.zip");
     private static final Path PACK_LANG_FOLDER = Path.of("lang");
-    private static final Path SKULLS_FILE = Path.of("custom-skulls.yml");
     private static final Path REPORT_FILE = Path.of("report.txt");
 
     private final ClientPackSerializer packSerializer = new ClientPackSerializer();
-    private Optional<RainbowPack> currentPack = Optional.empty();
+    private Optional<BedrockPack> currentPack = Optional.empty();
 
     public void startPack(String name) throws IOException {
         if (currentPack.isPresent()) {
-            throw new IllegalStateException("Already started a pack (" + currentPack.get().resources.name() + ")");
+            throw new IllegalStateException("Already started a pack (" + currentPack.get().name() + ")");
         }
         packSerializer.prepare(Objects.requireNonNull(Minecraft.getInstance().level).registryAccess());
 
@@ -105,27 +102,25 @@ which will list any models converted, and any problems that occurred during mapp
                 .withGeometryRenderer(MinecraftGeometryRenderer.INSTANCE)
                 .reportSuccesses()
                 .build();
-        currentPack = Optional.of(new RainbowPack(pack, new CustomSkulls()));
+        currentPack = Optional.of(pack);
     }
 
-    public void run(Consumer<RainbowPack> consumer) {
+    public void run(Consumer<BedrockPack> consumer) {
         currentPack.ifPresent(consumer);
     }
 
-    public void runOrElse(Consumer<RainbowPack> consumer, Runnable runnable) {
+    public void runOrElse(Consumer<BedrockPack> consumer, Runnable runnable) {
         currentPack.ifPresentOrElse(consumer, runnable);
     }
 
     public Optional<Path> getExportPath() {
-        return currentPack.map(pack -> EXPORT_DIRECTORY.resolve(pack.resources.name()));
+        return currentPack.map(pack -> EXPORT_DIRECTORY.resolve(pack.name()));
     }
 
     public boolean finish(Runnable onFinish) {
         currentPack.ifPresent(pack -> {
-            Path skullsPath = EXPORT_DIRECTORY.resolve(pack.resources.name()).resolve(SKULLS_FILE);
-            Path reportPath = EXPORT_DIRECTORY.resolve(pack.resources.name()).resolve(REPORT_FILE);
-            pack.resources.save().thenRun(() -> {
-                RainbowIO.safeIO(() -> Files.writeString(skullsPath, pack.skulls.createConfig()));
+            Path reportPath = EXPORT_DIRECTORY.resolve(pack.name()).resolve(REPORT_FILE);
+            pack.save().thenRun(() -> {
                 RainbowIO.safeIO(() -> Files.writeString(reportPath, createPackSummary(pack, packSerializer)));
                 onFinish.run();
             });
@@ -135,17 +130,15 @@ which will list any models converted, and any problems that occurred during mapp
         return wasPresent;
     }
 
-    public record RainbowPack(BedrockPack resources, CustomSkulls skulls) {}
-
     // TODO: clean this up
-    private static String createPackSummary(RainbowPack pack, ClientPackSerializer packSerializer) {
-        String problems = ((ProblemReporter.Collector) pack.resources.getReporter()).getTreeReport();
+    private static String createPackSummary(BedrockPack pack, ClientPackSerializer packSerializer) {
+        String problems = ((ProblemReporter.Collector) pack.getReporter()).getTreeReport();
         if (StringUtil.isBlank(problems)) {
             problems = "Well that's odd... there's nothing here!";
         }
 
-        long attachables = pack.resources.getBedrockItems().stream().filter(item -> item.attachableContext().attachable().isPresent()).count();
-        PackStats stats = pack.resources.collectStats();
+        long attachables = pack.getBedrockItems().stream().filter(item -> item.attachableContext().attachable().isPresent()).count();
+        PackStats stats = pack.collectStats();
 
         StringBuilder report = new StringBuilder(REPORT_HEADER);
         report.append("\n");
@@ -154,7 +147,7 @@ which will list any models converted, and any problems that occurred during mapp
         report.append('\n');
         report.append("\nVersion of Rainbow: ").append(RainbowClient.getVersion());
         report.append("\n");
-        report.append("\nGenerated pack: ").append(pack.resources.name());
+        report.append("\nGenerated pack: ").append(pack.name());
         appendPackStatGroup(report, stats, PackStatGroups.MAPPINGS);
         report.append("\n");
         appendPackStatGroup(report, stats, PackStatGroups.ATLASES);
@@ -165,9 +158,7 @@ which will list any models converted, and any problems that occurred during mapp
         report.append("\nJSON-files written: ").append(packSerializer.jsonExported());
         report.append("\nTextures written: ").append(packSerializer.texturesExported());
         report.append("\n");
-        report.append("\nUsername skulls exported: ").append(pack.skulls.usernames());
-        report.append("\nUUID skulls exported: ").append(pack.skulls.uuids());
-        report.append("\nStatic texture skulls exported: ").append(pack.skulls.textures());
+        appendPackStatGroup(report, stats, PackStatGroups.SKULLS);
         report.append("\n");
         report.append("\n-- ASSET CACHE STATS --");
         appendPackStatGroup(report, stats, PackStatGroups.ASSET_CACHE);

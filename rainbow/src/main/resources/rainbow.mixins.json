@@ -9,6 +9,7 @@
     "LateBoundIdMapperAccessor",
     "NativeImageAccessor",
     "RangeSelectItemModelAccessor",
+    "ResolvableProfileAccessor",
     "SpriteContentsAccessor",
     "SpriteLoaderAccessor",
     "TextureSlotsAccessor"
