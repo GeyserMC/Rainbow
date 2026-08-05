@@ -43,10 +43,10 @@ tasks {
 
     jar {
         from(rootDir.resolve("LICENSE")) {
-            rename { "${it}_${base.archivesName}" }
+            rename { "${it}_${base.archivesName.get()}" }
         }
         from(rootDir.resolve("LICENSE.LESSER")) {
-            rename { "${it}_${base.archivesName}" }
+            rename { "${it}_${base.archivesName.get()}" }
         }
     }
 
