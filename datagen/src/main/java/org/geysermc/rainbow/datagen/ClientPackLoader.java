@@ -56,7 +56,7 @@ class ClientPackLoader {
             PackRepository repository = new PackRepository(packSource);
             repository.reload();
             return new MultiPackResourceManager(PackType.CLIENT_RESOURCES, repository.getAvailablePacks().stream()
-                    .map(Pack::open)
+                    .flatMap(Pack::open)
                     .toList());
         });
     }

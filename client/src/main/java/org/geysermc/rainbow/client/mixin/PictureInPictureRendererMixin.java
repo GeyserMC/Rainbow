@@ -18,7 +18,7 @@
 package org.geysermc.rainbow.client.mixin;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-import com.mojang.blaze3d.textures.GpuTexture;
+import com.mojang.renderpearl.api.textures.GpuTexture;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
 import org.geysermc.rainbow.client.render.PictureInPictureCopyRenderer;
 import org.jspecify.annotations.Nullable;

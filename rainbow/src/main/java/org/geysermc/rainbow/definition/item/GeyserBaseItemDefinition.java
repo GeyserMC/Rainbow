@@ -36,21 +36,18 @@ public record GeyserBaseItemDefinition(Identifier bedrockIdentifier, Optional<St
                                        List<GeyserPredicate> predicates, BedrockOptions bedrockOptions, DataComponentPatch components) {
     private static final List<DataComponentType<?>> SUPPORTED_COMPONENTS = List.of(DataComponents.CONSUMABLE, DataComponents.EQUIPPABLE, DataComponents.FOOD,
             DataComponents.MAX_DAMAGE, DataComponents.MAX_STACK_SIZE, DataComponents.USE_COOLDOWN, DataComponents.ENCHANTABLE, DataComponents.ENCHANTMENT_GLINT_OVERRIDE,
-            DataComponents.ATTACK_RANGE, DataComponents.KINETIC_WEAPON, DataComponents.PIERCING_WEAPON, DataComponents.SWING_ANIMATION, DataComponents.USE_EFFECTS);
+            DataComponents.ATTACK_RANGE, DataComponents.KINETIC_WEAPON, DataComponents.PIERCING_WEAPON, DataComponents.USE_EFFECTS); // TODO attack + interaction animation, needs Geyser API changes
 
     private static final MapCodec<DataComponentPatch> FILTERED_COMPONENT_MAP_CODEC = DataComponentPatch.CODEC.optionalFieldOf("components")
             .xmap(optional -> optional.orElse(DataComponentPatch.EMPTY), patch -> {
                 DataComponentPatch.Builder filtered = DataComponentPatch.builder();
-                patch.entrySet().stream()
-                        .filter(entry -> entry.getValue().isEmpty() || SUPPORTED_COMPONENTS.contains(entry.getKey()))
-                        .forEach(entry -> {
-                            if (entry.getValue().isPresent()) {
-                                //noinspection unchecked
-                                filtered.set((DataComponentType) entry.getKey(), entry.getValue().orElseThrow());
-                            } else {
-                                filtered.remove(entry.getKey());
-                            }
-                        });
+
+                DataComponentPatch.SplitResult splitPatch = patch.split();
+                splitPatch.added().stream()
+                        .filter(component -> SUPPORTED_COMPONENTS.contains(component.type()))
+                        .forEach(filtered::set);
+                splitPatch.removed().forEach(filtered::remove);
+
                 DataComponentPatch built = filtered.build();
                 return built.isEmpty() ? Optional.empty() : Optional.of(built);
             });

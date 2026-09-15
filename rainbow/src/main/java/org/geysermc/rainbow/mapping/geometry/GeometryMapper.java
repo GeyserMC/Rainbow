@@ -167,7 +167,7 @@ public class GeometryMapper {
         for (CuboidModelElement element : geometry.elements()) {
             transformedElements.add(new CuboidModelElement(transformVector(element.from(), transformation),
                     transformVector(element.to(), transformation), element.faces(),
-                    element.rotation(), element.shade(), element.lightEmission()));
+                    element.rotation(), element.shadeDirectionOverride(), element.lightEmission()));
         }
         return new UnbakedCuboidGeometry(Collections.unmodifiableList(transformedElements));
     }

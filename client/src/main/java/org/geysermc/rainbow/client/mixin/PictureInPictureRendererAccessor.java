@@ -17,7 +17,7 @@
 
 package org.geysermc.rainbow.client.mixin;
 
-import com.mojang.blaze3d.textures.GpuTexture;
+import com.mojang.renderpearl.api.textures.GpuTexture;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
