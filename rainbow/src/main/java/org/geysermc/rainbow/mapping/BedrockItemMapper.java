@@ -424,10 +424,16 @@ public class BedrockItemMapper {
             List<Identifier> tags = itemStack.is(ItemTags.TRIMMABLE_ARMOR) ? TRIMMABLE_ARMOR_TAGS : List.of();
 
             TextureHolder icon = textures.icon().create(bedrockIdentifier, itemStack);
+            GeyserBaseItemDefinition.BedrockIcons iconSet = GeyserBaseItemDefinition.BedrockIcons.ofDefault(icon.bedrockSafeName());
+
+            // Java uses white as default tint, see ItemFeatureRenderer#getLayerColorSafe
+            // Ideally we'd also look at recipe data to see if the item is dyeable, but that's a little complicated from here
+            Optional<Integer> dyeable = itemStack.get(DataComponents.DYED_COLOR) != null ? Optional.of(0xFFFFFF) : Optional.empty();
+
             GeyserBaseItemDefinition base = new GeyserBaseItemDefinition(bedrockIdentifier,
                     Optional.ofNullable(itemStack.components().split().added().get(DataComponents.ITEM_NAME)).map(Component::tryCollapseToString),
                     predicateStack,
-                    new GeyserBaseItemDefinition.BedrockOptions(Optional.of(icon.bedrockSafeName()), true, geometry.handheld(), calculateProtectionValue(itemStack), tags),
+                    new GeyserBaseItemDefinition.BedrockOptions(iconSet, true, geometry.handheld(), calculateProtectionValue(itemStack), tags, dyeable),
                     itemStack.components());
             try {
                 packContext.mappings().items().map(itemStack.item(), definitionCreator.apply(base));

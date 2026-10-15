@@ -260,9 +260,8 @@ public class PackGeneratorCommand {
         if (coordinates instanceof WorldCoordinates(WorldCoordinate x, WorldCoordinate y, WorldCoordinate z)) {
             Vec3 pos = source.getPosition();
             return BlockPos.containing(new Vec3(x.get(pos.x), y.get(pos.y), z.get(pos.z)));
-        } else if (coordinates instanceof LocalCoordinates(double left, double up, double forwards)) {
-            Vec3 origin = source.getPosition();
-            return BlockPos.containing(Vec3.applyLocalCoordinatesToRotation(source.getRotation(), new Vec3(left, up, forwards)).add(origin.x, origin.y, origin.z));
+        } else if (coordinates instanceof LocalCoordinates local) {
+            return BlockPos.containing(local.apply(source.getPosition(), source.getRotation()));
         }
         throw new IllegalStateException("Don't know how to turn " + coordinates + " into a BlockPos");
     }

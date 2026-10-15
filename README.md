@@ -4,7 +4,7 @@
 [![Discord](https://img.shields.io/discord/613163671870242838.svg?color=%237289da&label=discord)](https://discord.gg/geysermc)
 
 Rainbow is a client-side Minecraft mod for the Fabric modloader to generate Geyser block/item mappings, locale overrides, and bedrock resourcepacks
-for use with Geyser's custom content APIs. Rainbow is available for Minecraft 26.2.
+for use with Geyser's custom content APIs. Rainbow is available for Minecraft 26.3.
 
 Rainbow is currently experimental, and capable of generating Geyser block/item/skull/waypoint style mappings, and a bedrock resourcepack for
 somewhat simple blocks, 2D and 3D items, sounds, and waypoint styles. For a moderately complete list of Rainbow's capabilities, see further below.
@@ -76,6 +76,7 @@ Rainbow is currently capable of the following:
       - For the `display_context` property, the `gui` case is mapped, if present.
   - Also includes detecting if an item should be displayed handheld by looking at the item's model.
   - Also is able to detect and map items using the "legacy" `custom_model_data` range-dispatch style, and map them to Geyser's `legacy` item mappings.
+  - Also supports mapping dyeable items, but these are (for now) only detected when they're dyed whilst mapping.
 - Generating Geyser skull mappings for custom player heads.
 - Generating Geyser waypoint style mappings for custom waypoint styles (locator bar icons).
 - Generating a simple bedrock resourcepack for blocks and simple 2D items, as well as:

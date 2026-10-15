@@ -30,16 +30,12 @@ public class NativeImageUtil {
     // Adjusted NativeImage#writeToFile
     @SuppressWarnings("DataFlowIssue")
     public static byte[] writeToByteArray(NativeImage image) throws IOException {
-        if (!image.format().supportedByStb()) {
-            throw new UnsupportedOperationException("Don't know how to write format " + image.format());
-        } else {
-            ((NativeImageAccessor) (Object) image).invokeCheckAllocated();
-            try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-                if (!((NativeImageAccessor) (Object) image).invokeWriteToChannel(Channels.newChannel(output))) {
-                    throw new IOException("Could not write image to pipe: " + STBImage.stbi_failure_reason());
-                }
-                return output.toByteArray();
+        ((NativeImageAccessor) (Object) image).invokeCheckAllocated();
+        try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            if (!((NativeImageAccessor) (Object) image).invokeWriteToChannel(Channels.newChannel(output))) {
+                throw new IOException("Could not write image to pipe: " + STBImage.stbi_failure_reason());
             }
+            return output.toByteArray();
         }
     }
 }
