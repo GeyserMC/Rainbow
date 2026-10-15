@@ -36,7 +36,8 @@ public record GeyserBaseItemDefinition(Identifier bedrockIdentifier, Optional<St
                                        List<GeyserPredicate> predicates, BedrockOptions bedrockOptions, DataComponentPatch components) {
     private static final List<DataComponentType<?>> SUPPORTED_COMPONENTS = List.of(DataComponents.CONSUMABLE, DataComponents.EQUIPPABLE, DataComponents.FOOD,
             DataComponents.MAX_DAMAGE, DataComponents.MAX_STACK_SIZE, DataComponents.USE_COOLDOWN, DataComponents.ENCHANTABLE, DataComponents.ENCHANTMENT_GLINT_OVERRIDE,
-            DataComponents.ATTACK_RANGE, DataComponents.KINETIC_WEAPON, DataComponents.PIERCING_WEAPON, DataComponents.USE_EFFECTS); // TODO attack + interaction animation, needs Geyser API changes
+            DataComponents.ATTACK_RANGE, DataComponents.KINETIC_WEAPON, DataComponents.PIERCING_WEAPON, DataComponents.USE_EFFECTS,
+            DataComponents.ATTACK_ANIMATION, DataComponents.COMPOSTABLE, DataComponents.COOKING_FUEL);
 
     private static final MapCodec<DataComponentPatch> FILTERED_COMPONENT_MAP_CODEC = DataComponentPatch.CODEC.optionalFieldOf("components")
             .xmap(optional -> optional.orElse(DataComponentPatch.EMPTY), patch -> {
@@ -77,19 +78,35 @@ public record GeyserBaseItemDefinition(Identifier bedrockIdentifier, Optional<St
     }
 
     public String textureName() {
-        return bedrockOptions.icon.orElse(Rainbow.bedrockSafeIdentifier(bedrockIdentifier));
+        return bedrockOptions.icons.defaultIcon.orElse(Rainbow.bedrockSafeIdentifier(bedrockIdentifier));
     }
 
-    public record BedrockOptions(Optional<String> icon, boolean allowOffhand, boolean displayHandheld, int protectionValue, List<Identifier> tags) {
+    public record BedrockOptions(BedrockIcons icons, boolean allowOffhand, boolean displayHandheld, int protectionValue, List<Identifier> tags,
+                                 Optional<Integer> dyeable) {
         public static final Codec<BedrockOptions> CODEC = RecordCodecBuilder.create(instance ->
                 instance.group(
-                        Codec.STRING.optionalFieldOf("icon").forGetter(BedrockOptions::icon),
+                        BedrockIcons.CODEC.optionalFieldOf("icons", BedrockIcons.EMPTY).forGetter(BedrockOptions::icons),
                         Codec.BOOL.optionalFieldOf("allow_offhand", true).forGetter(BedrockOptions::allowOffhand),
                         Codec.BOOL.optionalFieldOf("display_handheld", false).forGetter(BedrockOptions::displayHandheld),
                         Codec.INT.optionalFieldOf("protection_value", 0).forGetter(BedrockOptions::protectionValue),
-                        Identifier.CODEC.listOf().optionalFieldOf("tags", List.of()).forGetter(BedrockOptions::tags)
+                        Identifier.CODEC.listOf().optionalFieldOf("tags", List.of()).forGetter(BedrockOptions::tags),
+                        Codec.INT.optionalFieldOf("default_color").fieldOf("dyeable").forGetter(BedrockOptions::dyeable)
                 ).apply(instance, BedrockOptions::new)
         );
-        public static final BedrockOptions DEFAULT = new BedrockOptions(Optional.empty(), true, false, 0, List.of());
+        public static final BedrockOptions DEFAULT = new BedrockOptions(BedrockIcons.EMPTY, true, false, 0, List.of(), Optional.empty());
+    }
+
+    public record BedrockIcons(Optional<String> defaultIcon, Optional<String> dyed) {
+        public static final Codec<BedrockIcons> CODEC = RecordCodecBuilder.create(instance ->
+                instance.group(
+                        Codec.STRING.optionalFieldOf("default").forGetter(BedrockIcons::defaultIcon),
+                        Codec.STRING.optionalFieldOf("dyed").forGetter(BedrockIcons::dyed)
+                ).apply(instance, BedrockIcons::new)
+        );
+        public static final BedrockIcons EMPTY = new BedrockIcons(Optional.empty(), Optional.empty());
+
+        public static BedrockIcons ofDefault(String icon) {
+            return new BedrockIcons(Optional.of(icon), Optional.empty());
+        }
     }
 }
